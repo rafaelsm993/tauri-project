@@ -177,3 +177,20 @@ test.describe("touch devices", () => {
     expect(opacity).toBe("1");
   });
 });
+
+test.describe("theming", () => {
+  test("overriding a channel token re-skins components at runtime", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const active = page
+      .getByRole("navigation", { name: "Categories" })
+      .getByRole("button", { pressed: true });
+    const background = () => active.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const before = await background();
+    await page.evaluate(() =>
+      document.documentElement.style.setProperty("--clr-primary-rgb", "0 128 255"),
+    );
+    expect(before).toContain("229, 9, 20");
+    await expect.poll(background).toContain("0, 128, 255");
+  });
+});

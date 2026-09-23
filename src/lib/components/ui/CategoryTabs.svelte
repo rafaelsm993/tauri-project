@@ -48,8 +48,8 @@
     align-items: center;
     gap: $spacing-xs;
     padding: 3px;
-    background: $color-bg-secondary;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--clr-surface);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.06);
     border-radius: $radius-full;
     max-width: 100%;
     min-width: 0;
@@ -59,7 +59,7 @@
     flex: 0 0 auto;
     width: 1px;
     height: 1.1em;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgb(var(--clr-ink-rgb) / 0.12);
   }
 
   .category-tabs {
@@ -80,22 +80,22 @@
     font-size: 0.76rem;
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     background: transparent;
     border: none;
     cursor: pointer;
     transition: all $dur-normal ease;
 
     &:hover {
-      color: $color-text-main;
-      background: rgba(255, 255, 255, 0.05);
+      color: var(--clr-text);
+      background: rgb(var(--clr-ink-rgb) / 0.05);
     }
 
     &.active {
-      color: $color-bg-primary;
-      background: $color-primary;
+      color: var(--clr-bg);
+      background: var(--clr-primary);
       font-weight: 700;
-      box-shadow: 0 0 12px rgba($color-primary, 0.3);
+      box-shadow: 0 0 12px rgb(var(--clr-primary-rgb) / 0.3);
     }
 
     flex: 0 0 auto;

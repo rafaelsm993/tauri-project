@@ -44,9 +44,9 @@
     inset: 0;
     background: linear-gradient(
       to top,
-      $color-bg-primary 0%,
+      var(--clr-bg) 0%,
       transparent 50%,
-      rgba($color-bg-primary, 0.4) 100%
+      rgb(var(--clr-bg-rgb) / 0.4) 100%
     );
   }
 
@@ -61,10 +61,10 @@
   }
 
   .back-btn {
-    background: rgba($color-bg-secondary, 0.7);
+    background: rgb(var(--clr-surface-rgb) / 0.7);
     backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: $color-text-main;
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);
+    color: var(--clr-text);
     padding: $spacing-xs $spacing-md;
     border-radius: $radius-full;
     font-size: 0.82rem;
@@ -72,7 +72,7 @@
     margin-bottom: $spacing-md;
     transition: background $dur-fast;
     &:hover {
-      background: rgba($color-bg-secondary, 0.9);
+      background: rgb(var(--clr-surface-rgb) / 0.9);
     }
   }
 
@@ -80,14 +80,14 @@
     font-family: $font-display;
     font-size: 2.8rem;
     line-height: 1.1;
-    color: $color-text-main;
+    color: var(--clr-text);
     margin: 0;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 2px 12px rgb(var(--clr-shade-rgb) / 0.6);
   }
 
   .hero-tagline {
     font-size: 0.92rem;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     font-style: italic;
     margin: $spacing-xs 0 0;
   }

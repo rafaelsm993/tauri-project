@@ -124,13 +124,13 @@
     font-size: 1.25rem;
     letter-spacing: 0.04em;
     margin: 0;
-    color: $color-text-main;
+    color: var(--clr-text);
   }
 
   .see-more {
     background: none;
     border: none;
-    color: $color-primary;
+    color: var(--clr-primary);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -140,7 +140,7 @@
     border-radius: $radius-sm;
     transition: color $dur-fast ease;
     &:hover {
-      color: $color-text-main;
+      color: var(--clr-text);
     }
   }
 
@@ -181,7 +181,7 @@
 
   .rail-empty,
   .rail-error {
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     font-size: 0.82rem;
     padding: $spacing-xl 0;
     text-align: center;
@@ -191,22 +191,22 @@
   .retry-btn {
     margin-left: $spacing-sm;
     padding: $spacing-xs $spacing-sm;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.15);
     border-radius: $radius-sm;
     background: none;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     font-size: 0.76rem;
     cursor: pointer;
 
     @include hover-capable {
       &:hover {
-        color: $color-text-main;
-        border-color: rgba(255, 255, 255, 0.3);
+        color: var(--clr-text);
+        border-color: rgb(var(--clr-ink-rgb) / 0.3);
       }
     }
 
     &:focus-visible {
-      outline: 2px solid $color-primary;
+      outline: 2px solid var(--clr-primary);
       outline-offset: 2px;
     }
 
@@ -225,7 +225,7 @@
   .skeleton-poster {
     aspect-ratio: 2 / 3;
     border-radius: $radius-md;
-    background: $color-bg-secondary;
+    background: var(--clr-surface);
     overflow: hidden;
     position: relative;
     &::after {
@@ -235,7 +235,7 @@
       background: linear-gradient(
         100deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.05) 50%,
+        rgb(var(--clr-ink-rgb) / 0.05) 50%,
         transparent 100%
       );
       background-size: 200% 100%;
@@ -246,7 +246,7 @@
   .skeleton-line {
     height: 9px;
     border-radius: $radius-sm;
-    background: $color-bg-secondary;
+    background: var(--clr-surface);
   }
 
   // ── Nav arrows ──────────────────────────────────────────
@@ -259,8 +259,8 @@
     height: 56px;
     border: none;
     border-radius: $radius-sm;
-    color: $color-text-main;
-    background: rgba(8, 11, 16, 0.75);
+    color: var(--clr-text);
+    background: rgb(var(--clr-scrim-rgb) / 0.75);
     backdrop-filter: blur(6px);
     font-size: 1.6rem;
     line-height: 1;
@@ -284,8 +284,8 @@
   }
 
   .nav-btn:hover {
-    background: rgba(232, 184, 75, 0.85);
-    color: $color-bg-primary;
+    background: rgb(var(--clr-highlight-rgb) / 0.85);
+    color: var(--clr-bg);
   }
 
   @keyframes shimmer {

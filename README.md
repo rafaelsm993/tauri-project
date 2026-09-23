@@ -27,8 +27,8 @@ Architecture, API, component and design-system notes: see [Design notes](docs/no
 ```bash
 # Prerequisites: Node 20+, Rust stable, system WebView
 
-git clone https://github.com/rafaelsm993/tauri-app
-cd tauri-app
+git clone https://github.com/rafaelsm993/tauri-project
+cd tauri-project
 npm ci
 cp .env.example .env   # fill in TMDB_API_KEY and RAWG_API_KEY
 npm run tauri dev      # Arch desktop; on the Windows laptop use ./scripts/wdev.sh from WSL

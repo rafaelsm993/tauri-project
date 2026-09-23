@@ -72,7 +72,7 @@
       height: 4px;
     }
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgb(var(--clr-ink-rgb) / 0.1);
       border-radius: 2px;
     }
   }
@@ -91,19 +91,23 @@
     height: 72px;
     border-radius: 50%;
     object-fit: cover;
-    background: $color-bg-secondary;
+    background: var(--clr-surface);
   }
 
   .cast-photo-placeholder {
     width: 72px;
     height: 72px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba($color-primary, 0.18), rgba($color-accent, 0.18));
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      135deg,
+      rgb(var(--clr-primary-rgb) / 0.18),
+      rgb(var(--clr-accent-rgb) / 0.18)
+    );
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.06);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: $color-text-main;
+    color: var(--clr-text);
     font-family: $font-display;
     font-size: 1.2rem;
     letter-spacing: 0.04em;
@@ -112,7 +116,7 @@
 
   .cast-name {
     font-size: 0.72rem;
-    color: $color-text-main;
+    color: var(--clr-text);
     font-weight: 500;
     @include truncate;
     max-width: 100%;
@@ -120,7 +124,7 @@
 
   .cast-character {
     font-size: 0.66rem;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     @include truncate;
     max-width: 100%;
   }

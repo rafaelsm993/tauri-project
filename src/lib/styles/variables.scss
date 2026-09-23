@@ -4,15 +4,7 @@
 // Use these alongside the CSS custom properties in global.css
 // ============================================================
 
-// ── Color Palette (Netflix) ──
-$color-bg-primary: #000000; // matches --clr-bg
-$color-bg-secondary: #0a0a0a; // matches --clr-surface
-$color-primary: #e50914; // Netflix Red
-$color-accent: #b20710; // Symbol Dark Red
-$color-teal: #46d369; // Netflix Green
-$color-text-main: #f5f5f1; // Cararra — matches --clr-text
-$color-text-muted: #b3b3b3; // matches --clr-text-2
-$color-text-faint: #808080; // matches --clr-text-3
+// Colors are runtime CSS tokens in global.css (`--clr-*`); there are no SCSS color variables.
 
 // ── Spacing ──
 $spacing-xs: 4px;
@@ -123,17 +115,14 @@ $touch-target: 44px;
 
 // Glass surface
 @mixin glass($blur: 20px) {
-  background: rgba(20, 20, 20, 0.8);
+  background: rgb(var(--clr-surface-2-rgb) / 0.8);
   backdrop-filter: blur($blur) saturate(1.4);
   -webkit-backdrop-filter: blur($blur) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--clr-border);
 }
 
-// Red glow shadow (Netflix)
-@mixin glow-gold {
-  box-shadow:
-    0 0 24px rgba(229, 9, 20, 0.35),
-    0 0 60px rgba(229, 9, 20, 0.12);
+@mixin glow-primary {
+  box-shadow: var(--glow-primary);
 }
 
 // Card hover lift
@@ -144,7 +133,7 @@ $touch-target: 44px;
 
   &:hover {
     transform: translateY(-6px) scale(1.02);
-    @include glow-gold;
+    @include glow-primary;
   }
 }
 
@@ -173,5 +162,5 @@ $touch-target: 44px;
   font-size: 0.7rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: $color-primary;
+  color: var(--clr-primary);
 }

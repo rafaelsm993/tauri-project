@@ -107,7 +107,7 @@
     outline: none;
 
     &:focus-visible .card__poster {
-      outline: 2px solid $color-primary;
+      outline: 2px solid var(--clr-primary);
       outline-offset: 3px;
     }
   }
@@ -118,8 +118,8 @@
     aspect-ratio: 2 / 3;
     border-radius: $radius-md;
     overflow: hidden;
-    background: $color-bg-secondary;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--clr-surface);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.05);
     will-change: transform;
     transition:
       transform 350ms $ease-out-expo,
@@ -129,11 +129,11 @@
     @include hover-capable {
       .card:hover & {
         transform: translateY(-8px) scale(1.04);
-        border-color: rgba($color-primary, 0.4);
+        border-color: rgb(var(--clr-primary-rgb) / 0.4);
         box-shadow:
-          0 24px 64px rgba(0, 0, 0, 0.75),
-          0 0 0 1px rgba($color-primary, 0.18),
-          0 0 40px rgba($color-primary, 0.1);
+          0 24px 64px rgb(var(--clr-shade-rgb) / 0.75),
+          0 0 0 1px rgb(var(--clr-primary-rgb) / 0.18),
+          0 0 40px rgb(var(--clr-primary-rgb) / 0.1);
       }
     }
 
@@ -173,11 +173,11 @@
     inset: 0;
     background: linear-gradient(
       100deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.04) 40%,
-      rgba(255, 255, 255, 0.08) 50%,
-      rgba(255, 255, 255, 0.04) 60%,
-      rgba(255, 255, 255, 0) 100%
+      rgb(var(--clr-ink-rgb) / 0) 0%,
+      rgb(var(--clr-ink-rgb) / 0.04) 40%,
+      rgb(var(--clr-ink-rgb) / 0.08) 50%,
+      rgb(var(--clr-ink-rgb) / 0.04) 60%,
+      rgb(var(--clr-ink-rgb) / 0) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s ease-in-out infinite;
@@ -193,8 +193,8 @@
     justify-content: center;
     gap: $spacing-sm;
     padding: $spacing-md;
-    background: linear-gradient(160deg, $color-bg-secondary 0%, $color-bg-primary 100%);
-    color: $color-text-faint;
+    background: linear-gradient(160deg, var(--clr-surface) 0%, var(--clr-bg) 100%);
+    color: var(--clr-text-3);
 
     span {
       font-size: 0.7rem;
@@ -228,10 +228,10 @@
     // Gradient: transparent top → dark bottom
     background: linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.05) 0%,
-      rgba(0, 0, 0, 0) 25%,
-      rgba(0, 0, 0, 0) 40%,
-      rgba(8, 11, 16, 0.94) 100%
+      rgb(var(--clr-shade-rgb) / 0.05) 0%,
+      rgb(var(--clr-shade-rgb) / 0) 25%,
+      rgb(var(--clr-shade-rgb) / 0) 40%,
+      rgb(var(--clr-scrim-rgb) / 0.94) 100%
     );
 
     @include hover-capable {
@@ -267,8 +267,8 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    background: $color-primary;
-    color: $color-bg-primary;
+    background: var(--clr-primary);
+    color: var(--clr-bg);
     padding: 2px 6px;
     border-radius: $radius-sm;
     line-height: 1.7;
@@ -280,9 +280,9 @@
     font-family: $font-mono;
     font-size: 0.68rem;
     font-weight: 500;
-    color: $color-primary;
-    background: rgba($color-primary, 0.12);
-    border: 1px solid rgba($color-primary, 0.28);
+    color: var(--clr-primary);
+    background: rgb(var(--clr-primary-rgb) / 0.12);
+    border: 1px solid rgb(var(--clr-primary-rgb) / 0.28);
     padding: 2px 7px;
     border-radius: $radius-sm;
     line-height: 1.7;
@@ -293,7 +293,7 @@
   .card__overlay-title {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--clr-ink);
     line-height: 1.3;
     margin: 0;
     display: -webkit-box;
@@ -305,7 +305,7 @@
 
   .card__overview {
     font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.58);
+    color: rgb(var(--clr-ink-rgb) / 0.58);
     line-height: 1.55;
     margin: 0;
     display: -webkit-box;
@@ -317,7 +317,7 @@
 
   .card__author {
     font-size: 0.68rem;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgb(var(--clr-ink-rgb) / 0.45);
     font-style: italic;
     margin: 0;
     @include truncate;
@@ -332,7 +332,7 @@
     span {
       font-family: $font-mono;
       font-size: 0.58rem;
-      color: rgba(255, 255, 255, 0.35);
+      color: rgb(var(--clr-ink-rgb) / 0.35);
       letter-spacing: 0.03em;
     }
   }
@@ -349,7 +349,7 @@
   .card__label-title {
     font-size: 0.78rem;
     font-weight: 500;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -358,7 +358,7 @@
 
     @include hover-capable {
       .card:hover & {
-        color: $color-text-main;
+        color: var(--clr-text);
       }
     }
   }
@@ -366,7 +366,7 @@
   .card__label-year {
     font-family: $font-mono;
     font-size: 0.64rem;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     flex-shrink: 0;
   }
 

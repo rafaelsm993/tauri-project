@@ -10,33 +10,43 @@
    1. DESIGN TOKENS
    ============================================================ */
 :root {
-  /* ── Palette (Netflix) ── */
-  --clr-bg: #000000;
-  --clr-bg-2: #0a0a0a;
-  --clr-bg-3: #111111;
-  --clr-surface: #0a0a0a;
-  --clr-surface-2: #141414;
-  --clr-border: rgba(255, 255, 255, 0.07);
-  --clr-border-2: rgba(255, 255, 255, 0.12);
+  /* ── Palette (Netflix): channel tokens are the theme surface; colors derive from them ── */
+  --clr-bg-rgb: 0 0 0;
+  --clr-surface-rgb: 10 10 10;
+  --clr-surface-2-rgb: 20 20 20;
+  --clr-primary-rgb: 229 9 20;
+  --clr-accent-rgb: 178 7 16;
+  --clr-teal-rgb: 70 211 105;
+  --clr-error-rgb: 255 82 99;
+  --clr-ink-rgb: 255 255 255;
+  --clr-shade-rgb: 0 0 0;
+  --clr-scrim-rgb: 8 11 16;
+  --clr-highlight-rgb: 232 184 75;
 
-  --clr-gold: #e50914;
-  --clr-gold-dim: #b20710;
-  --clr-gold-glow: rgba(229, 9, 20, 0.18);
-  --clr-gold-subtle: rgba(229, 9, 20, 0.08);
+  --clr-bg: rgb(var(--clr-bg-rgb));
+  --clr-surface: rgb(var(--clr-surface-rgb));
+  --clr-surface-2: rgb(var(--clr-surface-2-rgb));
+  --clr-border: rgb(var(--clr-ink-rgb) / 0.07);
+  --clr-border-2: rgb(var(--clr-ink-rgb) / 0.12);
 
-  --clr-accent: #b20710;
-  --clr-accent-dim: #8c0510;
-  --clr-teal: #46d369;
-  --clr-teal-dim: #36a852;
+  --clr-primary: rgb(var(--clr-primary-rgb));
+  --clr-primary-subtle: rgb(var(--clr-primary-rgb) / 0.08);
+  --clr-accent: rgb(var(--clr-accent-rgb));
+  --clr-teal: rgb(var(--clr-teal-rgb));
+  --clr-error: rgb(var(--clr-error-rgb));
+  --clr-ink: rgb(var(--clr-ink-rgb));
 
   --clr-text: #f5f5f1;
   --clr-text-2: #b3b3b3;
   --clr-text-3: #808080;
   --clr-text-inv: #000000;
 
-  --clr-success: #46d369;
-  --clr-warning: #f5b942;
-  --clr-error: #e50914;
+  /* ── Family hues (GOALS §6.6); values are placeholders until the design task picks them ── */
+  --clr-hue-screen-rgb: var(--clr-primary-rgb);
+  --clr-hue-anime-rgb: 139 92 246;
+  --clr-hue-manga-rgb: 217 70 239;
+  --clr-hue-book-rgb: 245 158 11;
+  --clr-hue-game-rgb: 6 182 212;
 
   /* ── Typography ── */
   --font-display: "Bebas Neue", sans-serif;
@@ -90,13 +100,15 @@
   --radius-full: 9999px;
 
   /* ── Shadows & Glows ── */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
-  --shadow-xl: 0 24px 80px rgba(0, 0, 0, 0.7);
-  --glow-gold: 0 0 24px rgba(229, 9, 20, 0.35), 0 0 60px rgba(229, 9, 20, 0.12);
-  --glow-accent: 0 0 24px rgba(178, 7, 16, 0.35), 0 0 60px rgba(178, 7, 16, 0.12);
-  --glow-teal: 0 0 24px rgba(70, 211, 105, 0.3), 0 0 60px rgba(70, 211, 105, 0.1);
+  --shadow-sm: 0 1px 3px rgb(var(--clr-shade-rgb) / 0.4);
+  --shadow-md: 0 4px 16px rgb(var(--clr-shade-rgb) / 0.5);
+  --shadow-lg: 0 12px 40px rgb(var(--clr-shade-rgb) / 0.6);
+  --shadow-xl: 0 24px 80px rgb(var(--clr-shade-rgb) / 0.7);
+  --glow-primary:
+    0 0 24px rgb(var(--clr-primary-rgb) / 0.35), 0 0 60px rgb(var(--clr-primary-rgb) / 0.12);
+  --glow-accent:
+    0 0 24px rgb(var(--clr-accent-rgb) / 0.35), 0 0 60px rgb(var(--clr-accent-rgb) / 0.12);
+  --glow-teal: 0 0 24px rgb(var(--clr-teal-rgb) / 0.3), 0 0 60px rgb(var(--clr-teal-rgb) / 0.1);
 
   /* ── Motion ── */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -359,8 +371,8 @@ h6 {
 }
 
 .input:focus {
-  border-color: var(--clr-gold);
-  box-shadow: 0 0 0 3px var(--clr-gold-subtle);
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px var(--clr-primary-subtle);
   background: var(--clr-surface-2);
 }
 
@@ -402,10 +414,10 @@ h6 {
 }
 
 .tab.is-active {
-  background: var(--clr-gold);
+  background: var(--clr-primary);
   color: var(--clr-text-inv);
   font-weight: 700;
-  box-shadow: var(--glow-gold);
+  box-shadow: var(--glow-primary);
 }
 
 /* ============================================================
@@ -432,7 +444,7 @@ h6 {
   font-family: var(--font-mono);
   font-size: var(--size-sm);
   font-weight: 500;
-  color: var(--clr-gold);
+  color: var(--clr-primary);
 }
 .rating::before {
   content: "★";
@@ -461,7 +473,7 @@ h6 {
   width: 24px;
   height: 24px;
   border: 2px solid var(--clr-border-2);
-  border-top-color: var(--clr-gold);
+  border-top-color: var(--clr-primary);
   border-radius: var(--radius-full);
   animation: spin 0.7s linear infinite;
 }
@@ -475,7 +487,7 @@ h6 {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(8, 11, 16, 0.85);
+  background: rgb(var(--clr-scrim-rgb) / 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: var(--z-modal);
@@ -523,8 +535,8 @@ h6 {
    ============================================================ */
 
 ::selection {
-  background: var(--clr-gold-subtle);
-  color: var(--clr-gold);
+  background: var(--clr-primary-subtle);
+  color: var(--clr-primary);
 }
 
 /* ============================================================

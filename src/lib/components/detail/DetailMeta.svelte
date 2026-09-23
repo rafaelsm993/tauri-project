@@ -70,25 +70,25 @@
   .detail-studios,
   .detail-author {
     font-size: 0.82rem;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     font-style: italic;
     margin-bottom: $spacing-md;
   }
 
   .meta-badge {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgb(var(--clr-ink-rgb) / 0.06);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.08);
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-full;
     font-size: 0.78rem;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     font-family: $font-mono;
     letter-spacing: 0.04em;
   }
 
   .meta-rating {
-    color: $color-primary;
-    border-color: rgba($color-primary, 0.25);
+    color: var(--clr-primary);
+    border-color: rgb(var(--clr-primary-rgb) / 0.25);
   }
 
   .genre-row {
@@ -99,9 +99,9 @@
   }
 
   .genre-pill {
-    background: rgba($color-primary, 0.1);
-    border: 1px solid rgba($color-primary, 0.2);
-    color: $color-primary;
+    background: rgb(var(--clr-primary-rgb) / 0.1);
+    border: 1px solid rgb(var(--clr-primary-rgb) / 0.2);
+    color: var(--clr-primary);
     padding: 2px $spacing-sm;
     border-radius: $radius-full;
     font-size: 0.72rem;

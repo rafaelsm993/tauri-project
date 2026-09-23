@@ -90,23 +90,23 @@
     border-radius: $radius-full;
     padding: 0 $spacing-sm;
     /* Solid background — backdrop-filter unreliable across stacking contexts */
-    background: rgba(10, 10, 10, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgb(var(--clr-surface-rgb) / 0.82);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);
     transition:
       border-color $dur-normal $ease-out-expo,
       box-shadow $dur-normal $ease-out-expo,
       background $dur-normal $ease-out-expo;
 
     &.focused {
-      border-color: $color-primary;
+      border-color: var(--clr-primary);
       box-shadow:
-        0 0 0 3px rgba($color-primary, 0.15),
-        0 4px 24px rgba(0, 0, 0, 0.4);
-      background: rgba(10, 10, 10, 0.95);
+        0 0 0 3px rgb(var(--clr-primary-rgb) / 0.15),
+        0 4px 24px rgb(var(--clr-shade-rgb) / 0.4);
+      background: rgb(var(--clr-surface-rgb) / 0.95);
     }
 
     &.loading {
-      border-color: $color-teal;
+      border-color: var(--clr-teal);
     }
 
     &.submitted {
@@ -127,11 +127,11 @@
   .search-icon {
     width: 20px;
     height: 20px;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     transition: color $dur-normal ease;
 
     .focused & {
-      color: $color-primary;
+      color: var(--clr-primary);
     }
   }
 
@@ -142,18 +142,18 @@
     background: transparent;
     border: none;
     outline: none;
-    color: $color-text-main;
+    color: var(--clr-text);
     font-size: 0.95rem;
     font-family: $font-body;
     padding: 0 $spacing-xs;
 
     &::placeholder {
-      color: $color-text-faint;
+      color: var(--clr-text-3);
       transition: color $dur-normal ease;
     }
 
     .focused &::placeholder {
-      color: rgba(255, 255, 255, 0.2);
+      color: rgb(var(--clr-ink-rgb) / 0.2);
     }
   }
 
@@ -161,8 +161,8 @@
   .spinner {
     width: 20px;
     height: 20px;
-    border: 2.5px solid rgba($color-primary, 0.2);
-    border-top-color: $color-primary;
+    border: 2.5px solid rgb(var(--clr-primary-rgb) / 0.2);
+    border-top-color: var(--clr-primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -170,12 +170,12 @@
   /* ── Clear button ─────────────────────────────────────── */
   .clear-btn {
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgb(var(--clr-ink-rgb) / 0.08);
     border: none;
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -186,8 +186,8 @@
       color $dur-fast ease;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.16);
-      color: $color-primary;
+      background: rgb(var(--clr-ink-rgb) / 0.16);
+      color: var(--clr-primary);
     }
 
     svg {
@@ -205,13 +205,13 @@
 
   @keyframes pulse-success {
     0% {
-      box-shadow: 0 0 0 0 rgba($color-primary, 0.6);
+      box-shadow: 0 0 0 0 rgb(var(--clr-primary-rgb) / 0.6);
     }
     70% {
-      box-shadow: 0 0 0 12px rgba($color-primary, 0);
+      box-shadow: 0 0 0 12px rgb(var(--clr-primary-rgb) / 0);
     }
     100% {
-      box-shadow: 0 0 0 0 rgba($color-primary, 0);
+      box-shadow: 0 0 0 0 rgb(var(--clr-primary-rgb) / 0);
     }
   }
 </style>

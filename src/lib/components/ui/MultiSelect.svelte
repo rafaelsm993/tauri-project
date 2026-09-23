@@ -106,7 +106,7 @@
     border: none;
     border-radius: $radius-full;
     background: transparent;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     font-size: 0.76rem;
     font-weight: 500;
     letter-spacing: 0.04em;
@@ -118,13 +118,13 @@
 
     @include hover-capable {
       &:hover:not(:disabled) {
-        color: $color-text-main;
-        background: rgba(255, 255, 255, 0.05);
+        color: var(--clr-text);
+        background: rgb(var(--clr-ink-rgb) / 0.05);
       }
     }
 
     &:focus-visible {
-      outline: 2px solid $color-primary;
+      outline: 2px solid var(--clr-primary);
       outline-offset: 2px;
     }
 
@@ -134,7 +134,7 @@
     }
 
     &.has-value {
-      color: $color-text-main;
+      color: var(--clr-text);
       font-weight: 700;
     }
 
@@ -168,11 +168,11 @@
     padding: $spacing-xs;
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: $color-bg-secondary;
-    color: $color-text-main;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--clr-surface);
+    color: var(--clr-text);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.08);
     border-radius: $radius-md;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 32px rgb(var(--clr-shade-rgb) / 0.5);
   }
 
   .ms-group {
@@ -196,7 +196,7 @@
     align-items: center;
     padding: $spacing-sm $spacing-md;
     border-radius: $radius-sm;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     font-size: 0.84rem;
     cursor: pointer;
     transition:
@@ -218,26 +218,26 @@
     }
 
     &:has(input:focus-visible) {
-      outline: 2px solid $color-primary;
+      outline: 2px solid var(--clr-primary);
       outline-offset: -2px;
     }
 
     @include hover-capable {
       &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: $color-text-main;
+        background: rgb(var(--clr-ink-rgb) / 0.05);
+        color: var(--clr-text);
       }
     }
 
     // After :hover so a selected row keeps its fill under the pointer.
     &:has(input:checked) {
-      background: $color-primary;
-      color: $color-text-main;
+      background: var(--clr-primary);
+      color: var(--clr-text);
       font-weight: 600;
     }
 
     &:has(input:checked:focus-visible) {
-      outline-color: $color-text-main;
+      outline-color: var(--clr-text);
     }
 
     @include touch {
@@ -252,20 +252,20 @@
     margin-top: $spacing-xs;
     padding: $spacing-sm;
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    background: $color-bg-secondary;
-    color: $color-text-muted;
+    border-top: 1px solid rgb(var(--clr-ink-rgb) / 0.08);
+    background: var(--clr-surface);
+    color: var(--clr-text-2);
     font-size: 0.78rem;
     cursor: pointer;
 
     @include hover-capable {
       &:hover {
-        color: $color-text-main;
+        color: var(--clr-text);
       }
     }
 
     &:focus-visible {
-      outline: 2px solid $color-primary;
+      outline: 2px solid var(--clr-primary);
       outline-offset: -2px;
     }
 

@@ -18,7 +18,7 @@
     .skeleton-hero {
       width: 100%;
       height: 420px;
-      background: $color-bg-secondary;
+      background: var(--clr-surface);
     }
 
     .skeleton-body {
@@ -35,7 +35,7 @@
     .skeleton-poster-ph {
       width: 100%;
       aspect-ratio: 2/3;
-      background: $color-bg-secondary;
+      background: var(--clr-surface);
       border-radius: $radius-lg;
     }
 
@@ -44,7 +44,7 @@
     }
 
     .skeleton-line {
-      background: $color-bg-secondary;
+      background: var(--clr-surface);
       border-radius: $radius-sm;
       position: relative;
       overflow: hidden;
@@ -55,7 +55,7 @@
         background: linear-gradient(
           100deg,
           transparent 0%,
-          rgba(255, 255, 255, 0.04) 50%,
+          rgb(var(--clr-ink-rgb) / 0.04) 50%,
           transparent 100%
         );
         background-size: 200% 100%;

@@ -82,7 +82,7 @@
   .skeleton-poster {
     aspect-ratio: 2 / 3;
     border-radius: $radius-md;
-    background: $color-bg-secondary;
+    background: var(--clr-surface);
     overflow: hidden;
     position: relative;
     &::after {
@@ -92,9 +92,9 @@
       background: linear-gradient(
         100deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.05) 45%,
-        rgba(255, 255, 255, 0.09) 50%,
-        rgba(255, 255, 255, 0.05) 55%,
+        rgb(var(--clr-ink-rgb) / 0.05) 45%,
+        rgb(var(--clr-ink-rgb) / 0.09) 50%,
+        rgb(var(--clr-ink-rgb) / 0.05) 55%,
         transparent 100%
       );
       background-size: 200% 100%;
@@ -105,7 +105,7 @@
   .skeleton-line {
     height: 9px;
     border-radius: $radius-sm;
-    background: $color-bg-secondary;
+    background: var(--clr-surface);
     position: relative;
     overflow: hidden;
     &::after {
@@ -115,7 +115,7 @@
       background: linear-gradient(
         100deg,
         transparent 0%,
-        rgba(255, 255, 255, 0.05) 50%,
+        rgb(var(--clr-ink-rgb) / 0.05) 50%,
         transparent 100%
       );
       background-size: 200% 100%;
@@ -126,7 +126,7 @@
   .page-empty,
   .page-end {
     text-align: center;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     font-size: 0.78rem;
     letter-spacing: 0.08em;
     padding: $spacing-2xl 0;

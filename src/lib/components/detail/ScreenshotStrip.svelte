@@ -20,7 +20,7 @@
       height: 4px;
     }
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgb(var(--clr-ink-rgb) / 0.1);
       border-radius: 2px;
     }
   }
@@ -30,8 +30,8 @@
     height: 220px;
     width: auto;
     border-radius: $radius-md;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: $color-bg-secondary;
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.05);
+    background: var(--clr-surface);
     object-fit: cover;
   }
 </style>

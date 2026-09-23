@@ -20,14 +20,14 @@
     aspect-ratio: 16 / 9;
     border-radius: $radius-md;
     overflow: hidden;
-    background: $color-bg-secondary;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--clr-surface);
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.05);
     transition: box-shadow $dur-normal $ease-out-expo;
 
     &:hover {
       box-shadow:
-        0 0 0 2px $color-primary,
-        0 8px 32px rgba(0, 0, 0, 0.5);
+        0 0 0 2px var(--clr-primary),
+        0 8px 32px rgb(var(--clr-shade-rgb) / 0.5);
     }
 
     iframe {

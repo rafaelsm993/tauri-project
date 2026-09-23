@@ -47,7 +47,7 @@
   .bg-area {
     position: absolute;
     inset: 0;
-    background: $color-bg-primary;
+    background: var(--clr-bg);
 
     // Smooth radial red glows on solid black — blurred to eliminate banding
     &::before {
@@ -57,15 +57,15 @@
       background:
         radial-gradient(
           ellipse 130% 90% at 15% 100%,
-          rgba($color-primary, 0.12) 0%,
-          rgba($color-primary, 0.06) 25%,
-          rgba($color-primary, 0.02) 45%,
+          rgb(var(--clr-primary-rgb) / 0.12) 0%,
+          rgb(var(--clr-primary-rgb) / 0.06) 25%,
+          rgb(var(--clr-primary-rgb) / 0.02) 45%,
           transparent 70%
         ),
         radial-gradient(
           ellipse 110% 80% at 85% 0%,
-          rgba($color-accent, 0.08) 0%,
-          rgba($color-accent, 0.03) 30%,
+          rgb(var(--clr-accent-rgb) / 0.08) 0%,
+          rgb(var(--clr-accent-rgb) / 0.03) 30%,
           transparent 60%
         );
       filter: blur(40px);
@@ -86,7 +86,7 @@
     list-style: none;
     width: 20px;
     height: 20px;
-    background: rgba($color-primary, 0.1);
+    background: rgb(var(--clr-primary-rgb) / 0.1);
     animation: float 18s linear infinite;
     bottom: -160px;
   }
@@ -98,7 +98,7 @@
     height: 70px;
     animation-duration: 10s;
     animation-delay: 0s;
-    background: rgba($color-primary, 0.1);
+    background: rgb(var(--clr-primary-rgb) / 0.1);
   }
   .circles li:nth-child(2) {
     left: 15%;
@@ -106,7 +106,7 @@
     height: 18px;
     animation-duration: 7s;
     animation-delay: 1s;
-    background: rgba($color-accent, 0.14);
+    background: rgb(var(--clr-accent-rgb) / 0.14);
   }
   .circles li:nth-child(3) {
     left: 25%;
@@ -114,7 +114,7 @@
     height: 90px;
     animation-duration: 14s;
     animation-delay: 0s;
-    background: rgba($color-primary, 0.07);
+    background: rgb(var(--clr-primary-rgb) / 0.07);
   }
   .circles li:nth-child(4) {
     left: 35%;
@@ -122,7 +122,7 @@
     height: 14px;
     animation-duration: 8s;
     animation-delay: 2s;
-    background: rgba($color-primary, 0.16);
+    background: rgb(var(--clr-primary-rgb) / 0.16);
   }
   .circles li:nth-child(5) {
     left: 42%;
@@ -130,7 +130,7 @@
     height: 55px;
     animation-duration: 11s;
     animation-delay: 0.5s;
-    background: rgba($color-accent, 0.09);
+    background: rgb(var(--clr-accent-rgb) / 0.09);
   }
   .circles li:nth-child(6) {
     left: 52%;
@@ -138,7 +138,7 @@
     height: 120px;
     animation-duration: 16s;
     animation-delay: 3s;
-    background: rgba($color-primary, 0.05);
+    background: rgb(var(--clr-primary-rgb) / 0.05);
   }
   .circles li:nth-child(7) {
     left: 60%;
@@ -146,7 +146,7 @@
     height: 22px;
     animation-duration: 6s;
     animation-delay: 1.5s;
-    background: rgba($color-primary, 0.14);
+    background: rgb(var(--clr-primary-rgb) / 0.14);
   }
   .circles li:nth-child(8) {
     left: 70%;
@@ -154,7 +154,7 @@
     height: 40px;
     animation-duration: 9s;
     animation-delay: 0s;
-    background: rgba($color-accent, 0.11);
+    background: rgb(var(--clr-accent-rgb) / 0.11);
   }
   .circles li:nth-child(9) {
     left: 80%;
@@ -162,7 +162,7 @@
     height: 16px;
     animation-duration: 7s;
     animation-delay: 4s;
-    background: rgba($color-primary, 0.18);
+    background: rgb(var(--clr-primary-rgb) / 0.18);
   }
   .circles li:nth-child(10) {
     left: 90%;
@@ -170,7 +170,7 @@
     height: 130px;
     animation-duration: 13s;
     animation-delay: 0s;
-    background: rgba($color-primary, 0.04);
+    background: rgb(var(--clr-primary-rgb) / 0.04);
   }
   .circles li:nth-child(11) {
     left: 2%;
@@ -178,7 +178,7 @@
     height: 28px;
     animation-duration: 8s;
     animation-delay: 2.5s;
-    background: rgba($color-accent, 0.12);
+    background: rgb(var(--clr-accent-rgb) / 0.12);
   }
   .circles li:nth-child(12) {
     left: 18%;
@@ -186,7 +186,7 @@
     height: 50px;
     animation-duration: 10s;
     animation-delay: 1s;
-    background: rgba($color-primary, 0.08);
+    background: rgb(var(--clr-primary-rgb) / 0.08);
   }
   .circles li:nth-child(13) {
     left: 30%;
@@ -194,7 +194,7 @@
     height: 12px;
     animation-duration: 5s;
     animation-delay: 0s;
-    background: rgba($color-primary, 0.2);
+    background: rgb(var(--clr-primary-rgb) / 0.2);
   }
   .circles li:nth-child(14) {
     left: 48%;
@@ -202,7 +202,7 @@
     height: 80px;
     animation-duration: 12s;
     animation-delay: 3.5s;
-    background: rgba($color-accent, 0.06);
+    background: rgb(var(--clr-accent-rgb) / 0.06);
   }
   .circles li:nth-child(15) {
     left: 55%;
@@ -210,7 +210,7 @@
     height: 16px;
     animation-duration: 6s;
     animation-delay: 0.8s;
-    background: rgba($color-primary, 0.16);
+    background: rgb(var(--clr-primary-rgb) / 0.16);
   }
   .circles li:nth-child(16) {
     left: 65%;
@@ -218,7 +218,7 @@
     height: 100px;
     animation-duration: 15s;
     animation-delay: 2s;
-    background: rgba($color-primary, 0.05);
+    background: rgb(var(--clr-primary-rgb) / 0.05);
   }
   .circles li:nth-child(17) {
     left: 75%;
@@ -226,7 +226,7 @@
     height: 24px;
     animation-duration: 7s;
     animation-delay: 1.2s;
-    background: rgba($color-accent, 0.13);
+    background: rgb(var(--clr-accent-rgb) / 0.13);
   }
   .circles li:nth-child(18) {
     left: 85%;
@@ -234,7 +234,7 @@
     height: 45px;
     animation-duration: 9s;
     animation-delay: 0s;
-    background: rgba($color-primary, 0.09);
+    background: rgb(var(--clr-primary-rgb) / 0.09);
   }
   .circles li:nth-child(19) {
     left: 10%;
@@ -242,7 +242,7 @@
     height: 10px;
     animation-duration: 4s;
     animation-delay: 0.3s;
-    background: rgba($color-primary, 0.22);
+    background: rgb(var(--clr-primary-rgb) / 0.22);
   }
   .circles li:nth-child(20) {
     left: 95%;
@@ -250,12 +250,12 @@
     height: 35px;
     animation-duration: 8s;
     animation-delay: 5s;
-    background: rgba($color-accent, 0.1);
+    background: rgb(var(--clr-accent-rgb) / 0.1);
   }
 
   // Pulse — flash bubbles brighter on card click
   .bg-area.pulsing .circles li {
-    background: rgba($color-primary, 0.3);
+    background: rgb(var(--clr-primary-rgb) / 0.3);
     transition: background 0.2s ease-out;
   }
 
@@ -283,8 +283,8 @@
     background: radial-gradient(
       ellipse 100% 100% at 50% 50%,
       transparent 25%,
-      rgba($color-bg-primary, 0.4) 55%,
-      rgba($color-bg-primary, 0.8) 100%
+      rgb(var(--clr-bg-rgb) / 0.4) 55%,
+      rgb(var(--clr-bg-rgb) / 0.8) 100%
     );
     z-index: 1;
   }

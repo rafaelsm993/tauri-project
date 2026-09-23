@@ -161,29 +161,29 @@
     justify-content: space-between;
     gap: $spacing-md;
     padding: $spacing-md $spacing-lg;
-    background: rgba(255, 82, 99, 0.07);
-    border: 1px solid rgba(255, 82, 99, 0.2);
+    background: rgb(var(--clr-error-rgb) / 0.07);
+    border: 1px solid rgb(var(--clr-error-rgb) / 0.2);
     border-radius: $radius-md;
-    color: #ff5263;
+    color: var(--clr-error);
     font-size: 0.84rem;
     margin-bottom: $spacing-md;
     button {
       background: none;
-      border: 1px solid rgba(255, 82, 99, 0.3);
-      color: #ff5263;
+      border: 1px solid rgb(var(--clr-error-rgb) / 0.3);
+      color: var(--clr-error);
       padding: $spacing-xs $spacing-sm;
       border-radius: $radius-sm;
       font-size: 0.76rem;
       cursor: pointer;
       &:hover {
-        background: rgba(255, 82, 99, 0.1);
+        background: rgb(var(--clr-error-rgb) / 0.1);
       }
     }
   }
 
   .page-empty {
     text-align: center;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     font-size: 0.78rem;
     letter-spacing: 0.08em;
     padding: $spacing-2xl 0;

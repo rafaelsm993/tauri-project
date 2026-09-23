@@ -65,8 +65,8 @@
     padding: $spacing-sm $spacing-md;
     border-radius: $radius-full;
     @include glass(14px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-    color: $color-text-main;
+    box-shadow: 0 12px 32px rgb(var(--clr-shade-rgb) / 0.4);
+    color: var(--clr-text);
     font-family: $font-body;
     font-size: 0.76rem;
     font-weight: 600;
@@ -85,15 +85,15 @@
 
     @include hover-capable {
       &:hover {
-        color: $color-bg-primary;
-        background: $color-primary;
-        border-color: $color-primary;
-        @include glow-gold;
+        color: var(--clr-bg);
+        background: var(--clr-primary);
+        border-color: var(--clr-primary);
+        @include glow-primary;
       }
     }
 
     &:focus-visible {
-      outline: 2px solid $color-primary;
+      outline: 2px solid var(--clr-primary);
       outline-offset: 3px;
     }
 

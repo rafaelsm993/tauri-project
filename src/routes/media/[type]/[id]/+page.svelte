@@ -126,18 +126,18 @@
   .poster-img {
     width: 100%;
     border-radius: $radius-lg;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 30px rgb(var(--clr-shade-rgb) / 0.5);
   }
 
   .poster-placeholder {
     width: 100%;
     aspect-ratio: 2/3;
     border-radius: $radius-lg;
-    background: $color-bg-secondary;
+    background: var(--clr-surface);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     font-size: 0.82rem;
   }
 
@@ -145,7 +145,7 @@
   .overview {
     font-size: 0.92rem;
     line-height: 1.7;
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     margin-bottom: $spacing-xl;
   }
 
@@ -157,23 +157,23 @@
     padding: $spacing-lg $spacing-xl;
     max-width: 600px;
     margin: $spacing-2xl auto;
-    background: rgba(255, 82, 99, 0.07);
-    border: 1px solid rgba(255, 82, 99, 0.2);
+    background: rgb(var(--clr-error-rgb) / 0.07);
+    border: 1px solid rgb(var(--clr-error-rgb) / 0.2);
     border-radius: $radius-md;
-    color: #ff5263;
+    color: var(--clr-error);
     font-size: 0.84rem;
 
     button {
       background: none;
-      border: 1px solid rgba(255, 82, 99, 0.3);
-      color: #ff5263;
+      border: 1px solid rgb(var(--clr-error-rgb) / 0.3);
+      color: var(--clr-error);
       padding: $spacing-xs $spacing-sm;
       border-radius: $radius-sm;
       font-size: 0.76rem;
       cursor: pointer;
       white-space: nowrap;
       &:hover {
-        background: rgba(255, 82, 99, 0.1);
+        background: rgb(var(--clr-error-rgb) / 0.1);
       }
     }
   }

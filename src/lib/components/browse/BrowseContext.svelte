@@ -24,12 +24,12 @@
 <style lang="scss">
   .page-context {
     font-size: 0.78rem;
-    color: $color-text-faint;
+    color: var(--clr-text-3);
     letter-spacing: 0.06em;
     text-transform: uppercase;
 
     strong {
-      color: $color-text-muted;
+      color: var(--clr-text-2);
       font-weight: 600;
       text-transform: none;
     }
@@ -38,14 +38,14 @@
   .link-btn {
     background: none;
     border: none;
-    color: $color-primary;
+    color: var(--clr-primary);
     font-size: 0.78rem;
     cursor: pointer;
     margin-left: $spacing-sm;
     padding: 0;
     text-decoration: underline;
     &:hover {
-      color: $color-text-main;
+      color: var(--clr-text);
     }
   }
 </style>

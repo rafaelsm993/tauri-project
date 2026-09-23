@@ -22,12 +22,12 @@
   .placeholder-title {
     font-family: $font-display;
     font-size: clamp(2rem, 6vw, 3rem);
-    color: $color-text-main;
+    color: var(--clr-text);
     margin-bottom: $spacing-sm;
   }
 
   .placeholder-text {
-    color: $color-text-muted;
+    color: var(--clr-text-2);
     margin-bottom: $spacing-lg;
   }
 
@@ -35,6 +35,6 @@
     display: inline-flex;
     align-items: center;
     min-height: $touch-target;
-    color: $color-primary;
+    color: var(--clr-primary);
   }
 </style>

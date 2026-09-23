@@ -65,7 +65,8 @@ Never edit `src-tauri/gen/` by hand.
 - Every provider maps to the shared types; the UI stays provider-agnostic.
 - Accessible by default: real `<button type="button">`, `aria-*` state, labelled nav.
 - Test UI with `@testing-library/svelte` by role/name; mock IPC with `@tauri-apps/api/mocks` (`mockIPC`, `clearMocks`).
-- Design tokens only (`$color-*`, `$spacing-*`, `$radius-*`); no new colors.
+- Colors come only from runtime tokens in `global.css`: `var(--clr-*)`, and alpha via channels `rgb(var(--clr-*-rgb) / 0.12)`. No hex, numeric `rgb()`, or SCSS color functions in components; `npm run lint:colors` enforces it (opt out per line with `// colors: allow`). A theme is a set of `--clr-*-rgb` overrides. No new colors without a token.
+- Non-color design tokens stay SCSS: `$spacing-*`, `$radius-*`, `$font-*`, `$dur-*`.
 - Formatting: Prettier owns it — double quotes in `.ts` **and** `.svelte`, 100 cols, trailing commas. Never hand-format; run `npm run format`.
 - Comments: English, one short line above a function/const/prop, only when the name doesn't say it; no banners, blocks, inline or `<!-- -->` labels. CSS comments are exempt.
 - English only (UI, fixtures, provider params). `npm run lint:en` enforces it; opt out per line with `// english-only: allow`.

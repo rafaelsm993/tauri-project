@@ -2,7 +2,7 @@
 
 Tauri 2 desktop app. SvelteKit SPA (Svelte 5 runes, TypeScript strict) talks to a
 stateless Rust proxy over IPC. Providers: TMDB (movie/tv), AniList (anime/manga),
-RAWG (games), iTunes (books). No database, no user state.
+RAWG (games), iTunes (books). No persistence yet (S2 adds local JSON storage); no accounts, no cloud.
 
 ## Map
 | What | Where |
@@ -21,7 +21,7 @@ RAWG (games), iTunes (books). No database, no user state.
 
 ## The gate — nothing is "done" until this is green
 ```bash
-npm run verify   # prettier + eslint + breakpoint lint + svelte-check + vitest + playwright (5 viewports) + cargo fmt/clippy(-D warnings)/test
+npm run verify   # prettier + eslint + breakpoint/english/colors lint + docs guards + svelte-check + vitest + playwright (5 viewports) + cargo fmt/clippy(-D warnings)/test
 ```
 Fast loops: `npm run test:watch`, `npx playwright test --project=phone-small`, `cd src-tauri && cargo test <name>`, `npm run check`.
 

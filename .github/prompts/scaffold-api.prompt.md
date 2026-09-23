@@ -1,35 +1,15 @@
 ---
-description: "Scaffold a new API integration for tauri-app — creates Rust backend commands, registers them, adds TypeScript frontend service, and extends shared types."
+description: "Add a new media provider to tauri-app by following the AGENTS.md provider checklist."
 agent: "tauri-app"
 model: "Claude Opus 4.6 (copilot)"
 argument-hint: "Provider name and API details (e.g., 'Spotify API for music search and album details')"
 tools: [read, edit, search, execute, todo]
 ---
 
-Scaffold a full-stack API integration for tauri-app. Follow the exact patterns from the existing TMDB integration.
+Add a new media provider to tauri-app.
 
-## Steps
+The one source of truth for how to do this is the **"Adding a provider"** checklist in [AGENTS.md](../../AGENTS.md), together with its Rust and frontend conventions. Read it first and follow it step by step; use `src-tauri/src/api/rawg.rs` (a small provider with a concurrent detail fetch) as the reference implementation.
 
-1. **Read existing patterns first**: Study [tmdb.rs](../../../src-tauri/src/api/tmdb.rs), [tmdb.ts](../../../src/lib/api/tmdb.ts), [media.ts](../../../src/lib/types/media.ts), [mod.rs](../../../src-tauri/src/api/mod.rs), and [lib.rs](../../../src-tauri/src/lib.rs) to match conventions exactly.
-
-2. **Rust backend** (`src-tauri/src/api/{provider}.rs`):
-   - `use reqwest::Client;` and `use serde_json::Value;`
-   - Each command: `#[tauri::command] pub async fn ... -> Result<Value, String>`
-   - Error handling: `.map_err(|e: reqwest::Error| e.to_string())?`
-   - At minimum: one search command and one details command
-
-3. **Register Rust module**: Add `pub mod {provider};` to `src-tauri/src/api/mod.rs`
-
-4. **Register commands**: Add all new commands to `tauri::generate_handler![]` in `src-tauri/src/lib.rs`
-
-5. **Extend types if needed**: Update `src/lib/types/media.ts` — prefer mapping to existing `MediaItem`/`MediaDetail` interfaces. Only add new interfaces if the provider has fundamentally different data shapes.
-
-6. **Frontend service** (`src/lib/api/{provider}.ts`):
-   - `import { invoke } from '@tauri-apps/api/core';`
-   - Private `map()` function converting raw JSON → `MediaItem`
-   - Private `mapPage()` function converting raw response → `PaginatedResult<MediaItem>`
-   - Export a named const object (e.g., `SpotifyAPI`) with typed methods
-
-7. **Validate**: Run `npm run check` and check for errors.
+In short: providers live only in Rust behind the `Provider` trait in `src-tauri/src/api/catalog.rs` and map into the DTOs in `src-tauri/src/api/types.rs`. No new IPC commands and no TypeScript per provider. Work test-first and finish with `npm run verify` green.
 
 Provide a summary of all files created/modified when done.

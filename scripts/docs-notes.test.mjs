@@ -78,6 +78,31 @@ test("repo file paths cited in notes exist", () => {
   }
 });
 
+// Patterns removed by S1 (A2 typed facade, A4 runtime tokens, A7 deleted review).
+const STALE = [
+  "$color-",
+  "--clr-gold",
+  "glow-gold",
+  "serde_json::Value",
+  "TauriFlix",
+  "PROJECT_REVIEW",
+];
+
+test("docs and agent prompts do not teach removed patterns", () => {
+  const files = [
+    ...ALL.map((f) => `${NOTES}/${f}`),
+    `${NOTES}/README.md`,
+    "README.md",
+    "CHANGELOG.md",
+    ".github/instructions/scss-autoinjection.instructions.md",
+    ".github/prompts/scaffold-api.prompt.md",
+  ];
+  const hits = files.flatMap((f) =>
+    STALE.filter((s) => read(f).includes(s)).map((s) => `${f} mentions "${s}"`),
+  );
+  assert.deepEqual(hits, []);
+});
+
 test("README links the notes index", () => {
   assert.ok(read("README.md").includes("](docs/notes/README.md)"));
 });

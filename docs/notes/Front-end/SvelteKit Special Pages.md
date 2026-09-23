@@ -1,12 +1,12 @@
-# TauriFlix — SvelteKit Special Pages
+# tauri-app — SvelteKit Special Pages
 
-> SvelteKit file conventions and the two routes in the app.
+> SvelteKit file conventions and the routes in the app.
 
 ## File conventions
 
 | File | Role | Present |
 | --- | --- | --- |
-| `+page.svelte` | Page component for a route | `/`, `/media/[type]/[id]` |
+| `+page.svelte` | Page component for a route | `/`, `/media/[type]/[id]`, `/library`, `/profile`, `/planner`, `/welcome` |
 | `+layout.svelte` | Wraps all child pages | `src/routes/+layout.svelte` |
 | `+layout.ts` | Layout options/load; sets `ssr = false` | `src/routes/+layout.ts` |
 | `+error.svelte` | Error boundary | not present (SvelteKit default) |
@@ -30,18 +30,21 @@ The root layout does three things: it imports `global.css`, renders `<AppBackgro
 
 ## Home (`/`) — `src/routes/+page.svelte`
 
+A thin shell: all state lives in `BrowseStore` (`src/lib/stores/browse.svelte.ts`); the page wires it to components.
+
 ```
 ┌──────────────────────────────────────────────┐
-│  SearchBar                CategoryTabs       │
-├──────────┬───────────────────────────────────┤
-│ Gêneros  │  context line (+ reset link)      │
-│ (Genre   │  GenreCarousel × up to 8          │
-│  Filter, │   — or —                          │
-│  hidden  │  MediaCard grid + sentinel        │
-│  during  │                                   │
-│  search) │                                   │
-└──────────┴───────────────────────────────────┘
+│  SearchBar                                   │
+│  CategoryTabs (scrolls)          [Genres ▾]  │
+├──────────────────────────────────────────────┤
+│  BrowseContext (← Discover / ← All genres)   │
+│  GenreCarousel × one per genre (lazy)        │
+│   — or —                                     │
+│  ResultsGrid + infinite-scroll sentinel      │
+└──────────────────────────────────────────────┘
 ```
+
+Single column at every width; the genre `MultiSelect` sits in the tab bar's `trailing` slot and only shows in carousel mode.
 
 ### Modes
 
@@ -49,61 +52,48 @@ The root layout does three things: it imports `global.css`, renders `<AppBackgro
 
 | Mode | Trigger | Shows |
 | --- | --- | --- |
-| Carousel | default | One `GenreCarousel` per genre, capped at `MAX_CAROUSELS = 8` |
-| Grid | search query | flat grid with infinite scroll; genre cleared |
-| Grid | genre selected | flat grid with infinite scroll |
+| Carousel | default | One `GenreCarousel` per genre (no cap), filtered client-side by the Genres multi-select |
+| Grid | search query | `ResultsGrid` with infinite scroll; genre cleared |
+| Grid | "See all →" on a carousel | `ResultsGrid` for that genre |
 | Grid (fallback) | category has no genres | `loadGrid("")` |
 
 ### Data flow
 
-1. `onMount` calls `refreshView()`. In carousel mode that runs `refreshGenres(cat)` and then `loadCarousels(cat, list)`.
-2. `loadCarousels` fetches page 1 for each genre in parallel with `Promise.allSettled`, so one failing genre (for example a 429) doesn't block the others. Results are dropped if `activeCategory` has changed in the meantime.
-3. `switchCategory(cat)` resets `activeGenre` (genre ids differ between providers) and then refreshes.
-4. `switchGenre(id)` sets the genre and refreshes, which switches to grid mode.
-5. `onSearch(q)` clears the genre and calls `loadGrid(q)`. `clearSearch()` (the "← Descobrir" link) resets search.
-6. `fetchPage(cat, q, p, genre)` is the single switch that dispatches to the right provider.
-   - Books with no query send `"popular"`, which the Rust side turns into `"fiction"`.
-   - TMDB search ignores the genre.
-7. In grid mode, infinite scroll (`IntersectionObserver`, 300px margin) calls `loadMore()`.
+1. `onMount` calls `browse.refreshView()`. In carousel mode that fetches the genres (`catalog.fetchGenres`) and creates one idle section per genre.
+2. Each carousel slot has a `whenVisible` attachment (`rootMargin: "100% 0px"`, about one screen ahead) that calls `browse.loadSection(id)` once. A failed section shows "Try again" (`retrySection`).
+3. `switchCategory(cat)` resets the genre and the selection (genre ids differ between providers) and refreshes.
+4. `search(q)` clears the genre and loads the grid; `clearSearch()` ("← Discover") goes back to carousels.
+5. In grid mode, `ResultsGrid`'s `IntersectionObserver` (300px margin) calls `loadMore()`. Items are de-duplicated by `media_key`; a page with nothing new ends pagination; results that arrive after a switch are dropped.
+6. All requests go through `catalog.fetchPage(cat, query, page, genre)`; the provider-specific rules (TMDB search ignores the genre, iTunes is one page, empty book search means "fiction") live in Rust.
 
 ### Genre cache
 
-`genreCache: Partial<Record<MediaType, GenreOption[]>>` keeps each category's genre list for the page's lifetime, so switching back to a tab needs no new request. Book genres are hardcoded and never hit IPC.
+`BrowseStore` keeps each category's genre list in a private, non-reactive `#genreCache` for the page's lifetime, so switching back to a tab needs no new request. Book genres come from Rust with no provider request.
 
 ---
 
 ## Detail (`/media/[type]/[id]`) — `src/routes/media/[type]/[id]/+page.svelte`
 
-The params come from `page` in `$app/stores`. An `$effect` runs `fetchDetail(type, id)` whenever they change.
-
-```typescript
-switch (type) {
-  case 'movie': detail = await TmdbAPI.movieDetails(parseInt(id));   break;
-  case 'tv':    detail = await TmdbAPI.tvDetails(parseInt(id));      break;
-  case 'anime': detail = await AnilistAPI.animeDetails(parseInt(id)); break;
-  case 'manga': detail = await AnilistAPI.mangaDetails(parseInt(id)); break;
-  case 'book':  detail = await ITunesAPI.bookDetails(decodeURIComponent(id)); break;
-  case 'game':  detail = await RawgAPI.gameDetails(parseInt(id));    break;
-  default: error = 'Tipo de mídia inválido.';
-}
-```
-
-A non-numeric id for a numeric provider shows `ID inválido.`
+The params come from `page` in `$app/stores`. An `$effect` runs `fetchDetail(type, id)` whenever they change, which calls `catalog.fetchDetail(type, id)`. Rust validates the params: an unknown type shows "Invalid media type." and a non-numeric id for a numeric provider shows "Invalid ID.".
 
 ### Sections
 
-| Section | Notes |
+| Section | Component / notes |
 | --- | --- |
-| Loading | Skeleton for the hero, poster and text lines |
-| Error | Message + "Tentar novamente" + "← Voltar" |
-| Hero | Backdrop, fade, "← Voltar" (`goto('/')`), title, tagline |
-| Poster | `poster_path`, or a "Sem poster" placeholder |
-| Meta badges | ★ rating, year, runtime `Xh Ym` (books would show `N páginas`, but runtime is always null for books), episodes, chapters, volumes, status, platforms |
-| Credits line | developer · publisher (games), otherwise studios; author |
-| Genres | pill row |
+| Loading | `DetailSkeleton` |
+| Error | Message + "Try again" + "← Back" |
+| Hero | `DetailHero`: backdrop, fade, "← Back" (`goto('/')`), title, tagline |
+| Poster | `poster_path`, or a "No poster" placeholder |
+| Meta | `DetailMeta`: rating, year, runtime, episodes/chapters/volumes, status, platforms, credits line, genre pills |
 | Overview | `detail.overview` |
-| Trailer | YouTube `<iframe>`: first `type === 'Trailer'`, otherwise the first video |
-| Capturas | Game screenshots, horizontal scroll |
-| Elenco | Cast row with drag-to-scroll; initials when there is no photo |
+| Trailer | `TrailerEmbed` (YouTube `<iframe>`): first `type === "Trailer"`, otherwise the first video |
+| Screenshots | `ScreenshotStrip` (games) |
+| Cast | `CastRow`: drag-to-scroll; initials when there is no photo |
 
-The page sets `ui.detailMode = true` on creation and resets it in `onDestroy`.
+Titled sections use `DetailSection`. The page sets `ui.detailMode = true` on creation and resets it in `onDestroy`.
+
+---
+
+## Placeholder routes
+
+`/library`, `/profile`, `/planner` and `/welcome` each render `RoutePlaceholder` with a title. They exist so later sprints add screens as new routes instead of growing the two big pages. They are reachable by URL only (no nav yet).

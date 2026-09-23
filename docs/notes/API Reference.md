@@ -1,219 +1,124 @@
-# TauriFlix — API Reference
+# tauri-app — API Reference
 
-> Every Tauri command, the frontend service that calls it, and the shared types they map into.
+> The three IPC commands, the `Provider` trait behind them, and the shared types they return.
 
 ## Overview
 
-All data comes from four third-party APIs. The Rust backend calls them through `reqwest`, and the frontend calls the Rust backend through `invoke()`.
+All data comes from four third-party APIs. The Rust backend calls them through the shared `reqwest` client (`src-tauri/src/api/http.rs`), maps every response into typed DTOs, and the frontend calls Rust through three typed `invoke()`s. There is no per-provider code in TypeScript.
 
-Every Rust command follows the same pattern:
-
-- It is an `async fn` returning `Result<serde_json::Value, String>` and passes the provider's JSON through with little or no change.
-- Errors become strings via `.map_err(|e| e.to_string())`. The frontend receives them as a rejected promise carrying a string.
-- It is registered in `src-tauri/src/lib.rs` inside `tauri::generate_handler![]`, and its module is declared in `src-tauri/src/api/mod.rs`.
-
-Each `src/lib/api/<provider>.ts` wraps the `invoke()` calls and maps the raw JSON into `MediaItem`, `MediaDetail` and `GenreOption`. Command arguments are passed as camelCase-compatible objects (`{ query, page, genre }`), and an absent genre is sent as `null`.
-
----
-
-## TMDB — movies and TV
-
-- Base: `https://api.themoviedb.org/3`
-- Auth: `api_key` query param (`TMDB_API_KEY`)
-- Language: `pt-BR`
-
-### Rust (`src-tauri/src/api/tmdb.rs`)
-
-| Command | Params | Endpoint |
-| --- | --- | --- |
-| `tmdb_discover_movies` | `page: u32, genre: Option<u32>` | `/movie/popular`; with a genre, `/discover/movie?with_genres=…&sort_by=popularity.desc` |
-| `tmdb_search_movies` | `query: &str, page: u32` | `/search/movie` |
-| `tmdb_movie_details` | `id: u32` | `/movie/{id}?append_to_response=credits,videos` |
-| `tmdb_genres_movies` | — | `/genre/movie/list` |
-| `tmdb_discover_tv` | `page: u32, genre: Option<u32>` | `/tv/popular` or `/discover/tv` |
-| `tmdb_search_tv` | `query: &str, page: u32` | `/search/tv` |
-| `tmdb_tv_details` | `id: u32` | `/tv/{id}?append_to_response=credits,videos` |
-| `tmdb_genres_tv` | — | `/genre/tv/list` |
-
-### Frontend (`src/lib/api/tmdb.ts`)
-
-```typescript
-TmdbAPI.discoverMovies(page = 1, genre?: number) → PaginatedResult<MediaItem>
-TmdbAPI.searchMovies(query, page = 1)             → PaginatedResult<MediaItem>
-TmdbAPI.movieDetails(id: number)                  → MediaDetail
-TmdbAPI.movieGenres()                             → GenreOption[]
-TmdbAPI.discoverTv / searchTv / tvDetails / tvGenres   // same shapes
+```
+UI → src/lib/api/catalog.ts → invoke("catalog_*") → src-tauri/src/api/catalog.rs
+   → match media_type → impl Provider (tmdb | anilist | rawg | itunes)
+   → Raw* serde structs → pure map_* fns → DTOs in src-tauri/src/api/types.rs
 ```
 
-Mapping notes:
+- Commands return `Result<T, String>` where `T` is a `Serialize` DTO. Errors are English, user-facing strings; the frontend receives them as a rejected promise.
+- `http.rs` turns non-2xx responses into the provider's own message, adds `(retry after Ns)` on 429, logs a one-line summary (status, result count) and never logs a URL or body, so API keys never reach logs or the UI.
+- Commands are registered in `src-tauri/src/lib.rs` inside `tauri::generate_handler![]`.
 
-- TMDB returns relative image paths. The mappers turn them into absolute URLs with `TMDB_IMG` (`poster` w342, or w500 on detail; `backdrop` w780, or w1280 on detail; `profile` w185). After mapping, every provider stores absolute URLs.
-- Search does not accept a genre. The home page drops the genre when a query is present.
-- Detail: cast is the first 20 of `credits.cast`; videos are filtered to YouTube only; `runtime` comes from `runtime` or `episode_run_time[0]`; `episodes` from `number_of_episodes`; `studios` from `production_companies`.
+## IPC commands (`src-tauri/src/api/catalog.rs`)
 
----
-
-## AniList — anime and manga
-
-- Endpoint: `https://graphql.anilist.co` (GraphQL POST)
-- Auth: none. Rate limit is about 90 requests/min.
-
-### Rust (`src-tauri/src/api/anilist.rs`)
-
-| Command | Params | Query |
+| Command | Args (snake_case) | Returns |
 | --- | --- | --- |
-| `anilist_search_anime` | `query: &str, page: u32, genre: Option<String>` | `Page(perPage: 20) { media(type: ANIME, isAdult: false) }` |
-| `anilist_search_manga` | same | same with `type: MANGA` |
-| `anilist_anime_details` | `id: u32` | `Media(id)` — returns `data.Media` |
-| `anilist_manga_details` | `id: u32` | `Media(id)` — returns `data.Media` |
-| `anilist_genres` | — | `GenreCollection` — returns a string array |
+| `catalog_genres` | `media_type: MediaType` | `GenreOption[]` |
+| `catalog_page` | `media_type: MediaType, query: string, page: u32, genre: Id \| null` | `Page<MediaItem>` |
+| `catalog_detail` | `media_type: string, id: string` | `MediaDetail` |
 
-Lists sort by `SEARCH_MATCH` when a query is given and by `POPULARITY_DESC` otherwise, which makes the empty query the "discover" view. List commands return the full `{ data: { Page } }` envelope; detail commands return the unwrapped `Media`.
+- An empty `query` is the "discover" view; a non-empty one is search.
+- `catalog_detail` takes raw URL segments. Rust validates them: an unknown type rejects with "Invalid media type."; a non-numeric id for anything but books rejects with "Invalid ID.".
 
-### Frontend (`src/lib/api/anilist.ts`)
+### Frontend (`src/lib/api/catalog.ts`)
 
 ```typescript
-AnilistAPI.searchAnime(query, page = 1, genre?: string) → PaginatedResult<MediaItem>
-AnilistAPI.searchManga(query, page = 1, genre?: string) → PaginatedResult<MediaItem>
-AnilistAPI.animeDetails(id: number) / mangaDetails(id)  → MediaDetail
-AnilistAPI.animeGenres() / mangaGenres()                 → GenreOption[]   // same command
+catalog.fetchGenres(cat: MediaType)                                  → GenreOption[]
+catalog.fetchPage(cat, query: string, page: number, genre: GenreId | null) → PaginatedResult<MediaItem>
+catalog.fetchDetail(type: string, id: string)                        → MediaDetail   // id is URL-decoded
 ```
 
-Mapping notes:
+Components never call `invoke` directly; stores and routes go through `catalog`.
 
-- Scores run 0–100 and are divided by 10.
-- Descriptions have their HTML stripped.
-- Title priority: `userPreferred` → `english` → `romaji` → `native`.
-- Genre ids are the genre names (strings).
-- `episodes` is set for anime; `chapters` and `volumes` for manga.
-- For manga, `author` comes from staff whose role matches story/art/original.
-- The trailer is used only when it is hosted on YouTube.
+## The `Provider` trait
 
----
-
-## RAWG — games
-
-- Base: `https://api.rawg.io/api`
-- Auth: `key` query param (`RAWG_API_KEY`)
-
-### Rust (`src-tauri/src/api/rawg.rs`)
-
-| Command | Params | Endpoint |
-| --- | --- | --- |
-| `rawg_discover` | `page: u32, genre: Option<String>` | `/games?ordering=-added&page_size=20` |
-| `rawg_search` | `query: &str, page: u32, genre: Option<String>` | `/games?search=…&search_precise=true&page_size=20` |
-| `rawg_details` | `id: u32` | `/games/{id}` and `/games/{id}/screenshots` in parallel (`tokio::join!`), merged |
-| `rawg_genres` | — | `/genres?page_size=40` |
-
-### Frontend (`src/lib/api/rawg.ts`)
-
-```typescript
-RawgAPI.discoverGames(page = 1, genre?: string)       → PaginatedResult<MediaItem>
-RawgAPI.searchGames(query, page = 1, genre?: string)  → PaginatedResult<MediaItem>
-RawgAPI.gameDetails(id: number)                       → MediaDetail
-RawgAPI.genres()                                      → GenreOption[]   // id = slug
+```rust
+pub(crate) trait Provider {
+    async fn genres(&self) -> Result<Vec<GenreOption>, String>;
+    async fn page(&self, query: &str, page: u32, genre: Option<Id>) -> Result<Page<MediaItem>, String>;
+    async fn detail(&self, id: Id) -> Result<MediaDetail, String>;
+}
 ```
 
-Mapping notes:
-
-- Ratings run 0–5 and are doubled.
-- `runtime` is `playtime` hours × 60.
-- `platforms` has duplicates removed by name.
-- `developer`, `publisher`, `screenshots` and `studios` are filled in.
-- List items have no overview.
+Dispatch is a static `match` on `MediaType`: movie/tv → `Tmdb(media_type)`, anime/manga → `Anilist(media_type)`, game → `Rawg`, book → `Itunes`. Each provider module holds private `Raw*` serde structs and pure `map_*` functions, unit-tested on real saved responses in `src-tauri/tests/fixtures/`.
 
 ---
 
-## iTunes Search — books (ebooks)
+## TMDB — movies and TV (`src-tauri/src/api/tmdb.rs`)
 
-- Base: `https://itunes.apple.com`
-- Auth: none
+- Base `https://api.themoviedb.org/3`, `api_key` query param (`TMDB_API_KEY`), `language=en-US`.
+- Genres: `/genre/{movie|tv}/list`.
+- Page: search → `/search/{kind}` (genre ignored); a genre → `/discover/{kind}?with_genres=…&sort_by=popularity.desc`; otherwise `/{kind}/popular`.
+- Detail: `/{kind}/{id}?append_to_response=credits,videos`.
+- Mapping: images become absolute URLs (`w342` poster / `w780` backdrop in lists, `w500` / `w1280` on detail, `w185` profiles); cast is the first 20 credits; videos are YouTube only.
 
-### Rust (`src-tauri/src/api/itunes.rs`)
+## AniList — anime and manga (`src-tauri/src/api/anilist.rs`)
 
-| Command | Params | Endpoint |
-| --- | --- | --- |
-| `itunes_search` | `query: &str, page: u32, genre: Option<String>` | `/search?media=ebook&limit=20&offset=(page-1)*20` |
-| `itunes_details` | `id: &str` | `/lookup?id=…` (first result) |
+- GraphQL POST to `https://graphql.anilist.co`, no key. Errors inside a 200 body (`errors[].message`) become `Err`.
+- Genres: `GenreCollection` (the name is the id).
+- Page: `Page(perPage: 20) { media(type, search, genre, isAdult: false) }`, sorted `SEARCH_MATCH` with a query and `POPULARITY_DESC` without.
+- Mapping: title `english` → `romaji` → `native`; scores 0–100 → 0–10; HTML stripped from descriptions; fuzzy dates become `YYYY-MM-DD`; manga `author` from story/art/original staff; trailer only when hosted on YouTube.
 
-iTunes ignores `genreId` for ebooks, so the genre keyword is folded into `term` instead:
+## RAWG — games (`src-tauri/src/api/rawg.rs`)
 
-| Query | Genre | Resulting `term` |
-| --- | --- | --- |
-| text | keyword | `"<query> <keyword>"` |
-| text | none | `"<query>"` |
-| empty or `popular` | keyword | `"<keyword>"` |
-| empty or `popular` | none | `"fiction"` |
+- Base `https://api.rawg.io/api`, `key` query param (`RAWG_API_KEY`).
+- Genres: `/genres?page_size=40` (the slug is the id).
+- Page: `/games?page_size=20` with `ordering=-added` (discover) or `search=…&search_precise=true`, plus `genres=<slug>`. `total_pages` is capped at 500 because RAWG refuses deep paging.
+- Detail: `/games/{id}` and `/games/{id}/screenshots` in parallel (`tokio::join!`); screenshots are optional.
+- Mapping: rating 0–5 → 0–10; `runtime` = playtime hours × 60; platforms, developer, publisher, studios and screenshots filled in.
 
-### Frontend (`src/lib/api/itunes.ts`)
+## iTunes Search — books (`src-tauri/src/api/itunes.rs`)
 
-```typescript
-ITunesAPI.searchBooks(query, page = 1, genre?: string) → PaginatedResult<MediaItem>
-ITunesAPI.bookDetails(id: string)                      → MediaDetail
-ITunesAPI.genres()                                     → GenreOption[]   // hardcoded, no IPC
-```
-
-- The 20 hardcoded genre keywords (in Portuguese) are: romance, fantasia, ficção científica, mistério, suspense, terror, aventura, drama, biografia, história, autoajuda, negócios, filosofia, religião, culinária, infantil, jovem adulto, quadrinhos, poesia, tecnologia.
-- `id` is `String(trackId)`. Covers are upscaled by URL substitution (600px in lists, 1200px on detail).
-- There is no total count, so `total_pages = page + 1` while a page comes back full (20 items).
-- `runtime` is always `null` (no page count).
+- Base `https://itunes.apple.com`, no key, `country=us`.
+- Genres: 20 curated English keywords in Rust (`BOOK_GENRES`), no request.
+- Page: `/search?media=ebook&limit=20`. Apple ignores `genreId` for ebooks, so the keyword is folded into `term`; an empty query with no genre searches `fiction`. Apple also ignores `offset`, so a search is always one page (`total_pages = page`, no request for page > 1).
+- Detail: `/lookup?id=…&country=us` (no media filter; it's brittle with `media=ebook`).
+- Mapping: ids are strings (`trackId`); covers upscaled by URL rewrite (600 px in lists, 1200 px on detail); `runtime` is always `null`. `vote_average` is Apple's 0–5 rating as is (not normalised).
 
 ---
 
-## Shared types (`src/lib/types/media.ts`)
+## Shared types
+
+Rust `src-tauri/src/api/types.rs` is the source; `src/lib/types/media.ts` mirrors it by hand. `src/lib/types/media.contract.test.ts` checks both ways against `src/lib/types/contract.fixture.json`, which a Rust test writes (`UPDATE_CONTRACT=1 cargo test contract`).
 
 ```typescript
-type MediaType = 'movie' | 'tv' | 'anime' | 'manga' | 'book' | 'game';
+type MediaType  = "movie" | "tv" | "anime" | "manga" | "book" | "game";
+type ProviderId = "tmdb" | "anilist" | "rawg" | "itunes" | "manual";   // manual: user-created (S2+)
+type MediaKey   = string;                                               // "provider:media_type:id"
+type GenreId    = number | string;                                      // number for TMDB, string otherwise
 
 interface PaginatedResult<T> { results: T[]; page: number; total_pages: number; total_results: number; }
+interface GenreOption { id: GenreId; name: string; }
 
 interface MediaItem {
-  id: number | string;            // string for iTunes
+  id: number | string; provider: ProviderId; media_key: MediaKey; media_type: MediaType;
   title: string; overview: string;
-  poster_path: string | null;     // absolute URL after mapping (all providers)
-  backdrop_path: string | null;
-  vote_average: number;           // normalised to 0–10
-  vote_count: number;
-  release_date?: string; first_air_date?: string; genre_ids?: number[];
-  media_type: MediaType;
-  author?: string; episodes?: number | null; chapters?: number | null; developer?: string;
+  poster_path: string | null; backdrop_path: string | null;   // absolute URLs
+  vote_average: number; vote_count: number;
+  release_date?; first_air_date?; genre_ids?; author?; episodes?; chapters?;
 }
 
 interface MediaDetail {
-  id: number | string; media_type: MediaType;
-  title: string; tagline: string; overview: string;
-  poster_path: string | null; backdrop_path: string | null;
-  vote_average: number; vote_count: number; release_date: string;
-  runtime: number | null;         // minutes
+  id; provider; media_key; media_type; title; tagline; overview;
+  poster_path; backdrop_path; vote_average; vote_count; release_date: string;
+  runtime: number | null;                                     // minutes
   genres: Genre[]; cast: CastMember[]; videos: VideoClip[];
   author?; episodes?; chapters?; volumes?; status?; studios?; subjects?;
   developer?; publisher?; platforms?; screenshots?;
 }
-
-interface Genre       { id: number; name: string; }   // declared number; AniList/iTunes actually put strings or hashes here
-interface CastMember  { id: number; name: string; character: string; profile_path: string | null; }
-interface VideoClip   { key: string; site: string; type: string; name: string; }
-type GenreId = number | string;                     // number for TMDB, string for AniList/RAWG/iTunes
-interface GenreOption { id: GenreId; name: string; }
 ```
 
-Helpers:
+- **`media_key`** is the identity of an item across the app (`tmdb:movie:969681`, `itunes:book:1502418197`). `MediaItem::new` / `MediaDetail::new` derive it from the provider, so every mapper sets it in one place. Lists are keyed by it and de-duplicated by it.
+- Optional fields are omitted from the JSON when empty (`skip_serializing_if`).
+- Helpers in `media.ts`: `getPosterUrl`, `getYear`, `getRating`, `MEDIA_LABELS`, `GENRE_SUPPORTED`.
 
-- `TMDB_IMG.poster/backdrop/profile(path, size)`
-- `getPosterUrl(item)` returns `item.poster_path`.
-- `getYear(item)` takes the first 4 characters of `release_date` or `first_air_date`.
-- `getRating(item)` returns `vote_average.toFixed(1)`, or `''` when it is 0.
-- `MEDIA_LABELS` holds the pt-BR category labels.
-- `GENRE_SUPPORTED` contains all 6 types.
-- `OL_IMG` (OpenLibrary covers) is legacy and has no callers.
+## Adding a provider
 
----
-
-## Adding a new provider
-
-1. Create `src-tauri/src/api/<provider>.rs` with `#[tauri::command] pub async fn …` returning `Result<Value, String>`.
-2. Add `pub mod <provider>;` to `src-tauri/src/api/mod.rs`.
-3. Register each command in `generate_handler![]` in `src-tauri/src/lib.rs`.
-4. Create `src/lib/api/<provider>.ts` that invokes the commands and maps the results to `MediaItem` / `MediaDetail` / `GenreOption`.
-5. If it is a new category, add it to `MediaType`, `MEDIA_LABELS`, `GENRE_SUPPORTED` and `CategoryTabs`.
-6. Wire it into the `loadGenresFor()` and `fetchPage()` switches in `src/routes/+page.svelte`, and into `fetchDetail()` in `src/routes/media/[type]/[id]/+page.svelte`.
+Follow the checklist in `AGENTS.md` ("Adding a provider"): saved fixtures → module with `Raw*` structs and tested `map_*` fns → `impl Provider` → arms in the three `catalog.rs` matches → `mod.rs` → e2e fixture if the home tab changes → `cargo test live_ -- --ignored` → `npm run verify`.

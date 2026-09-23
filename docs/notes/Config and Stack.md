@@ -1,4 +1,4 @@
-# TauriFlix — Config and Stack
+# tauri-app — Config and Stack
 
 > Manifests, config files, dependencies and system requirements.
 
@@ -16,14 +16,22 @@
 | `check` | `svelte-kit sync` + `svelte-check` (type-checks `.svelte` and `.ts`) |
 | `check:watch` | Same as `check`, in watch mode |
 | `tauri` | Tauri CLI proxy: `npm run tauri dev`, `npm run tauri build` |
-
-There is no `test` script. Structural tests run directly with `node --test scripts/<name>.test.mjs` from the repo root.
+| `format` | Prettier writes every file |
+| `lint` | `prettier --check` + ESLint + `lint:bp` + `lint:en` + `lint:colors` + `lint:guards` |
+| `lint:bp` | Breakpoint lint: raw px inside `@media` fails (`scripts/check-breakpoints.mjs`) |
+| `lint:en` | English-only guard (`scripts/english-only.test.mjs`) |
+| `lint:colors` | Runtime-color guard for `.svelte` files (`scripts/colors.test.mjs`) |
+| `lint:guards` | Docs-vs-code guard (`scripts/docs-notes.test.mjs`) and toolchain check (`scripts/verify-toolchain.test.mjs`) |
+| `test` / `test:watch` | Vitest (jsdom, `@testing-library/svelte`) |
+| `test:ui` | Playwright on 5 viewports with faked IPC (`e2e/`) |
+| `verify` | The gate: `verify:fe` (lint, check, test, test:ui) + `verify:rs` (cargo fmt, clippy `-D warnings`, test) |
 
 ## 2. Runtime dependencies
 
 | Package | Purpose |
 | --- | --- |
-| `@tauri-apps/api` ^2 | `invoke()` to Rust commands |
+| `@tauri-apps/api` ^2.11 | `invoke()` to Rust commands |
+| `@tauri-apps/plugin-log` ^2.9 | Forwards frontend `console.*` to the Rust log sinks |
 | `@tauri-apps/plugin-opener` ^2 | Opens URLs in the system browser (plugin is registered; no frontend call site yet) |
 
 ## 3. Dev dependencies
@@ -34,11 +42,14 @@ There is no `test` script. Structural tests run directly with `node --test scrip
 | `@sveltejs/kit` | ^2.9.0 | Routing, `$app/*`, build |
 | `@sveltejs/vite-plugin-svelte` | ^5.0.0 | Compiles `.svelte`; `vitePreprocess()` for TS/SCSS |
 | `@sveltejs/adapter-static` | ^3.0.6 | Static output to `build/` |
-| `@tauri-apps/cli` | ^2 | `tauri` command |
+| `@tauri-apps/cli` | ^2.11 | `tauri` command |
 | `svelte` | ^5.0.0 | Compiler |
 | `typescript` | ~5.6.2 | Types |
 | `sass` | ^1.97.3 | SCSS |
 | `svelte-check` | ^4.0.0 | `npm run check` |
+| `vitest`, `jsdom`, `@testing-library/{svelte,jest-dom,user-event}` | ^5 / ^30 / … | Unit and component tests |
+| `@playwright/test` | ^1.63 | Responsive e2e (`e2e/responsive.spec.ts`) |
+| `eslint`, `typescript-eslint`, `eslint-plugin-svelte`, `prettier`, `prettier-plugin-svelte` | — | Lint and format |
 
 ## 4. Config files
 
@@ -50,10 +61,11 @@ There is no `test` script. Structural tests run directly with `node --test scrip
 - `src/routes/+layout.ts` sets `export const ssr = false`.
 - `src-tauri/tauri.conf.json`:
   - dev URL `http://localhost:1420`; `frontendDist: "../build"`
-  - one 800×600 window with devtools on
+  - one 800×600 window, minimum 360×560 (so phone layouts are reachable on desktop), devtools on
+  - `identifier: com.user.tauri-app` (placeholder until the name is chosen)
   - `csp: null`
   - bundles all targets
-- `src-tauri/capabilities/default.json` grants `core:default` and `opener:default` to the `main` window.
+- `src-tauri/capabilities/default.json` grants `core:default`, `opener:default` and `log:default` to the `main` window.
 - `src-tauri/build.rs`:
   - reads `../.env` and emits every `KEY=value` line as `cargo:rustc-env`
   - reruns when `.env` changes, then calls `tauri_build::build()`
@@ -76,9 +88,10 @@ This project keeps its shared state in `.svelte.ts` class stores built with rune
 | `tauri` | 2 | — | App framework, IPC, windows |
 | `tauri-plugin-opener` | 2 | — | Open URLs/files |
 | `serde` | 1 | `derive` | Serialization |
-| `serde_json` | 1 | — | `Value` return type |
+| `serde_json` | 1 | — | Reading provider bodies before typed decode; AniList GraphQL variables |
 | `reqwest` | 0.12 | `json`, `rustls-tls` (no default features) | HTTP to providers |
 | `tokio` | 1 | `full` | Async runtime, `join!` |
+| `tauri-plugin-log` + `log` | 2 / 0.4 | — | Logging to terminal, file, logcat |
 | `tauri-build` (build) | 2 | — | Codegen |
 
 Build profiles (the reasoning is in [BUILD_AND_RUN.md](../BUILD_AND_RUN.md)):
@@ -103,7 +116,7 @@ TMDB_API_KEY=...
 RAWG_API_KEY=...
 ```
 
-Both keys must be present at compile time, because `env!()` fails the build otherwise. A runtime environment variable with the same name overrides the embedded value.
+Both keys must be present at compile time, because `env!()` fails the build otherwise (CI uses dummy values). A runtime environment variable with the same name overrides the embedded value. Optional: `TAURI_APP_LOG` (log level) and, in dev, `TAURI_APP_DEVTOOLS=1` (open the inspector).
 
 ## 8. System requirements
 
@@ -121,6 +134,6 @@ Both keys must be present at compile time, because `env!()` fails the build othe
 npm run tauri dev
 └─► @tauri-apps/cli
       ├─► vite dev (:1420)           → SvelteKit SPA
-      └─► cargo build → Tauri window → Rust commands
+      └─► cargo build → Tauri window → catalog_* commands
               └── reqwest → TMDB / AniList / RAWG / iTunes
 ```

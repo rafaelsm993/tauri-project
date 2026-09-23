@@ -1,4 +1,4 @@
-# TauriFlix — Component Patterns
+# tauri-app — Component Patterns
 
 > Conventions for the reusable UI components, with a reference entry for each.
 
@@ -9,6 +9,9 @@ All components use Svelte 5 syntax:
 - Event attributes (`onclick`, `onsubmit`, `onscroll`), not `on:click`
 - Snippets: `{#snippet Name()}…{/snippet}` + `{@render Name()}`
 - Callback props (`onchange`, `onSearch`, `onCardClick`) instead of dispatched events
+- Colors only from `var(--clr-*)` / `rgb(var(--clr-*-rgb) / a)` (`npm run lint:colors`); visible text in English (`npm run lint:en`)
+- Lists keyed by `item.media_key`
+- Components never call `invoke`; data flows in through props from a store or route
 
 ---
 
@@ -24,16 +27,19 @@ A poster card rendered as a single `<button>`. It is used in both the grid and t
 - Hover overlay (`aria-hidden`) shows:
   - type badge (`MEDIA_LABELS`) and rating
   - title, author, overview
-  - year, eps/caps and review count (formatted with `pt-BR`)
+  - year, eps/chapters and rating count (formatted with `en-US`)
 - A static label under the poster shows the title and year.
-- Focus: `:focus-visible` draws a `$color-primary` outline on the poster.
+- Focus: `:focus-visible` draws a `var(--clr-primary)` outline on the poster.
 
 ## CategoryTabs
 
 - File: `src/lib/components/ui/CategoryTabs.svelte`
-- Props: `active: MediaType`, `onchange: (c: MediaType) => void`
+- Props: `active: MediaType`, `onchange: (c: MediaType) => void`, `trailing?: Snippet`
 
-A pill tab bar with a fixed list of categories: `movie → Filmes`, `tv → Séries`, `anime → Anime`, `manga → Mangá`, `book → Livros`, `game → Jogos`. The parent owns the active state.
+A pill tab bar with a fixed list of categories: Movies, TV Shows, Anime, Manga, Books, Games. The parent owns the active state.
+
+- The pill background sits on a `.category-bar` wrapper; only the inner `nav` scrolls horizontally, so it never wraps or clips at 360 px.
+- `trailing` renders at the end of the bar, outside the `nav` landmark (not announced as a category). Home puts the genre `MultiSelect` there.
 
 ## GenreCarousel
 
@@ -47,29 +53,50 @@ A pill tab bar with a fixed list of categories: `movie → Filmes`, `tv → Sér
 | `error` | `string` | — |
 | `onCardClick` | `(item: MediaItem) => void` | ✓ |
 | `onSeeMore` | `() => void` | — |
+| `onRetry` | `() => void` | — |
 
 A horizontally scrolling rail of `MediaCard`s with scroll-snap.
 
 - Arrow buttons appear when `canScrollLeft` / `canScrollRight` are true. These are `$state` values updated `onscroll` and by an `$effect` after items load. Each click scrolls about 85% of the visible width.
-- While loading it shows 8 skeleton cards. Errors and empty results render inline.
-- "Ver todos →" appears when `onSeeMore` is passed. The home page wires it to `switchGenre(genre.id)`.
+- While loading it shows 8 skeleton cards. Errors and empty results render inline; with `onRetry` the error has a "Try again" button (home wires it to `browse.retrySection`).
+- "See all →" appears when `onSeeMore` is passed. The home page wires it to `switchGenre(genre.id)`.
+- Home mounts one carousel per genre and loads each one lazily with the `whenVisible` attachment (`src/lib/attachments/whenVisible.ts`).
 
-## GenreFilter
+## MultiSelect
 
-- File: `src/lib/components/ui/GenreFilter.svelte`
+- File: `src/lib/components/ui/MultiSelect.svelte`
 
 | Prop | Type | Required |
 | --- | --- | --- |
-| `genres` | `GenreOption[]` | ✓ |
-| `active` | `GenreId \| null` | ✓ |
-| `loading` | `boolean` | — |
-| `onchange` | `(id: GenreId \| null) => void` | ✓ |
+| `label` | `string` | ✓ |
+| `options` | `{ value, label }[]` | ✓ |
+| `selected` | `value[]` | ✓ |
+| `onchange` | `(next: value[]) => void` | ✓ |
+| `disabled` | `boolean` | — |
 
-A vertical genre list in the home sidebar.
+A button that opens a popover of native checkboxes. Generic: values keep their type and order.
 
-- The first entry, "Todos", calls `onchange(null)`.
-- Loading shows skeleton items.
-- It renders nothing when `genres` is empty and nothing is loading.
+- Trigger reads `Label · N` when something is selected.
+- The panel uses `popover="auto"` (top layer), so the scrolling tab bar never clips it; Esc and an outside click close it. It is placed under the trigger, kept on screen, and re-placed on scroll/resize.
+- Each row is a labelled checkbox stretched over the row; selected rows are filled with the primary color and bold. Rows are ≥ 44 px under `touch`.
+- "Clear" empties the selection. Home uses it as the genre filter: it shows or hides carousels client-side, with no extra requests.
+
+## ResultsGrid and BrowseContext
+
+- Files: `src/lib/components/browse/ResultsGrid.svelte`, `src/lib/components/browse/BrowseContext.svelte`
+
+`ResultsGrid` (`items`, `loading`, `appending`, `hasMore`, `hasError`, `onCardClick`, `onLoadMore`) is the search / single-genre grid with infinite scroll through an `IntersectionObserver` sentinel. `BrowseContext` (`isSearch`, `query`, `genreName`, `onClearSearch`, `onAllGenres`) is the heading above it with the "← Discover" and "← All genres" links.
+
+## Detail components
+
+- Folder: `src/lib/components/detail/`
+
+`DetailHero` (title, tagline, backdrop, back button), `DetailMeta` (`detail: MediaDetail`), `DetailSection` (titled wrapper with a `children` snippet), `TrailerEmbed` (`videoKey`, `name`), `ScreenshotStrip` (`screenshots`), `CastRow` (`cast`), `DetailSkeleton`.
+
+## BackToTop and RoutePlaceholder
+
+- `src/lib/components/ui/BackToTop.svelte`: `threshold?`, `label = "Back to top"`; appears after scrolling past the threshold.
+- `src/lib/components/ui/RoutePlaceholder.svelte`: `title`; the body of `/library`, `/profile`, `/planner` and `/welcome` until their sprints.
 
 ## SearchBar
 
@@ -80,7 +107,7 @@ A `<form>` with a search icon, a clear (×) button and focus glow.
 
 - Submitting calls `onSearch(query.trim())`.
 - The spinner (1.5s) and success pulse (2s) that follow run on **fixed timers**. They are not tied to the real request.
-- Clear only empties the input. It does not call `onSearch`, so the parent keeps the previous results. The home page's "← Descobrir" link is what actually resets search.
+- Clear only empties the input. It does not call `onSearch`, so the parent keeps the previous results. The home page's "← Discover" link is what actually resets search.
 
 ## AppBackground
 
@@ -93,7 +120,7 @@ A fixed, `aria-hidden` decorative layer with three parts:
 2. `.circles`: 20 `<li>` bubbles animated with CSS `@keyframes`.
 3. `.bg-vignette`.
 
-An `$effect` watches `ui.lastClick` and adds `.pulsing` for 900ms. Nothing currently sets `lastClick`, so the pulse never fires in practice. No JavaScript animation loop runs.
+An `$effect` watches `ui.lastClick` and adds `.pulsing` for 900ms. Nothing currently sets `lastClick`, so the pulse never fires in practice. No JavaScript animation loop runs. Colors come from the `--clr-*-rgb` channel tokens.
 
 ---
 

@@ -7,8 +7,6 @@ A cross-platform media tracker built with **Tauri 2**, **SvelteKit**, and **Rust
 
 Tracks movies, TV series, anime, manga, books, and games via TMDB, AniList, RAWG, and iTunes.
 
-See [Project review and feature overview](docs/PROJECT_REVIEW.md) for the implementation inventory, validation results, and known limitations.
-
 Build and run on the Arch desktop or on WSL + Windows 11: see [Build and run runbook](docs/BUILD_AND_RUN.md).
 
 Architecture, API, component and design-system notes: see [Design notes](docs/notes/README.md).

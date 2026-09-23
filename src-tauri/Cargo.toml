@@ -1,8 +1,10 @@
 [package]
 name = "tauri-app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Cross-platform media tracker: movies, TV, anime, manga, books and games"
+authors = ["rafaelsm993"]
+license = "MIT"
+repository = "https://github.com/rafaelsm993/tauri-project"
 edition = "2021"
 
 [lib]

@@ -1,7 +1,7 @@
 {
   "name": "tauri-app",
   "version": "0.1.0",
-  "description": "",
+  "description": "Cross-platform media tracker: movies, TV, anime, manga, books and games",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -14,13 +14,14 @@
     "lint:bp": "node scripts/check-breakpoints.mjs",
     "lint:en": "node --test scripts/english-only.test.mjs",
     "lint:colors": "node --test scripts/colors.test.mjs",
-    "lint": "prettier --check . && eslint . && npm run lint:bp && npm run lint:en && npm run lint:colors",
+    "lint": "prettier --check . && eslint . && npm run lint:bp && npm run lint:en && npm run lint:colors && npm run lint:guards",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "playwright test",
     "verify:fe": "npm run lint && npm run check && npm run test && npm run test:ui",
     "verify:rs": "cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
-    "verify": "npm run verify:fe && npm run verify:rs"
+    "verify": "npm run verify:fe && npm run verify:rs",
+    "lint:guards": "node --test scripts/docs-notes.test.mjs scripts/verify-toolchain.test.mjs"
   },
   "license": "MIT",
   "dependencies": {
@@ -52,5 +53,9 @@
     "typescript-eslint": "^8.70.1",
     "vite": "^6.0.3",
     "vitest": "^5.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rafaelsm993/tauri-project.git"
   }
 }

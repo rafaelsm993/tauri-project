@@ -24,8 +24,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The unused `greet` Tauri command
 - The `rusqlite` dependency — the backend is now a stateless API proxy
 
+### Changed (S1 — stable base)
+- Typed catalog facade: three IPC commands (`catalog_genres/page/detail`) over a common Rust `Provider` trait; providers map into typed DTOs, with a Rust↔TS contract test
+- `media_key` identity (`provider:media_type:id`) on every item; lists keyed and de-duplicated by it
+- Home and Detail split into thin routes, `BrowseStore` and components; genre multi-select with lazy per-genre carousels
+- English-only UI and provider params (TMDB `en-US`, iTunes `country=us`)
+- Runtime theming: every component color is a `--clr-*` token (`lint:colors` guard)
+- Debug logging with `tauri-plugin-log` (terminal, log file, logcat), keys never logged
+- MIT `LICENSE` file; docs and agent instructions updated to the new architecture
+
 ### Known issues
-- See [Project review — findings and backlog](docs/PROJECT_REVIEW.md#11-findings-and-backlog) for current security, persistence, UI, and build-tooling limitations.
+- CSP is `null` and devtools are enabled in every build (decision owned by S3·C6)
+- API keys are compiled into the binary (runtime keys come with S2·B5)
+- iTunes book ratings stay on Apple's 0–5 scale; other providers are normalised to 0–10
 
 ## [0.1.0] - unreleased
 - Initial project scaffold (Tauri 2 + SvelteKit + Rust)

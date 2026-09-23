@@ -3,6 +3,8 @@ import { test as base } from "@playwright/test";
 // Deterministic IPC fixtures; unknown commands get an empty page so the UI shows its empty state.
 const MOVIE = (id: number) => ({
   id,
+  provider: "tmdb",
+  media_key: `tmdb:movie:${id}`,
   title: `Test movie ${id} with a very long title to break the layout`,
   overview: "Test synopsis. ".repeat(12),
   poster_path: null,

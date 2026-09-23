@@ -1,7 +1,11 @@
 use super::catalog::Provider;
 use super::http::{client as http, fetch};
-use super::types::{strip_html, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType, Page};
+use super::types::{
+    strip_html, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType, Page, ProviderId,
+};
 use serde::Deserialize;
+
+const PROVIDER: ProviderId = ProviderId::Itunes;
 
 const BASE: &str = "https://itunes.apple.com";
 const PAGE_SIZE: u32 = 20;
@@ -132,18 +136,18 @@ fn map_item(raw: RawBook) -> MediaItem {
             Id::Str(raw.track_id.to_string()),
             title(&raw),
             MediaType::Book,
+            PROVIDER,
         )
     }
 }
 
-// iTunes returns no total; advertise one more page while the current one is full.
+// iTunes ignores `offset`, so a search is always one page.
 fn map_page(raw: RawSearch, page: u32) -> Page<MediaItem> {
     let count = raw.results.len() as u32;
-    let has_more = count >= PAGE_SIZE;
     Page {
         results: raw.results.into_iter().map(map_item).collect(),
         page,
-        total_pages: if has_more { page + 1 } else { page },
+        total_pages: page,
         total_results: raw.result_count.unwrap_or(count),
     }
 }
@@ -171,6 +175,7 @@ fn map_detail(raw: RawBook) -> MediaDetail {
             Id::Str(raw.track_id.to_string()),
             title(&raw),
             MediaType::Book,
+            PROVIDER,
         )
     }
 }
@@ -198,15 +203,21 @@ impl Provider for Itunes {
         page: u32,
         genre: Option<Id>,
     ) -> Result<Page<MediaItem>, String> {
+        if page > 1 {
+            return Ok(Page {
+                results: Vec::new(),
+                page,
+                total_pages: page,
+                total_results: 0,
+            });
+        }
         let term = search_term(query, genre.as_ref().and_then(Id::as_str));
-        let offset = (page.saturating_sub(1) * PAGE_SIZE).to_string();
         let limit = PAGE_SIZE.to_string();
         let req = http().get(format!("{BASE}/search")).query(&[
             ("media", "ebook"),
             ("country", COUNTRY),
             ("term", term.as_str()),
             ("limit", limit.as_str()),
-            ("offset", offset.as_str()),
         ]);
         Ok(map_page(fetch("itunes", "search", req).await?, page))
     }
@@ -281,6 +292,7 @@ mod tests {
     fn search_maps_books_with_string_ids_and_a_next_page_hint() {
         let page = map_page(sample("itunes_search"), 1);
         let first = &page.results[0];
+        assert_eq!(first.media_key, format!("itunes:book:{}", first.id));
         assert_eq!(page.results.len(), 3);
         assert_eq!(page.total_pages, 1);
         assert!(matches!(first.id, Id::Str(_)));
@@ -294,22 +306,23 @@ mod tests {
     }
 
     #[test]
-    fn full_pages_advertise_one_more() {
+    fn search_is_a_single_page_because_itunes_ignores_offset() {
         let raw = RawSearch {
             result_count: None,
-            results: (0..PAGE_SIZE as u64)
+            results: (0..24u64)
                 .map(|i| decode("t", serde_json::json!({ "trackId": i })).unwrap())
                 .collect(),
         };
-        let page = map_page(raw, 3);
-        assert_eq!(page.total_pages, 4);
-        assert_eq!(page.total_results, PAGE_SIZE);
+        let page = map_page(raw, 1);
+        assert_eq!(page.total_pages, 1);
+        assert_eq!(page.total_results, 24);
     }
 
     #[test]
     fn lookup_maps_detail_with_subjects() {
         let res: RawSearch = sample("itunes_lookup");
         let d = map_detail(res.results.into_iter().next().unwrap());
+        assert_eq!(d.media_key, format!("itunes:book:{}", d.id));
         assert!(d.poster_path.unwrap().ends_with("/1200x1200bb.jpg"));
         assert_eq!(d.tagline, d.author.clone().unwrap());
         assert_eq!(d.subjects.as_ref().unwrap().len(), d.genres.len());

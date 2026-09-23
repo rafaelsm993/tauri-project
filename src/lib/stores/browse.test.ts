@@ -5,6 +5,8 @@ import { BrowseStore } from "./browse.svelte";
 
 const item = (id: number): MediaItem => ({
   id,
+  provider: "tmdb",
+  media_key: `tmdb:movie:${id}`,
   title: `T${id}`,
   overview: "",
   poster_path: null,
@@ -144,6 +146,65 @@ describe("BrowseStore", () => {
     expect(s.hasMore).toBe(false);
     await s.loadMore();
     expect(cat.fetchPage).toHaveBeenCalledTimes(2);
+  });
+
+  it("loadMore: drops items the provider repeats across pages", async () => {
+    const cat = fakeCatalog({
+      fetchPage: vi.fn(async (_c: MediaType, _q: string, p: number) =>
+        page(p === 1 ? [1, 2, 3] : [3, 4, 2], 2),
+      ),
+    });
+    const s = new BrowseStore(cat);
+    await s.search("x");
+    await s.loadMore();
+    expect(s.items.map((i) => i.media_key)).toEqual([
+      "tmdb:movie:1",
+      "tmdb:movie:2",
+      "tmdb:movie:3",
+      "tmdb:movie:4",
+    ]);
+  });
+
+  it("loadMore: a page with nothing new ends pagination instead of looping", async () => {
+    const cat = fakeCatalog({ fetchPage: vi.fn(async () => page([1, 2, 3], 99)) });
+    const s = new BrowseStore(cat);
+    await s.search("x");
+    const before = s.items;
+    await s.loadMore();
+    expect(s.items).toBe(before);
+    expect(s.hasMore).toBe(false);
+    await s.loadMore();
+    expect(cat.fetchPage).toHaveBeenCalledTimes(2);
+  });
+
+  it("loadMore: a late page from the previous category is dropped", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const cat = fakeCatalog({
+      fetchGenres: vi.fn(async () => []),
+      fetchPage: vi.fn(async (c: MediaType, _q: string, p: number) => {
+        if (c === "movie" && p === 2) await gate;
+        return page(c === "movie" ? [p * 10] : [7], 2);
+      }),
+    });
+    const s = new BrowseStore(cat);
+    await s.search("x");
+    const late = s.loadMore();
+    await s.switchCategory("tv");
+    release();
+    await late;
+    expect(s.activeCategory).toBe("tv");
+    expect(s.items.map((i) => i.id)).toEqual([7]);
+  });
+
+  it("grid and carousels drop duplicates within one page", async () => {
+    const cat = fakeCatalog({ fetchPage: vi.fn(async () => page([5, 5, 6])) });
+    const s = new BrowseStore(cat);
+    await s.search("x");
+    expect(s.items.map((i) => i.id)).toEqual([5, 6]);
+    await s.clearSearch();
+    await s.loadSection(1);
+    expect(s.sections[0].items.map((i) => i.id)).toEqual([5, 6]);
   });
 
   it("grid errors are user-facing strings", async () => {

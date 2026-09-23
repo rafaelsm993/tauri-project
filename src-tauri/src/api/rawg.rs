@@ -1,9 +1,11 @@
 use super::catalog::Provider;
 use super::http::{client as http, fetch};
 use super::types::{
-    round1, strip_html, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType, Page,
+    round1, strip_html, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType, Page, ProviderId,
 };
 use serde::Deserialize;
+
+const PROVIDER: ProviderId = ProviderId::Rawg;
 
 const BASE: &str = "https://api.rawg.io/api";
 
@@ -126,6 +128,7 @@ fn map_item(raw: RawGame) -> MediaItem {
             Id::Num(raw.id),
             raw.name.unwrap_or_else(|| "Untitled".into()),
             MediaType::Game,
+            PROVIDER,
         )
     }
 }
@@ -195,6 +198,7 @@ fn map_detail(raw: RawDetail, shots: Option<RawShots>) -> MediaDetail {
             Id::Num(raw.id),
             raw.name.unwrap_or_else(|| "Untitled".into()),
             MediaType::Game,
+            PROVIDER,
         )
     }
 }
@@ -302,6 +306,7 @@ mod tests {
     fn page_maps_games_with_year_and_capped_totals() {
         let page = map_page(sample("rawg_page"), 1);
         let first = &page.results[0];
+        assert_eq!(first.media_key, format!("rawg:game:{}", first.id));
         assert_eq!(page.results.len(), 3);
         assert_eq!(page.total_pages, MAX_PAGES);
         assert_eq!(first.media_type, MediaType::Game);
@@ -319,6 +324,7 @@ mod tests {
     #[test]
     fn detail_merges_screenshots_and_dedupes_platforms() {
         let d = map_detail(sample("rawg_detail"), Some(sample("rawg_screenshots")));
+        assert_eq!(d.media_key, format!("rawg:game:{}", d.id));
         assert_eq!(d.title, "Grand Theft Auto V");
         assert!(!d.overview.contains('<'));
         assert_eq!(d.screenshots.as_ref().unwrap().len(), 3);

@@ -3,6 +3,13 @@ import { errorMessage } from "$lib/utils/errors";
 import { GENRE_SUPPORTED } from "$lib/types/media";
 import type { GenreId, GenreOption, MediaItem, MediaType } from "$lib/types/media";
 
+// Keeps the first occurrence of each media_key; providers repeat items across pages.
+function uniqueByKey(items: MediaItem[], existing: MediaItem[] = []): MediaItem[] {
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local scratch set
+  const seen = new Set(existing.map((it) => it.media_key));
+  return items.filter((it) => !seen.has(it.media_key) && !!seen.add(it.media_key));
+}
+
 export type GenreSection = {
   genre: GenreOption;
   items: MediaItem[];
@@ -91,7 +98,11 @@ export class BrowseStore {
     try {
       const res = await this.#catalog.fetchPage(cat, "", 1, id);
       if (this.activeCategory !== cat || this.sections !== sections) return;
-      this.sections[idx] = { ...this.sections[idx], items: res.results, loading: false };
+      this.sections[idx] = {
+        ...this.sections[idx],
+        items: uniqueByKey(res.results),
+        loading: false,
+      };
     } catch (e) {
       if (this.activeCategory !== cat || this.sections !== sections) return;
       this.sections[idx] = {
@@ -124,7 +135,7 @@ export class BrowseStore {
     this.loading = true;
     try {
       const res = await this.#catalog.fetchPage(this.activeCategory, newQuery, 1, this.activeGenre);
-      this.items = res.results;
+      this.items = uniqueByKey(res.results);
       this.totalPages = res.total_pages ?? 1;
     } catch (e) {
       this.error = errorMessage(e, "Failed to fetch data.");
@@ -136,6 +147,7 @@ export class BrowseStore {
   async loadMore() {
     if (this.appending || !this.hasMore || this.carouselMode) return;
     this.appending = true;
+    const items = this.items;
     try {
       const next = this.page + 1;
       const res = await this.#catalog.fetchPage(
@@ -144,10 +156,16 @@ export class BrowseStore {
         next,
         this.activeGenre,
       );
-      this.items = [...this.items, ...res.results];
+      if (this.items !== items) return;
+      const fresh = uniqueByKey(res.results, items);
+      if (fresh.length === 0) {
+        this.totalPages = this.page;
+        return;
+      }
+      this.items = [...items, ...fresh];
       this.page = next;
     } catch (e) {
-      this.error = errorMessage(e, "Failed to load more.");
+      if (this.items === items) this.error = errorMessage(e, "Failed to load more.");
     } finally {
       this.appending = false;
     }

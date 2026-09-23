@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -26,6 +27,97 @@ impl MediaType {
     }
 }
 
+impl fmt::Display for MediaType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Movie => "movie",
+            Self::Tv => "tv",
+            Self::Anime => "anime",
+            Self::Manga => "manga",
+            Self::Book => "book",
+            Self::Game => "game",
+        })
+    }
+}
+
+// Source of an item; `manual` is reserved for user-created entries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ProviderId {
+    Tmdb,
+    Anilist,
+    Rawg,
+    Itunes,
+    Manual,
+}
+
+impl ProviderId {
+    fn parse(s: &str) -> Option<Self> {
+        match s {
+            "tmdb" => Some(Self::Tmdb),
+            "anilist" => Some(Self::Anilist),
+            "rawg" => Some(Self::Rawg),
+            "itunes" => Some(Self::Itunes),
+            "manual" => Some(Self::Manual),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for ProviderId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Tmdb => "tmdb",
+            Self::Anilist => "anilist",
+            Self::Rawg => "rawg",
+            Self::Itunes => "itunes",
+            Self::Manual => "manual",
+        })
+    }
+}
+
+// Library identity: `provider:media_type:id`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MediaKey {
+    pub provider: ProviderId,
+    pub media_type: MediaType,
+    pub id: String,
+}
+
+impl MediaKey {
+    pub fn parse(s: &str) -> Result<Self, String> {
+        let invalid = || "Invalid media key.".to_string();
+        let mut parts = s.splitn(3, ':');
+        let provider = parts
+            .next()
+            .and_then(ProviderId::parse)
+            .ok_or_else(invalid)?;
+        let media_type = parts
+            .next()
+            .and_then(|t| MediaType::parse(t).ok())
+            .ok_or_else(invalid)?;
+        let id = parts.next().ok_or_else(invalid)?;
+        if id.is_empty() || id.contains(':') {
+            return Err(invalid());
+        }
+        Ok(Self {
+            provider,
+            media_type,
+            id: id.to_string(),
+        })
+    }
+}
+
+impl fmt::Display for MediaKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}:{}", self.provider, self.media_type, self.id)
+    }
+}
+
+pub fn media_key(provider: ProviderId, media_type: MediaType, id: &Id) -> String {
+    format!("{provider}:{media_type}:{id}")
+}
+
 // Numeric for TMDB/AniList/RAWG, string for iTunes and genre slugs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -50,6 +142,15 @@ impl Id {
     }
 }
 
+impl fmt::Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Num(n) => write!(f, "{n}"),
+            Self::Str(s) => f.write_str(s),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Page<T> {
     pub results: Vec<T>,
@@ -67,6 +168,8 @@ pub struct GenreOption {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MediaItem {
     pub id: Id,
+    pub provider: ProviderId,
+    pub media_key: String,
     pub title: String,
     pub overview: String,
     pub poster_path: Option<String>,
@@ -89,8 +192,10 @@ pub struct MediaItem {
 }
 
 impl MediaItem {
-    pub fn new(id: Id, title: String, media_type: MediaType) -> Self {
+    pub fn new(id: Id, title: String, media_type: MediaType, provider: ProviderId) -> Self {
         Self {
+            media_key: media_key(provider, media_type, &id),
+            provider,
             id,
             title,
             overview: String::new(),
@@ -135,6 +240,8 @@ pub struct VideoClip {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct MediaDetail {
     pub id: Id,
+    pub provider: ProviderId,
+    pub media_key: String,
     pub media_type: MediaType,
     pub title: String,
     pub tagline: String,
@@ -173,8 +280,10 @@ pub struct MediaDetail {
 }
 
 impl MediaDetail {
-    pub fn new(id: Id, title: String, media_type: MediaType) -> Self {
+    pub fn new(id: Id, title: String, media_type: MediaType, provider: ProviderId) -> Self {
         Self {
+            media_key: media_key(provider, media_type, &id),
+            provider,
             id,
             media_type,
             title,
@@ -241,6 +350,8 @@ mod tests {
     fn full_item() -> MediaItem {
         MediaItem {
             id: Id::Num(1),
+            provider: ProviderId::Tmdb,
+            media_key: "tmdb:movie:1".into(),
             title: "Title".into(),
             overview: "Overview".into(),
             poster_path: Some("https://example.com/p.jpg".into()),
@@ -294,7 +405,12 @@ mod tests {
             publisher: Some("Publisher".into()),
             platforms: Some(vec!["PC".into()]),
             screenshots: Some(vec!["https://example.com/s.jpg".into()]),
-            ..MediaDetail::new(Id::Str("x1".into()), "Title".into(), MediaType::Book)
+            ..MediaDetail::new(
+                Id::Str("x1".into()),
+                "Title".into(),
+                MediaType::Book,
+                ProviderId::Itunes,
+            )
         }
     }
 
@@ -326,8 +442,13 @@ mod tests {
 
     #[test]
     fn optional_fields_are_omitted_when_absent() {
-        let v =
-            serde_json::to_value(MediaItem::new(Id::Num(1), "T".into(), MediaType::Tv)).unwrap();
+        let v = serde_json::to_value(MediaItem::new(
+            Id::Num(1),
+            "T".into(),
+            MediaType::Tv,
+            ProviderId::Tmdb,
+        ))
+        .unwrap();
         assert!(v.get("episodes").is_none());
         assert_eq!(v["poster_path"], Value::Null);
         assert_eq!(v["media_type"], "tv");
@@ -357,6 +478,81 @@ mod tests {
             MediaType::parse("podcast"),
             Err("Invalid media type.".into())
         );
+    }
+
+    #[test]
+    fn media_key_formats_provider_type_and_id() {
+        assert_eq!(
+            media_key(ProviderId::Tmdb, MediaType::Movie, &Id::Num(550)),
+            "tmdb:movie:550"
+        );
+        assert_eq!(
+            media_key(ProviderId::Itunes, MediaType::Book, &Id::Str("123".into())),
+            "itunes:book:123"
+        );
+    }
+
+    #[test]
+    fn media_key_round_trips_for_every_provider() {
+        for provider in [
+            ProviderId::Tmdb,
+            ProviderId::Anilist,
+            ProviderId::Rawg,
+            ProviderId::Itunes,
+            ProviderId::Manual,
+        ] {
+            let key = media_key(provider, MediaType::Game, &Id::Num(7));
+            let parsed = MediaKey::parse(&key).unwrap();
+            assert_eq!(parsed.provider, provider);
+            assert_eq!(parsed.media_type, MediaType::Game);
+            assert_eq!(parsed.id, "7");
+            assert_eq!(parsed.to_string(), key);
+        }
+    }
+
+    #[test]
+    fn media_key_parse_accepts_manual_uuid() {
+        let key = MediaKey::parse("manual:book:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69").unwrap();
+        assert_eq!(key.provider, ProviderId::Manual);
+        assert_eq!(key.id, "0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69");
+    }
+
+    #[test]
+    fn media_key_parse_rejects_malformed_keys() {
+        for bad in [
+            "",
+            "tmdb:movie",
+            "tmdb:movie:",
+            "tmdb:movie:1:2",
+            "imdb:movie:1",
+            "tmdb:podcast:1",
+        ] {
+            assert_eq!(
+                MediaKey::parse(bad),
+                Err("Invalid media key.".into()),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn items_carry_provider_and_media_key() {
+        let v = serde_json::to_value(MediaItem::new(
+            Id::Num(21),
+            "T".into(),
+            MediaType::Anime,
+            ProviderId::Anilist,
+        ))
+        .unwrap();
+        assert_eq!(v["provider"], "anilist");
+        assert_eq!(v["media_key"], "anilist:anime:21");
+        let d = MediaDetail::new(
+            Id::Str("9".into()),
+            "T".into(),
+            MediaType::Book,
+            ProviderId::Itunes,
+        );
+        assert_eq!(d.media_key, "itunes:book:9");
     }
 
     #[test]

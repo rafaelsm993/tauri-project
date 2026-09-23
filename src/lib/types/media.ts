@@ -1,5 +1,11 @@
 export type MediaType = "movie" | "tv" | "anime" | "manga" | "book" | "game";
 
+// `manual` is reserved for user-created entries.
+export type ProviderId = "tmdb" | "anilist" | "rawg" | "itunes" | "manual";
+
+// Library identity: `provider:media_type:id`.
+export type MediaKey = string;
+
 export interface PaginatedResult<T> {
   results: T[];
   page: number;
@@ -10,6 +16,8 @@ export interface PaginatedResult<T> {
 // Every provider maps into this shape.
 export interface MediaItem {
   id: number | string;
+  provider: ProviderId;
+  media_key: MediaKey;
   title: string;
   overview: string;
   poster_path: string | null;
@@ -44,6 +52,8 @@ export interface VideoClip {
 
 export interface MediaDetail {
   id: number | string;
+  provider: ProviderId;
+  media_key: MediaKey;
   media_type: MediaType;
   title: string;
   tagline: string;

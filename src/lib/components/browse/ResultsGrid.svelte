@@ -47,7 +47,7 @@
   <p class="page-empty">No results found.</p>
 {:else}
   <div class="grid">
-    {#each items as item, i (`${item.media_type}-${item.id}-${i}`)}
+    {#each items as item (item.media_key)}
       <MediaCard {item} onclick={() => onCardClick(item)} />
     {/each}
     {#if appending}

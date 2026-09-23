@@ -2,10 +2,12 @@ use super::catalog::Provider;
 use super::http::{client as http, decode, fetch_json};
 use super::types::{
     round1, strip_html, CastMember, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType,
-    Page, VideoClip,
+    Page, ProviderId, VideoClip,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
+
+const PROVIDER: ProviderId = ProviderId::Anilist;
 
 const ENDPOINT: &str = "https://graphql.anilist.co";
 
@@ -307,7 +309,7 @@ fn map_item(raw: RawMedia, media_type: MediaType) -> MediaItem {
         release_date: Some(fuzzy_date(raw.start_date)),
         episodes: if is_manga { None } else { raw.episodes },
         chapters: if is_manga { raw.chapters } else { None },
-        ..MediaItem::new(Id::Num(raw.id), pick_title(raw.title), media_type)
+        ..MediaItem::new(Id::Num(raw.id), pick_title(raw.title), media_type, PROVIDER)
     }
 }
 
@@ -415,7 +417,7 @@ fn map_detail(raw: RawMedia, media_type: MediaType) -> MediaDetail {
         status: Some(raw.status.unwrap_or_default()),
         studios: Some(studios),
         author: is_manga.then(|| author(raw.staff)),
-        ..MediaDetail::new(Id::Num(raw.id), pick_title(raw.title), media_type)
+        ..MediaDetail::new(Id::Num(raw.id), pick_title(raw.title), media_type, PROVIDER)
     }
 }
 
@@ -570,6 +572,7 @@ mod tests {
         let data: PageData = sample("anilist_anime_page");
         let page = map_page(data.page, MediaType::Anime);
         let first = &page.results[0];
+        assert_eq!(first.media_key, format!("anilist:anime:{}", first.id));
         assert_eq!(page.results.len(), 3);
         assert_eq!(page.page, 1);
         assert!(page.total_pages > 1 && page.total_results > 3);
@@ -600,6 +603,7 @@ mod tests {
     fn manga_detail_credits_story_and_art_staff() {
         let data: MediaData = sample("anilist_manga_detail");
         let d = map_detail(data.media.unwrap(), MediaType::Manga);
+        assert_eq!(d.media_key, format!("anilist:manga:{}", d.id));
         assert_eq!(d.title, "Berserk");
         assert!(d.author.as_deref().unwrap().contains("Kentarou Miura"));
         assert!(d.episodes.is_none());

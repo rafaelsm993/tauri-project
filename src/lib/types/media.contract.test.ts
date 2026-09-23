@@ -4,6 +4,8 @@ import type { GenreOption, MediaDetail, MediaItem, PaginatedResult } from "./med
 
 const ITEM_KEYS = {
   id: 0,
+  provider: 0,
+  media_key: 0,
   title: 0,
   overview: 0,
   poster_path: 0,
@@ -21,6 +23,8 @@ const ITEM_KEYS = {
 
 const DETAIL_KEYS = {
   id: 0,
+  provider: 0,
+  media_key: 0,
   media_type: 0,
   title: 0,
   tagline: 0,

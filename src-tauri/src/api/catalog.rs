@@ -68,6 +68,7 @@ pub async fn catalog_detail(media_type: String, id: String) -> Result<MediaDetai
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::types::MediaKey;
 
     #[test]
     fn detail_args_parse_numeric_ids_for_numeric_providers() {
@@ -116,19 +117,15 @@ mod tests {
                 .results
                 .first()
                 .unwrap_or_else(|| panic!("{mt:?} page"));
-            let id = match &first.id {
-                Id::Num(n) => n.to_string(),
-                Id::Str(s) => s.clone(),
-            };
-            let kind = serde_json::to_value(mt).unwrap();
-            let detail = catalog_detail(kind.as_str().unwrap().into(), id)
-                .await
-                .unwrap();
-            assert_eq!(detail.id, first.id);
+            let key = MediaKey::parse(&first.media_key).unwrap();
+            assert_eq!(key.media_type, mt);
+            let detail = catalog_detail(mt.to_string(), key.id).await.unwrap();
+            assert_eq!(detail.media_key, first.media_key);
             let search = catalog_page(mt, "star".into(), 1, None).await.unwrap();
             assert!(!search.results.is_empty(), "{mt:?} search");
             eprintln!(
-                "{mt:?}: {} genres, {} items, detail {:?}, search {}",
+                "{}: {} genres, {} items, detail {:?}, search {}",
+                first.media_key,
                 genres.len(),
                 page.results.len(),
                 detail.title,

@@ -1,9 +1,12 @@
 use super::catalog::Provider;
 use super::http::{client as http, fetch};
 use super::types::{
-    CastMember, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType, Page, VideoClip,
+    CastMember, Genre, GenreOption, Id, MediaDetail, MediaItem, MediaType, Page, ProviderId,
+    VideoClip,
 };
 use serde::Deserialize;
+
+const PROVIDER: ProviderId = ProviderId::Tmdb;
 
 const BASE: &str = "https://api.themoviedb.org/3";
 const IMG: &str = "https://image.tmdb.org/t/p";
@@ -137,6 +140,7 @@ fn map_item(raw: RawItem, media_type: MediaType) -> MediaItem {
             Id::Num(raw.id),
             title.unwrap_or_else(|| "Untitled".into()),
             media_type,
+            PROVIDER,
         )
     }
 }
@@ -222,6 +226,7 @@ fn map_detail(raw: RawDetail, media_type: MediaType) -> MediaDetail {
             Id::Num(raw.id),
             raw.title.or(raw.name).unwrap_or_else(|| "Untitled".into()),
             media_type,
+            PROVIDER,
         )
     }
 }
@@ -321,6 +326,7 @@ mod tests {
     fn movie_page_maps_titles_images_and_totals() {
         let page = map_page(sample("tmdb_movie_page"), MediaType::Movie);
         let first = &page.results[0];
+        assert_eq!(first.media_key, format!("tmdb:movie:{}", first.id));
         assert_eq!(page.results.len(), 3);
         assert!(page.total_pages > 1);
         assert_eq!(first.media_type, MediaType::Movie);
@@ -337,6 +343,7 @@ mod tests {
     fn tv_page_uses_name_and_first_air_date() {
         let page = map_page(sample("tmdb_tv_page"), MediaType::Tv);
         let first = &page.results[0];
+        assert_eq!(first.media_key, format!("tmdb:tv:{}", first.id));
         assert_eq!(first.media_type, MediaType::Tv);
         assert!(first.first_air_date.is_some() && first.release_date.is_none());
         assert_ne!(first.title, "Untitled");
@@ -354,6 +361,7 @@ mod tests {
     #[test]
     fn movie_detail_caps_cast_and_keeps_only_youtube_videos() {
         let d = map_detail(sample("tmdb_movie_detail"), MediaType::Movie);
+        assert_eq!(d.media_key, format!("tmdb:movie:{}", d.id));
         assert_eq!(d.title, "Fight Club");
         assert_eq!(d.cast.len(), MAX_CAST);
         assert!(d.videos.iter().all(|v| v.site == "YouTube"));

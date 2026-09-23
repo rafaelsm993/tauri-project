@@ -81,7 +81,7 @@
       {:else if items.length === 0}
         <p class="rail-empty">No items available.</p>
       {:else}
-        {#each items as item, i (`${item.media_type}-${item.id}-${i}`)}
+        {#each items as item (item.media_key)}
           <div class="rail-item" role="listitem">
             <MediaCard {item} onclick={() => onCardClick(item)} />
           </div>

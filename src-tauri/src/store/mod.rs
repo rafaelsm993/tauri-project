@@ -1,4 +1,5 @@
 pub mod file;
+pub mod writer;
 
 use serde_json::Value;
 

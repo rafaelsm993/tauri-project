@@ -62,7 +62,7 @@ export const test = base.extend({
       const empty = { page: 1, total_pages: 1, total_results: 0, results: [] };
       const calls: string[] = [];
       Object.assign(window, { __ipcCalls: calls });
-      (window as any).__TAURI_INTERNALS__ = {
+      (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
         invoke: async (cmd: string) => {
           calls.push(cmd);
           return structuredClone(fixtures[cmd] ?? empty);

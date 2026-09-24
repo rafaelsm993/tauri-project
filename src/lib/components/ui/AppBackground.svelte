@@ -20,10 +20,29 @@
   onDestroy(() => {
     clearTimeout(pulseTimer);
   });
+
+  let hidden = $state(false);
+  let blurred = $state(false);
+  const paused = $derived(hidden || blurred);
+
+  // Stops the infinite background loops while nobody can see them.
+  $effect(() => {
+    const onVisibility = () => (hidden = document.hidden);
+    const onBlur = () => (blurred = true);
+    const onFocus = () => (blurred = false);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+    };
+  });
 </script>
 
 <div class="bg-layer" aria-hidden="true">
-  <div class="bg-area" class:pulsing>
+  <div class="bg-area" class:pulsing class:paused>
     <ul class="circles">
       <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -- skeleton placeholder, only the index is used -->
       {#each { length: BUBBLE_COUNT } as _, i (i)}
@@ -70,6 +89,10 @@
         );
       filter: blur(40px);
     }
+  }
+
+  .bg-area.paused .circles li {
+    animation-play-state: paused;
   }
 
   .circles {

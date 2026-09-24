@@ -31,7 +31,7 @@ Fast loops: `npm run test:watch`, `npx playwright test --project=phone-small`, `
 3. **RED** — write the failing test first (Rust `#[cfg(test)]` next to the code; TS `*.test.ts` next to the file). Run it; see it fail for the right reason.
 4. **GREEN** — minimal code to pass.
 5. **Refactor** — remove duplication, name things, keep functions small. Tests stay green.
-6. **Verify** — `npm run verify` exit 0. For UI changes also `npm run tauri dev` and look at it at full size **and** dragged down to the 360 px minimum.
+6. **Verify** — `npm run verify` exit 0. For UI changes also `npm run tauri dev` and look at it at full size **and** dragged down to the 360 px minimum. UI changes are also checked on a physical Android phone (`docs/BUILD_AND_RUN_ANDROID.md`), with a phone screenshot in the handoff; if no phone is connected, say "phone check pending".
 7. **Handoff** — summary: what changed, gate output tail, anything not verified.
 Commits/branches only with the user's explicit OK. Conventional Commits (`feat(scope): …`).
 

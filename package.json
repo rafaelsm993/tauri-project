@@ -14,7 +14,7 @@
     "lint:bp": "node scripts/check-breakpoints.mjs",
     "lint:en": "node --test scripts/english-only.test.mjs",
     "lint:colors": "node --test scripts/colors.test.mjs",
-    "lint": "prettier --check . && eslint . && npm run lint:bp && npm run lint:en && npm run lint:colors && npm run lint:guards",
+    "lint": "prettier --check . && eslint . --max-warnings 0 && npm run lint:bp && npm run lint:en && npm run lint:colors && npm run lint:guards",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "playwright test",

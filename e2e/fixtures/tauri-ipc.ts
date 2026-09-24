@@ -65,7 +65,7 @@ export const test = base.extend({
       const calls: string[] = [];
       const prefs = { background_animation: true };
       Object.assign(window, { __ipcCalls: calls });
-      (window as any).__TAURI_INTERNALS__ = {
+      (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
         invoke: async (cmd: string, args?: { patch?: object }) => {
           calls.push(cmd);
           // Tests set window.__offline to simulate a dropped network for provider calls.

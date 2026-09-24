@@ -46,3 +46,7 @@ test("the Android dev loop is documented once, not duplicated in BUILD_AND_RUN.m
     "BUILD_AND_RUN.md repeats the Android dev loop; link the runbook instead",
   );
 });
+
+test("the workflow asks for a phone check on UI changes", () => {
+  assert.match(read("AGENTS.md"), /physical Android phone/);
+});

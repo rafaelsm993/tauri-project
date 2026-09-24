@@ -1,5 +1,6 @@
 pub mod api;
 pub mod logging;
+pub mod store;
 
 #[cfg(all(desktop, debug_assertions))]
 use tauri::Manager;

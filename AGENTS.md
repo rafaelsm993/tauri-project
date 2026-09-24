@@ -39,7 +39,7 @@ Commits/branches only with the user's explicit OK. Conventional Commits (`feat(s
 | Need | Command |
 |---|---|
 | Environment report (paste into bug reports) | `npm run tauri info` |
-| Dev app | `npm run tauri dev` |
+| Dev app | `npm run tauri dev` · Android (phone): `adb reverse tcp:1420 tcp:1420 && adb reverse tcp:1421 tcp:1421`, then `npm run tauri android dev -- --host 127.0.0.1` (see `docs/BUILD_AND_RUN_ANDROID.md`) |
 | Add an official plugin (Cargo + npm + capability in one go) | `npm run tauri add <plugin>` |
 | List / create permissions | `npm run tauri permission ls` · `npm run tauri permission new` |
 | Create a capability | `npm run tauri capability new` |
@@ -82,7 +82,7 @@ Supported range: **360 px phone → 1920 px+ desktop**, mouse **and** touch. The
 - **Never** hide overflow on `html`/`body` to "fix" a layout; find the wide element instead.
 - **Rails/tabs** that can exceed the width must scroll horizontally (`overflow-x: auto`), not wrap into a broken grid or get clipped.
 - **Tests:** a new screen gets an entry in `SCREENS` in `e2e/responsive.spec.ts`. A new interactive component gets a touch-target or visibility assertion there if it has hover or small controls. IPC is faked in `e2e/fixtures/tauri-ipc.ts`; add fixtures for new commands.
-- Mobile builds (`tauri android|ios`) aren't initialised yet. Keep Rust free of desktop-only APIs outside `#[cfg(desktop)]` so enabling them later is config, not a rewrite.
+- Android is initialised (`src-tauri/gen/android`, package `com.user.tauri_app` until the app is named); iOS is out of scope. Keep desktop-only APIs behind `#[cfg(desktop)]`. Setup and the phone dev loop: `docs/BUILD_AND_RUN_ANDROID.md`. CI builds Linux (`verify`), Windows and an arm64 debug APK on every PR.
 
 ## Adding a provider (checklist)
 Save real responses to `src-tauri/tests/fixtures/` (strip keys/URLs) → module with `Raw*` structs + pure `map_*` fns tested on them → `impl Provider` → arms in the 3 `catalog.rs` matches → `mod.rs` → e2e fixture if the home tab changes → `cargo test live_ -- --ignored` → `npm run verify`.

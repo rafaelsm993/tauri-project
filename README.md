@@ -37,7 +37,10 @@ npm run tauri dev      # Arch desktop; on the Windows laptop use ./scripts/wdev.
 ```bash
 npm run tauri build -- --no-bundle   # Arch: binary at src-tauri/target/release/tauri-app
 ./scripts/wdev.sh build              # Windows laptop (from WSL): MSI + NSIS in src-tauri/target/release/bundle/
+npm run tauri android build -- --debug --apk --target aarch64   # Android debug APK in src-tauri/gen/android/app/build/outputs/apk/
 ```
+
+Android (phone dev loop with hot reload, APKs): see [Android runbook](docs/BUILD_AND_RUN_ANDROID.md).
 
 ## Development workflow
 

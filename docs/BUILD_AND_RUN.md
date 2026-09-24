@@ -1,9 +1,10 @@
-# Building and running TauriFlix
+# Building and running tauri-app
 
 | Machine | Run (hot reload) | Release | Toolchain check |
 | --- | --- | --- | --- |
 | Arch desktop (native Linux) | `npm run tauri dev` | `npm run tauri build -- --no-bundle` | `node --test scripts/verify-toolchain.test.mjs` |
 | Windows 11 laptop (edit in WSL) | `./scripts/wdev.sh` | `./scripts/wdev.sh build` | `PS> powershell -ExecutionPolicy Bypass -File scripts\verify.ps1` |
+| Android (phone, from Arch) | see [BUILD_AND_RUN_ANDROID.md](BUILD_AND_RUN_ANDROID.md) | `npm run tauri android build -- --debug --apk --target aarch64 --target armv7` | `npm run tauri info` |
 
 `src-tauri/target/`, `node_modules/` and `.env` are per machine, never shared or committed.
 
@@ -98,6 +99,10 @@ Windows optional binaries, the symptom is `Cannot find module @rollup/rollup-win
 PS> Remove-Item -Recurse -Force node_modules
 PS> npm install
 ```
+
+## Android
+
+Setup, the phone dev loop with hot reload, screen mirroring, sideload APKs and troubleshooting: [BUILD_AND_RUN_ANDROID.md](BUILD_AND_RUN_ANDROID.md).
 
 ## WSLg fallback (only if you must run a Linux build)
 

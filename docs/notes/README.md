@@ -13,4 +13,4 @@ When a note disagrees with the code, the code is right. `npm run lint:guards` (p
 | [Config and Stack](Config%20and%20Stack.md) | Scripts, dependencies, config files, `.env`, system requirements |
 | [Design System](Design%20System.md) | Runtime color tokens, type, spacing, motion, z-index tokens, SCSS mixins |
 
-Related: [BUILD_AND_RUN.md](../BUILD_AND_RUN.md) (WSL → Windows build).
+Related: [BUILD_AND_RUN.md](../BUILD_AND_RUN.md) (Arch, WSL → Windows) and [BUILD_AND_RUN_ANDROID.md](../BUILD_AND_RUN_ANDROID.md) (Android).

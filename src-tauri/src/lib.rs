@@ -1,12 +1,12 @@
 pub mod api;
 pub mod logging;
 
-#[cfg(debug_assertions)]
+#[cfg(all(desktop, debug_assertions))]
 use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 /// Dev-only opt-in (`TAURI_APP_DEVTOOLS=1`) since a docked inspector costs viewport and CPU.
-#[cfg(debug_assertions)]
+#[cfg(all(desktop, debug_assertions))]
 fn devtools_requested(value: Option<&str>) -> bool {
     value.is_some_and(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
 }
@@ -42,7 +42,7 @@ pub fn run() {
         .plugin(log_plugin())
         .plugin(tauri_plugin_opener::init())
         .setup(|_app| {
-            #[cfg(debug_assertions)]
+            #[cfg(all(desktop, debug_assertions))]
             if devtools_requested(std::env::var("TAURI_APP_DEVTOOLS").ok().as_deref()) {
                 if let Some(window) = _app.get_webview_window("main") {
                     window.open_devtools();
@@ -59,7 +59,7 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-#[cfg(all(test, debug_assertions))]
+#[cfg(all(test, desktop, debug_assertions))]
 mod tests {
     use super::devtools_requested;
 

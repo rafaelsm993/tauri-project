@@ -117,6 +117,11 @@ fn artwork(raw: &RawBook) -> Option<&str> {
         .or(raw.artwork_url60.as_deref())
 }
 
+// iTunes rates 0–5; the shared DTO is 0–10.
+fn ten_point(rating: Option<f64>) -> f64 {
+    rating.map_or(0.0, |r| r * 2.0)
+}
+
 fn map_item(raw: RawBook) -> MediaItem {
     let year: String = raw
         .release_date
@@ -128,7 +133,7 @@ fn map_item(raw: RawBook) -> MediaItem {
     MediaItem {
         overview: strip_html(raw.description.as_deref().unwrap_or_default()),
         poster_path: upscale_cover(artwork(&raw), 600),
-        vote_average: raw.average_user_rating.unwrap_or(0.0),
+        vote_average: ten_point(raw.average_user_rating),
         vote_count: raw.user_rating_count.unwrap_or(0),
         release_date: (!year.is_empty()).then_some(year),
         author: Some(raw.artist_name.clone().unwrap_or_default()),
@@ -158,7 +163,7 @@ fn map_detail(raw: RawBook) -> MediaDetail {
         tagline: author.clone(),
         overview: strip_html(raw.description.as_deref().unwrap_or_default()),
         poster_path: upscale_cover(artwork(&raw), 1200),
-        vote_average: raw.average_user_rating.unwrap_or(0.0),
+        vote_average: ten_point(raw.average_user_rating),
         vote_count: raw.user_rating_count.unwrap_or(0),
         release_date: raw.release_date.clone().unwrap_or_default(),
         genres: raw
@@ -327,5 +332,14 @@ mod tests {
         assert_eq!(d.tagline, d.author.clone().unwrap());
         assert_eq!(d.subjects.as_ref().unwrap().len(), d.genres.len());
         assert_eq!(d.runtime, None);
+    }
+
+    #[test]
+    fn ratings_are_on_the_shared_ten_point_scale() {
+        let page = map_page(sample("itunes_search"), 1);
+        assert_eq!(page.results[0].vote_average, 8.0);
+        let res: RawSearch = sample("itunes_lookup");
+        let d = map_detail(res.results.into_iter().next().unwrap());
+        assert_eq!(d.vote_average, 8.0);
     }
 }

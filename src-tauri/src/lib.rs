@@ -1,4 +1,5 @@
 pub mod api;
+pub mod library;
 pub mod logging;
 pub mod store;
 

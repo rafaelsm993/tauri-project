@@ -1,0 +1,32 @@
+{
+  "entry": {
+    "created_at": "2026-09-24T02:00:00Z",
+    "key": "tmdb:tv:7",
+    "snapshot": {
+      "media_key": "tmdb:tv:7",
+      "media_type": "tv",
+      "poster_path": "https://example.com/p.jpg",
+      "provider": "tmdb",
+      "title": "Arcane",
+      "year": "2021"
+    },
+    "updated_at": "2026-09-24T02:00:00Z",
+    "user": {
+      "progress": 3,
+      "rating": 9,
+      "review": "Great",
+      "status": "in_progress"
+    }
+  },
+  "event": {
+    "at_utc": "2026-09-24T02:00:00Z",
+    "id": "e1",
+    "kind": "status_changed",
+    "local_date": "2026-09-23",
+    "media_key": "tmdb:tv:7",
+    "payload": {
+      "from": "planning",
+      "to": "in_progress"
+    }
+  }
+}

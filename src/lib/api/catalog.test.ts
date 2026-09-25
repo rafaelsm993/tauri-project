@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { catalog } from "./catalog";
+import { onlineStore } from "$lib/stores/online.svelte";
 
-afterEach(() => clearMocks());
+afterEach(() => {
+  clearMocks();
+  onlineStore.noteSuccess();
+});
 
 const EMPTY = { page: 1, total_pages: 1, total_results: 0, results: [] };
 
@@ -56,5 +60,21 @@ describe("catalog.fetchGenres", () => {
     const calls = record(genres);
     await expect(catalog.fetchGenres("book")).resolves.toEqual(genres);
     expect(calls).toEqual([{ cmd: "catalog_genres", args: { media_type: "book" } }]);
+  });
+});
+
+describe("catalog online reporting", () => {
+  it("an offline-marked rejection flips the app offline and still rejects", async () => {
+    mockIPC(() => Promise.reject("offline: error sending request"));
+    await expect(catalog.fetchGenres("movie")).rejects.toBe("offline: error sending request");
+    expect(onlineStore.online).toBe(false);
+  });
+
+  it("the next success brings it back online", async () => {
+    mockIPC(() => Promise.reject("offline: error sending request"));
+    await catalog.fetchGenres("movie").catch(() => {});
+    record([]);
+    await catalog.fetchGenres("movie");
+    expect(onlineStore.online).toBe(true);
   });
 });

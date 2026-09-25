@@ -60,8 +60,8 @@ test("notes do not describe removed features", () => {
 });
 
 test("API Reference documents every registered command", () => {
-  const lib = read("src-tauri/src/lib.rs");
-  const cmds = [...lib.matchAll(/api::\w+::(\w+)/g)].map((m) => m[1]);
+  const handler = read("src-tauri/src/lib.rs").match(/generate_handler!\[([^\]]*)\]/)?.[1] ?? "";
+  const cmds = [...handler.matchAll(/api::\w+::(\w+)/g)].map((m) => m[1]);
   assert.ok(cmds.length > 0, "no commands parsed from lib.rs");
   const ref = read(`${NOTES}/API Reference.md`);
   for (const c of cmds) {

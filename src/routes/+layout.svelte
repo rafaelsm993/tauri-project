@@ -6,6 +6,7 @@
   import "@fontsource/dm-mono/500.css";
   import "$lib/styles/global.css";
   import AppBackground from "$lib/components/ui/AppBackground.svelte";
+  import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
   import ProfileMenu from "$lib/components/ui/ProfileMenu.svelte";
   import { page } from "$app/state";
   import type { Snippet } from "svelte";
@@ -35,6 +36,7 @@
   </header>
   {@render children()}
 </div>
+<OfflineBanner />
 
 <style lang="scss">
   // Mirrors the home page box so the button lines up with the search bar and carousels.

@@ -15,4 +15,10 @@ describe("errorMessage", () => {
     expect(errorMessage({ code: 1 }, "fallback")).toBe("fallback");
     expect(errorMessage("", "fallback")).toBe("fallback");
   });
+
+  it("hides the offline marker from the message", () => {
+    expect(errorMessage("offline: error sending request", "fallback")).toBe(
+      "error sending request",
+    );
+  });
 });

@@ -7,9 +7,10 @@ import type {
   MediaType,
   PaginatedResult,
 } from "$lib/types/media";
+import { report } from "./offline";
 
 function fetchGenres(cat: MediaType): Promise<GenreOption[]> {
-  return invoke<GenreOption[]>("catalog_genres", { media_type: cat });
+  return report(invoke<GenreOption[]>("catalog_genres", { media_type: cat }));
 }
 
 function fetchPage(
@@ -18,17 +19,16 @@ function fetchPage(
   page: number,
   genre: GenreId | null,
 ): Promise<PaginatedResult<MediaItem>> {
-  return invoke<PaginatedResult<MediaItem>>("catalog_page", {
-    media_type: cat,
-    query,
-    page,
-    genre,
-  });
+  return report(
+    invoke<PaginatedResult<MediaItem>>("catalog_page", { media_type: cat, query, page, genre }),
+  );
 }
 
 // Args come from the URL (untrusted); Rust validates them and rejects with a user-facing message.
 function fetchDetail(type: string, id: string): Promise<MediaDetail> {
-  return invoke<MediaDetail>("catalog_detail", { media_type: type, id: decodeURIComponent(id) });
+  return report(
+    invoke<MediaDetail>("catalog_detail", { media_type: type, id: decodeURIComponent(id) }),
+  );
 }
 
 export const catalog = { fetchGenres, fetchPage, fetchDetail };

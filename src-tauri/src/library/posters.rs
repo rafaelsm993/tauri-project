@@ -347,7 +347,9 @@ mod tests {
         assert!(img.contains("asset:") && img.contains("http://asset.localhost"));
         let csp = security["csp"].to_string();
         assert!(!csp.contains("fonts.g"), "fonts are bundled, not fetched");
-        let dev = security["devCsp"]["connect-src"].as_str().expect("devCsp is set");
+        let dev = security["devCsp"]["connect-src"]
+            .as_str()
+            .expect("devCsp is set");
         assert!(dev.contains("ws://localhost:1421") && dev.contains("ws://127.0.0.1:1421"));
         assert_eq!(security["devCsp"]["img-src"], security["csp"]["img-src"]);
         assert_eq!(security["assetProtocol"]["enable"], true);

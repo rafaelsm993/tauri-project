@@ -29,6 +29,35 @@ impl<T: Serialize + Send + 'static> StoreHandle<T> {
         self.dirty.store(true, Ordering::Release);
     }
 
+    // Applies `f` and writes the file in one step; any failure restores the previous state.
+    pub async fn commit<R>(&self, f: impl FnOnce(&mut T) -> Result<R, String>) -> Result<R, String>
+    where
+        T: Clone,
+    {
+        let mut state = self.state.lock().await;
+        let before = state.clone();
+        let out = match f(&mut state) {
+            Ok(out) => out,
+            Err(e) => {
+                *state = before;
+                return Err(e);
+            }
+        };
+        let file = Versioned {
+            schema_version: self.schema_version,
+            data: &*state,
+        };
+        let written = serde_json::to_vec_pretty(&file)
+            .map_err(|e| format!("serialize: {e}"))
+            .and_then(|bytes| write_atomic(&self.path, &bytes));
+        if let Err(e) = written {
+            *state = before;
+            return Err(e);
+        }
+        self.dirty.store(false, Ordering::Release);
+        Ok(out)
+    }
+
     pub async fn update<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
         let mut state = self.state.lock().await;
         let out = f(&mut state);
@@ -131,6 +160,62 @@ mod tests {
         task.abort();
         let saved: Versioned<Vec<u32>> = read_with_recovery(&path).unwrap().unwrap();
         assert_eq!(saved.data, vec![7]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn commit_applies_the_change_and_writes_it() {
+        let dir = scratch("commit-ok");
+        let path = dir.join("x.json");
+        let store = StoreHandle::new(path.clone(), 1, vec![1u32]);
+        let len = store
+            .commit(|v| {
+                v.push(2);
+                Ok(v.len())
+            })
+            .await
+            .unwrap();
+        assert_eq!(len, 2);
+        let saved: Versioned<Vec<u32>> = read_with_recovery(&path).unwrap().unwrap();
+        assert_eq!(saved.data, vec![1, 2]);
+        assert!(!store.flush().await.unwrap());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_failed_commit_write_restores_the_previous_state() {
+        let dir = scratch("commit-write-fail");
+        let path = dir.join("missing").join("x.json");
+        let store = StoreHandle::new(path.clone(), 1, vec![1u32]);
+        store
+            .commit(|v| {
+                v.push(2);
+                Ok(())
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(store.read(Clone::clone).await, vec![1]);
+        assert!(!store.flush().await.unwrap());
+        assert!(!path.exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_commit_whose_closure_fails_changes_nothing() {
+        let dir = scratch("commit-closure-fail");
+        let path = dir.join("x.json");
+        let store = StoreHandle::new(path.clone(), 1, vec![1u32]);
+        let err = store
+            .commit::<()>(|v| {
+                v.push(2);
+                Err("no".into())
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(err, "no");
+        assert_eq!(store.read(Clone::clone).await, vec![1]);
+        assert!(!store.flush().await.unwrap());
+        assert!(!path.exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

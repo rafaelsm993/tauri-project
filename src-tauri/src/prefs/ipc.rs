@@ -34,15 +34,13 @@ pub async fn load(state: &PrefsState) -> Prefs {
 }
 
 pub async fn update(state: &PrefsState, patch: PrefsPatch) -> Result<Prefs, String> {
-    let prefs = state
+    state
         .store
-        .update(|p| {
+        .commit(|p| {
             apply_patch(p, patch);
-            p.clone()
+            Ok(p.clone())
         })
-        .await;
-    state.store.flush().await?;
-    Ok(prefs)
+        .await
 }
 
 #[tauri::command]
@@ -95,6 +93,24 @@ mod tests {
         drop(first);
         let second = init(&dir).unwrap();
         assert!(!load(&second).await.background_animation);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_failed_save_keeps_prefs_unchanged_in_memory_and_on_disk() {
+        let dir = scratch("prefs-failed-save");
+        let state = init(&dir).unwrap();
+        std::fs::create_dir_all(dir.join("prefs.json")).unwrap();
+        let saved = update(
+            &state,
+            PrefsPatch {
+                background_animation: Some(false),
+            },
+        )
+        .await;
+        assert!(saved.is_err());
+        assert!(load(&state).await.background_animation);
+        assert!(dir.join("prefs.json").is_dir());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

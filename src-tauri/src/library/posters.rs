@@ -4,9 +4,16 @@ use crate::store::file::write_atomic;
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const TIMEOUT: Duration = Duration::from_secs(15);
+
+// A failed poster waits this long before the next save may retry it; a restart always retries.
+pub const RETRY_AFTER: Duration = Duration::from_secs(10 * 60);
+
+pub fn retry_due(last_failure: Option<Instant>, now: Instant) -> bool {
+    last_failure.is_none_or(|t| now.duration_since(t) >= RETRY_AFTER)
+}
 
 // Hosts a poster may come from; tauri.conf.json img-src lists the same ones.
 pub const HOSTS: [&str; 4] = [
@@ -170,12 +177,26 @@ where
     let dir = state.posters.clone();
     let todo = state.store.read(|f| missing(f, &dir)).await;
     for (key, url) in todo {
+        let last = state.poster_failures.lock().await.get(&key).copied();
+        if !retry_due(last, Instant::now()) {
+            continue;
+        }
         match cache_one(&dir, &key, &url, &fetch).await {
             Ok(name) if !commands::attach_poster(&state, &key, &name).await => {
                 remove_quietly(&dir.join(name));
             }
-            Ok(_) => log::info!("[posters] cached {key}"),
-            Err(e) => log::warn!("[posters] {key}: {e}"),
+            Ok(_) => {
+                state.poster_failures.lock().await.remove(&key);
+                log::info!("[posters] cached {key}");
+            }
+            Err(e) => {
+                state
+                    .poster_failures
+                    .lock()
+                    .await
+                    .insert(key.clone(), Instant::now());
+                log::warn!("[posters] {key}: {e}");
+            }
         }
     }
     let referenced = commands::poster_files(&state).await;
@@ -255,6 +276,34 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_failed_poster_is_not_retried_until_the_cooldown_passes() {
+        let (dir, state) = saved_with_poster("c6-cooldown", REMOTE).await;
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counting = |_: String| {
+            let calls = calls.clone();
+            async move {
+                calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Err::<Vec<u8>, String>("offline".into())
+            }
+        };
+        fill_with(state.clone(), counting).await;
+        fill_with(state.clone(), counting).await;
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        state.poster_failures.lock().await.clear();
+        fill_with(state.clone(), png).await;
+        assert_eq!(poster_file(&dir).as_deref(), Some("tmdb_tv_7.png"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn retry_waits_for_the_cooldown() {
+        let t0 = std::time::Instant::now();
+        assert!(retry_due(None, t0));
+        assert!(!retry_due(Some(t0), t0 + RETRY_AFTER / 2));
+        assert!(retry_due(Some(t0), t0 + RETRY_AFTER));
+    }
+
+    #[tokio::test]
     async fn a_host_outside_the_allow_list_is_never_fetched() {
         let (dir, state) = saved_with_poster("c6-host", "https://example.com/p.jpg").await;
         fill_with(state.clone(), never).await;
@@ -298,6 +347,9 @@ mod tests {
         assert!(img.contains("asset:") && img.contains("http://asset.localhost"));
         let csp = security["csp"].to_string();
         assert!(!csp.contains("fonts.g"), "fonts are bundled, not fetched");
+        let dev = security["devCsp"]["connect-src"].as_str().expect("devCsp is set");
+        assert!(dev.contains("ws://localhost:1421") && dev.contains("ws://127.0.0.1:1421"));
+        assert_eq!(security["devCsp"]["img-src"], security["csp"]["img-src"]);
         assert_eq!(security["assetProtocol"]["enable"], true);
         assert_eq!(
             security["assetProtocol"]["scope"],

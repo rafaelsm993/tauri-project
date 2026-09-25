@@ -11,7 +11,7 @@ const plugin = vi.hoisted(() => ({
 }));
 vi.mock("@tauri-apps/plugin-log", () => plugin);
 
-import { format, forwardConsole } from "./console";
+import { format, forwardConsole, reportCspViolations } from "./console";
 
 const LEVELS = ["log", "debug", "info", "warn", "error"] as const;
 const saved = Object.fromEntries(LEVELS.map((l) => [l, console[l]]));
@@ -100,5 +100,33 @@ describe("format", () => {
     const cyclic: Record<string, unknown> = {};
     cyclic.self = cyclic;
     expect(format([cyclic])).toBe("[object Object]");
+  });
+});
+
+describe("reportCspViolations", () => {
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => setTauri(false));
+
+  function violate() {
+    const e = new Event("securitypolicyviolation");
+    Object.assign(e, { violatedDirective: "connect-src", blockedURI: "ws://localhost:1421" });
+    document.dispatchEvent(e);
+  }
+
+  it("logs every blocked request so CSP gaps show up in the app log", () => {
+    setTauri(true);
+    const stop = reportCspViolations();
+    violate();
+    expect(plugin.warn).toHaveBeenCalledWith("[csp] blocked connect-src ws://localhost:1421");
+    stop();
+    violate();
+    expect(plugin.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a no-op outside Tauri", () => {
+    setTauri(false);
+    reportCspViolations()();
+    violate();
+    expect(plugin.warn).not.toHaveBeenCalled();
   });
 });

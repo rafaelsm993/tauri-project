@@ -29,6 +29,14 @@
         "font-src": "'self' data:",
         "frame-src": "https://www.youtube.com https://www.youtube-nocookie.com"
       },
+      "devCsp": {
+        "default-src": "'self' customprotocol: asset: http://localhost:1420 http://127.0.0.1:1420",
+        "connect-src": "ipc: http://ipc.localhost ws://localhost:1421 ws://127.0.0.1:1421 http://localhost:1420 http://127.0.0.1:1420",
+        "img-src": "'self' asset: http://asset.localhost data: blob: https://image.tmdb.org https://s4.anilist.co https://media.rawg.io https://*.mzstatic.com",
+        "style-src": "'self' 'unsafe-inline'",
+        "font-src": "'self' data:",
+        "frame-src": "https://www.youtube.com https://www.youtube-nocookie.com"
+      },
       "dangerousDisableAssetCspModification": ["style-src"],
       "assetProtocol": {
         "enable": true,

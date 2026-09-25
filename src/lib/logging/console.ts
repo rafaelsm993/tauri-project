@@ -52,3 +52,13 @@ export function forwardConsole(): () => void {
     }
   };
 }
+
+// Sends every Content-Security-Policy block to the app log; returns a stop fn.
+export function reportCspViolations(): () => void {
+  if (!inTauri()) return () => {};
+  const onViolation = (e: SecurityPolicyViolationEvent) => {
+    warn(`[csp] blocked ${e.violatedDirective} ${e.blockedURI}`).catch(() => {});
+  };
+  document.addEventListener("securitypolicyviolation", onViolation);
+  return () => document.removeEventListener("securitypolicyviolation", onViolation);
+}

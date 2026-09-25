@@ -4,9 +4,10 @@ use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Status, UserData}
 use crate::api::types::{MediaItem, MediaType};
 use crate::store::writer::StoreHandle;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 pub const SCHEMA_VERSION: u32 = 1;
 
@@ -24,6 +25,7 @@ pub struct LibraryState {
     pub events: PathBuf,
     pub posters: PathBuf,
     pub poster_lock: Arc<tokio::sync::Mutex<()>>,
+    pub poster_failures: Arc<tokio::sync::Mutex<HashMap<String, Instant>>>,
 }
 
 impl LibraryState {
@@ -33,6 +35,7 @@ impl LibraryState {
             events: dir.join("events.jsonl"),
             posters: dir.join("posters"),
             poster_lock: Arc::default(),
+            poster_failures: Arc::default(),
         }
     }
 }

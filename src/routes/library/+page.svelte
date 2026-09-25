@@ -1,5 +1,7 @@
 <script lang="ts">
-  import RoutePlaceholder from "$lib/components/ui/RoutePlaceholder.svelte";
+  import LibraryView from "$lib/components/library/LibraryView.svelte";
 </script>
 
-<RoutePlaceholder title="Library" />
+<svelte:head><title>Library · Aevum</title></svelte:head>
+
+<LibraryView />

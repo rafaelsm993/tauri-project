@@ -87,7 +87,7 @@ test("a rejected save rolls back and shows why", async ({ page }) => {
 
   await expect(page.getByText(/disk full/i)).toBeVisible();
   await expect(addButton).toBeVisible();
-  await expect(page.getByLabel(/status/i)).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Status" })).toHaveCount(0);
 });
 
 test("a successful save shows the status control", async ({ page }) => {
@@ -97,7 +97,9 @@ test("a successful save shows the status control", async ({ page }) => {
   await page.getByRole("button", { name: /add to library/i }).click();
   await page.getByRole("button", { name: /skip/i }).click();
 
-  await expect(page.getByLabel(/status/i)).toHaveValue("planning");
+  await expect(
+    page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Planning" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: /add to library/i })).toHaveCount(0);
 });
 
@@ -115,7 +117,9 @@ test("adding opens the sheet first and saves nothing until the user answers", as
   );
 
   await sheet.getByRole("button", { name: /^save/i }).click();
-  await expect(page.getByLabel(/status/i)).toHaveValue("planning");
+  await expect(
+    page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Planning" }),
+  ).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => (window as unknown as { __addCalls: number }).__addCalls)).toBe(
     1,
   );
@@ -137,7 +141,9 @@ test("a saved item without length can add it later", async ({ page }) => {
   await page.goto("/media/movie/1");
   await page.getByRole("button", { name: /add to library/i }).click();
   await page.getByRole("button", { name: /skip/i }).click();
-  await expect(page.getByLabel(/status/i)).toHaveValue("planning");
+  await expect(
+    page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Planning" }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("button", { name: /add length/i }).click();
   const sheet = page.getByRole("dialog", { name: /add to library/i });

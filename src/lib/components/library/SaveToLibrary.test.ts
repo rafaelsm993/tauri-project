@@ -59,7 +59,10 @@ describe("SaveToLibrary", () => {
     await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
     await userEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(client.add).toHaveBeenCalledTimes(1);
-    expect(await screen.findByLabelText(/status/i)).toHaveValue("planning");
+    expect(await screen.findByRole("button", { name: /planning/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("shows the error and the add button again when the save fails", async () => {
@@ -79,8 +82,34 @@ describe("SaveToLibrary", () => {
     const { store, client } = storeWith({ load: vi.fn(async () => [SAVED]) });
     await store.hydrate();
     render(SaveToLibrary, { item: ITEM, store });
-    await userEvent.selectOptions(screen.getByLabelText(/status/i), "completed");
+    expect(screen.getByRole("button", { name: /planning/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /completed/i }));
     expect(client.update).toHaveBeenCalledWith("tmdb:tv:7", { status: "completed" });
+  });
+
+  it("marks a movie watched when it is completed, and unwatched otherwise", async () => {
+    const movie = { ...ITEM, media_key: "tmdb:movie:7", media_type: "movie" as const };
+    const saved = {
+      ...SAVED,
+      key: movie.media_key,
+      snapshot: { ...SAVED.snapshot, media_key: movie.media_key, media_type: "movie" as const },
+    };
+    const { store, client } = storeWith({ load: vi.fn(async () => [saved]) });
+    await store.hydrate();
+    render(SaveToLibrary, { item: movie, store });
+    await userEvent.click(screen.getByRole("button", { name: /completed/i }));
+    expect(client.update).toHaveBeenLastCalledWith(movie.media_key, {
+      status: "completed",
+      progress: 1,
+    });
+    await userEvent.click(screen.getByRole("button", { name: /dropped/i }));
+    expect(client.update).toHaveBeenLastCalledWith(movie.media_key, {
+      status: "dropped",
+      progress: 0,
+    });
   });
 
   it("removes a saved entry", async () => {

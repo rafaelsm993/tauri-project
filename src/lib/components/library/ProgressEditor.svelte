@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { clampProgress, isBinary, percent, progressLabel } from "$lib/domain/progress";
   import type { MediaType } from "$lib/types/media";
 
@@ -26,41 +27,29 @@
 
   const id = $props.id();
   const progressId = `${id}-progress`;
-  const ratingId = `${id}-rating`;
 
   const binary = $derived(isBinary(mediaType));
   const label = $derived(progressLabel(mediaType, progress, total));
   // A watched/not-watched item has nothing to fill a bar with.
   const pct = $derived(binary ? null : percent(progress, total));
-  const scale = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const ratingOptions = [
+    { value: "", label: "Unrated" },
+    ...Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
+  ];
 
   function changeProgress(event: Event) {
     const raw = Number((event.currentTarget as HTMLInputElement).value);
     onprogress(clampProgress(mediaType, Number.isFinite(raw) ? raw : 0));
   }
 
-  function toggleWatched(event: Event) {
-    onprogress((event.currentTarget as HTMLInputElement).checked ? 1 : 0);
-  }
-
-  function changeRating(event: Event) {
-    const raw = (event.currentTarget as HTMLSelectElement).value;
+  function changeRating(raw: string) {
     onrating(raw === "" ? null : Number(raw));
   }
 </script>
 
 <div class="progress-editor">
-  <div class="progress-field">
-    {#if binary}
-      <label class="field-label" for={progressId}>Watched</label>
-      <input
-        id={progressId}
-        type="checkbox"
-        checked={progress > 0}
-        {disabled}
-        onchange={toggleWatched}
-      />
-    {:else}
+  {#if !binary}
+    <div class="progress-field">
       <label class="field-label" for={progressId}>Progress</label>
       <input
         id={progressId}
@@ -72,9 +61,9 @@
         {disabled}
         oninput={changeProgress}
       />
-    {/if}
-    <span class="progress-text">{label}</span>
-  </div>
+      <span class="progress-text">{label}</span>
+    </div>
+  {/if}
 
   {#if !plannable}
     <p class="length-hint">
@@ -101,19 +90,16 @@
   {/if}
 
   <div class="progress-field">
-    <label class="field-label" for={ratingId}>Rating</label>
-    <select
-      id={ratingId}
-      class="rating-select"
-      value={rating === null ? "" : String(rating)}
-      {disabled}
-      onchange={changeRating}
-    >
-      <option value="">Unrated</option>
-      {#each scale as value (value)}
-        <option value={String(value)}>{value}</option>
-      {/each}
-    </select>
+    <span class="field-label" aria-hidden="true">Rating</span>
+    <div class="rating-control">
+      <SegmentedControl
+        label="Rating"
+        options={ratingOptions}
+        value={rating === null ? "" : String(rating)}
+        {disabled}
+        onchange={changeRating}
+      />
+    </div>
   </div>
 </div>
 
@@ -141,6 +127,7 @@
 
   .progress-input {
     width: 5rem;
+    color-scheme: dark;
     background: rgb(var(--clr-ink-rgb) / 0.06);
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
     color: var(--clr-text);
@@ -187,13 +174,8 @@
     }
   }
 
-  .rating-select {
-    background: rgb(var(--clr-ink-rgb) / 0.06);
-    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
-    color: var(--clr-text);
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-sm;
-    font-size: 0.8rem;
-    cursor: pointer;
+  .rating-control {
+    min-width: 0;
+    max-width: 100%;
   }
 </style>

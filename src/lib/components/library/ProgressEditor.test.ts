@@ -27,11 +27,10 @@ describe("ProgressEditor", () => {
     expect(onprogress).toHaveBeenLastCalledWith(7);
   });
 
-  it("clamps a movie to watched or not", async () => {
-    const onprogress = vi.fn();
-    render(ProgressEditor, { ...base, mediaType: "movie", progress: 0, total: 1, onprogress });
-    await userEvent.click(screen.getByLabelText(/watched/i));
-    expect(onprogress).toHaveBeenLastCalledWith(1);
+  it("shows no progress control for a movie, whose status already says it", () => {
+    render(ProgressEditor, { ...base, mediaType: "movie", progress: 0, total: 1 });
+    expect(screen.queryByLabelText(/progress/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/watched/i)).not.toBeInTheDocument();
   });
 
   it("hides the bar when the total is unknown", () => {
@@ -48,14 +47,14 @@ describe("ProgressEditor", () => {
   it("offers ratings 1 to 10 and reports the chosen one", async () => {
     const onrating = vi.fn();
     render(ProgressEditor, { ...base, onrating });
-    await userEvent.selectOptions(screen.getByLabelText(/rating/i), "8");
+    await userEvent.click(screen.getByRole("button", { name: "8" }));
     expect(onrating).toHaveBeenLastCalledWith(8);
   });
 
   it("reports an unrated selection as null", async () => {
     const onrating = vi.fn();
     render(ProgressEditor, { ...base, rating: 8, onrating });
-    await userEvent.selectOptions(screen.getByLabelText(/rating/i), "");
+    await userEvent.click(screen.getByRole("button", { name: /unrated/i }));
     expect(onrating).toHaveBeenLastCalledWith(null);
   });
 

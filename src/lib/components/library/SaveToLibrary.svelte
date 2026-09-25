@@ -1,6 +1,8 @@
 <script lang="ts">
   import AddSheet from "./AddSheet.svelte";
+  import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { lengthFromDetail } from "$lib/domain/length";
+  import { isBinary } from "$lib/domain/progress";
   import { libraryStore, LibraryStore, STATUSES, STATUS_LABELS } from "$lib/stores/library.svelte";
   import type { Length, LibraryStatus } from "$lib/types/library";
   import type { MediaDetail, MediaItem } from "$lib/types/media";
@@ -16,9 +18,6 @@
     store?: LibraryStore;
     editing?: boolean;
   } = $props();
-
-  const id = $props.id();
-  const statusId = `${id}-status`;
 
   const entry = $derived(store.get(item.media_key));
   const busy = $derived(store.isPending(item.media_key));
@@ -45,28 +44,33 @@
     node.querySelector<HTMLElement>("input, textarea, button")?.focus();
   }
 
-  function pickStatus(event: Event) {
-    const status = (event.currentTarget as HTMLSelectElement).value as LibraryStatus;
-    store.update(item.media_key, { status });
+  const statusOptions = STATUSES.map((status) => ({ value: status, label: STATUS_LABELS[status] }));
+
+  // A movie has no progress of its own; Completed is what marks it watched.
+  function pickStatus(status: LibraryStatus) {
+    if (!isBinary(item.media_type)) return store.update(item.media_key, { status });
+    store.update(item.media_key, { status, progress: status === "completed" ? 1 : 0 });
   }
 </script>
 
 <div class="save-row">
   {#if entry}
-    <label class="status-label" for={statusId}>Status</label>
-    <select
-      id={statusId}
-      class="status-select"
-      value={entry.user.status}
+    <span class="status-label" aria-hidden="true">Status</span>
+    <div class="status-control" aria-busy={busy}>
+      <SegmentedControl
+        label="Status"
+        options={statusOptions}
+        value={entry.user.status}
+        disabled={busy}
+        onchange={pickStatus}
+      />
+    </div>
+    <button
+      type="button"
+      class="remove-btn"
       disabled={busy}
-      aria-busy={busy}
-      onchange={pickStatus}
+      onclick={() => store.remove(item.media_key)}
     >
-      {#each STATUSES as status (status)}
-        <option value={status}>{STATUS_LABELS[status]}</option>
-      {/each}
-    </select>
-    <button class="remove-btn" disabled={busy} onclick={() => store.remove(item.media_key)}>
       Remove
     </button>
   {:else}
@@ -145,14 +149,9 @@
     letter-spacing: 0.04em;
   }
 
-  .status-select {
-    background: rgb(var(--clr-ink-rgb) / 0.06);
-    border: 1px solid rgb(var(--clr-primary-rgb) / 0.25);
-    color: var(--clr-text);
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-full;
-    font-size: 0.8rem;
-    cursor: pointer;
+  .status-control {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .remove-btn {
@@ -163,6 +162,10 @@
     border-radius: $radius-full;
     font-size: 0.78rem;
     cursor: pointer;
+
+    @include touch {
+      min-height: $touch-target;
+    }
 
     &:hover:not(:disabled) {
       color: var(--clr-error);

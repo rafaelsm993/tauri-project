@@ -4,11 +4,13 @@
     options,
     value,
     onchange,
+    disabled = false,
   }: {
     label: string;
     options: { value: T; label: string; count?: number }[];
     value: T;
     onchange: (value: T) => void;
+    disabled?: boolean;
   } = $props();
 </script>
 
@@ -19,6 +21,7 @@
       class="segment"
       class:active={option.value === value}
       aria-pressed={option.value === value}
+      {disabled}
       onclick={() => onchange(option.value)}
     >
       {option.label}
@@ -57,6 +60,11 @@
       border-color: transparent;
       color: var(--clr-text);
       font-weight: 600;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: progress;
     }
 
     &:focus-visible {

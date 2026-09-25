@@ -40,7 +40,9 @@
   <div class="lib-card__body">
     <span class="lib-card__title">{entry.snapshot.title}</span>
     <span class="lib-card__status">{STATUS_LABELS[entry.user.status]}</span>
-    <span class="lib-card__progress">{label}</span>
+    {#if !isBinary(type)}
+      <span class="lib-card__progress">{label}</span>
+    {/if}
     {#if pct !== null}
       <div
         class="lib-card__bar"

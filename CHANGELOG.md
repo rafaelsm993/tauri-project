@@ -1,10 +1,13 @@
 # Changelog
 
-All notable changes to tauri-app are documented here.
+All notable changes to Aevum are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+### Changed
+- Renamed from the `tauri-app` placeholder to **Aevum** (Latin: an age, a lifetime); bundle identifier `com.user.tauri-app` → `com.rafaelsm993.aevum`. The Android project was regenerated for the new package; a device with the old debug APK must reinstall.
 
 ### Added
 - Six media categories: movies/TV (TMDB), anime/manga (AniList GraphQL), games (RAWG), and books (iTunes)

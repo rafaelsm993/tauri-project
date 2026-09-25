@@ -1,4 +1,4 @@
-# tauri-app — API Reference
+# Aevum — API Reference
 
 > The three IPC commands, the `Provider` trait behind them, and the shared types they return.
 

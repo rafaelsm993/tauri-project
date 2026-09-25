@@ -1,4 +1,4 @@
-# tauri-app — Config and Stack
+# Aevum — Config and Stack
 
 > Manifests, config files, dependencies and system requirements.
 
@@ -62,7 +62,7 @@
 - `src-tauri/tauri.conf.json`:
   - dev URL `http://localhost:1420`; `frontendDist: "../build"`
   - one 800×600 window, minimum 360×560 (so phone layouts are reachable on desktop), devtools on
-  - `identifier: com.user.tauri-app` (placeholder until the name is chosen)
+  - `identifier: com.rafaelsm993.aevum`, `productName: Aevum` (locked 2026-09-24; changing it again forces an Android re-init)
   - `csp: null`
   - bundles all targets
 - `src-tauri/capabilities/default.json` grants `core:default`, `opener:default` and `log:default` to the `main` window.

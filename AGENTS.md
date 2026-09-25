@@ -1,4 +1,4 @@
-# tauri-app — Agent & Contributor Guide
+# Aevum — Agent & Contributor Guide
 
 Tauri 2 desktop app. SvelteKit SPA (Svelte 5 runes, TypeScript strict) talks to a
 stateless Rust proxy over IPC. Providers: TMDB (movie/tv), AniList (anime/manga),
@@ -82,7 +82,7 @@ Supported range: **360 px phone → 1920 px+ desktop**, mouse **and** touch. The
 - **Never** hide overflow on `html`/`body` to "fix" a layout; find the wide element instead.
 - **Rails/tabs** that can exceed the width must scroll horizontally (`overflow-x: auto`), not wrap into a broken grid or get clipped.
 - **Tests:** a new screen gets an entry in `SCREENS` in `e2e/responsive.spec.ts`. A new interactive component gets a touch-target or visibility assertion there if it has hover or small controls. IPC is faked in `e2e/fixtures/tauri-ipc.ts`; add fixtures for new commands.
-- Android is initialised (`src-tauri/gen/android`, package `com.user.tauri_app` until the app is named); iOS is out of scope. Keep desktop-only APIs behind `#[cfg(desktop)]`. Setup and the phone dev loop: `docs/BUILD_AND_RUN_ANDROID.md`. CI builds Linux (`verify`), Windows and an arm64 debug APK on every PR.
+- Android is initialised (`src-tauri/gen/android`, package `com.rafaelsm993.aevum` until the app is named); iOS is out of scope. Keep desktop-only APIs behind `#[cfg(desktop)]`. Setup and the phone dev loop: `docs/BUILD_AND_RUN_ANDROID.md`. CI builds Linux (`verify`), Windows and an arm64 debug APK on every PR.
 
 ## Adding a provider (checklist)
 Save real responses to `src-tauri/tests/fixtures/` (strip keys/URLs) → module with `Raw*` structs + pure `map_*` fns tested on them → `impl Provider` → arms in the 3 `catalog.rs` matches → `mod.rs` → e2e fixture if the home tab changes → `cargo test live_ -- --ignored` → `npm run verify`.

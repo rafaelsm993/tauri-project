@@ -1,4 +1,4 @@
-# Building and running tauri-app
+# Building and running Aevum
 
 | Machine | Run (hot reload) | Release | Toolchain check |
 | --- | --- | --- | --- |
@@ -20,7 +20,7 @@ npm ci                      # not `npm install`: keeps the shared lockfile uncha
 node --test scripts/verify-toolchain.test.mjs   # expect: # pass 8, # skipped 3
 ```
 
-- `npm run tauri build -- --no-bundle` → `src-tauri/target/release/tauri-app`. No .deb/AppImage; run the binary directly.
+- `npm run tauri build -- --no-bundle` → `src-tauri/target/release/aevum`. No .deb/AppImage; run the binary directly.
 - Web Inspector: right-click → Inspect Element, or auto-open it with `env TAURI_APP_DEVTOOLS=1 npm run tauri dev`.
 - Wayland: only if the window is blank/white, or a *detached* inspector is solid black, add
   `WEBKIT_DISABLE_DMABUF_RENDERER=1` (e.g. `env WEBKIT_DISABLE_DMABUF_RENDERER=1 TAURI_APP_DEVTOOLS=1 npm run tauri dev`).
@@ -43,7 +43,7 @@ Edit code in WSL. Build and run on Windows. One shared NTFS working tree, no syn
 
 WSLg with no `/dev/dri` renders the webview in software and composites it over RDP. That is the source of
 the stutter this setup avoids. The Windows toolchain already produced a working binary
-(`src-tauri/target/debug/tauri-app.exe`), so it is the supported path.
+(`src-tauri/target/debug/aevum.exe`), so it is the supported path.
 
 ## One-time prerequisites (Windows side)
 

@@ -1,12 +1,12 @@
 ---
-description: "Add a new media provider to tauri-app by following the AGENTS.md provider checklist."
+description: "Add a new media provider to Aevum by following the AGENTS.md provider checklist."
 agent: "tauri-app"
 model: "Claude Opus 4.6 (copilot)"
 argument-hint: "Provider name and API details (e.g., 'Spotify API for music search and album details')"
 tools: [read, edit, search, execute, todo]
 ---
 
-Add a new media provider to tauri-app.
+Add a new media provider to Aevum.
 
 The one source of truth for how to do this is the **"Adding a provider"** checklist in [AGENTS.md](../../AGENTS.md), together with its Rust and frontend conventions. Read it first and follow it step by step; use `src-tauri/src/api/rawg.rs` (a small provider with a concurrent detail fetch) as the reference implementation.
 

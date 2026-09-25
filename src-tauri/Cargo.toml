@@ -1,5 +1,5 @@
 [package]
-name = "tauri-app"
+name = "aevum"
 version = "0.1.0"
 description = "Cross-platform media tracker: movies, TV, anime, manga, books and games"
 authors = ["rafaelsm993"]
@@ -8,7 +8,7 @@ repository = "https://github.com/rafaelsm993/tauri-project"
 edition = "2021"
 
 [lib]
-name = "tauri_app_lib"
+name = "aevum_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

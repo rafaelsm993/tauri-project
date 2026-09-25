@@ -3,8 +3,7 @@
    Cinematic dark SaaS · Film-grade aesthetics · CSS-only motion
    ============================================================ */
 
-/* ── Google Fonts ── */
-@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap");
+/* ── Fonts: bundled via @fontsource in +layout.svelte, so they work offline ── */
 
 /* ============================================================
    1. DESIGN TOKENS
@@ -50,7 +49,7 @@
 
   /* ── Typography ── */
   --font-display: "Bebas Neue", sans-serif;
-  --font-body: "DM Sans", sans-serif;
+  --font-body: "DM Sans Variable", "DM Sans", sans-serif;
   --font-mono: "DM Mono", monospace;
 
   --size-2xs: 0.625rem; /*  10px */

@@ -296,6 +296,8 @@ mod tests {
             );
         }
         assert!(img.contains("asset:") && img.contains("http://asset.localhost"));
+        let csp = security["csp"].to_string();
+        assert!(!csp.contains("fonts.g"), "fonts are bundled, not fetched");
         assert_eq!(security["assetProtocol"]["enable"], true);
         assert_eq!(
             security["assetProtocol"]["scope"],

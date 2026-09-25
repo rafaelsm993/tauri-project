@@ -124,11 +124,14 @@ pub async fn add(
     validate_user_data(item.media_type, &user)?;
     let snapshot = MediaSnapshot::from_item(item);
     let key = snapshot.media_key.clone();
+    if let Some(existing) = state.store.read(|f| f.entries.get(&key).cloned()).await {
+        return Ok(existing);
+    }
     let (entry, inserted) = state
         .store
-        .update(|f| {
+        .commit(|f| {
             if let Some(existing) = f.entries.get(&key) {
-                return (existing.clone(), false);
+                return Ok((existing.clone(), false));
             }
             let entry = LibraryEntry {
                 key: key.clone(),
@@ -138,12 +141,11 @@ pub async fn add(
                 updated_at: at,
             };
             f.entries.insert(key.clone(), entry.clone());
-            (entry, true)
+            Ok((entry, true))
         })
-        .await;
+        .await?;
     if inserted {
         log_event(state, event)?;
-        state.store.flush().await?;
     }
     Ok(entry)
 }
@@ -156,35 +158,34 @@ pub async fn update(
     at: String,
     event: Option<Event>,
 ) -> Result<LibraryEntry, String> {
-    let media_type = state
-        .store
-        .read(|f| f.entries.get(key).map(|e| e.snapshot.media_type))
-        .await
-        .ok_or_else(|| format!("{key} is not in the library"))?;
-    let mut candidate = state.store.read(|f| f.entries[key].user.clone()).await;
-    apply_patch(&mut candidate, patch);
-    validate_user_data(media_type, &candidate)?;
     let entry = state
         .store
-        .update(|f| {
-            let entry = f.entries.get_mut(key).expect("checked above");
-            entry.user = candidate;
+        .commit(|f| {
+            let entry = f
+                .entries
+                .get_mut(key)
+                .ok_or_else(|| format!("{key} is not in the library"))?;
+            let mut user = entry.user.clone();
+            apply_patch(&mut user, patch);
+            validate_user_data(entry.snapshot.media_type, &user)?;
+            entry.user = user;
             entry.updated_at = at;
-            entry.clone()
+            Ok(entry.clone())
         })
-        .await;
+        .await?;
     log_event(state, event)?;
-    state.store.flush().await?;
     Ok(entry)
 }
 
 /// Removes an entry and its cached poster; returns false when the key was not there.
 pub async fn remove(state: &LibraryState, key: &str, event: Option<Event>) -> Result<bool, String> {
-    let Some(entry) = state.store.update(|f| f.entries.remove(key)).await else {
+    if !state.store.read(|f| f.entries.contains_key(key)).await {
+        return Ok(false);
+    }
+    let Some(entry) = state.store.commit(|f| Ok(f.entries.remove(key))).await? else {
         return Ok(false);
     };
     log_event(state, event)?;
-    state.store.flush().await?;
     if let Some(file) = entry.snapshot.poster_file {
         posters::remove_quietly(&state.posters.join(file));
     }
@@ -295,6 +296,37 @@ mod tests {
             poster_files(&state).await,
             ["tmdb_tv_7.jpg".to_string()].into()
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_failed_write_rolls_the_command_back() {
+        let dir = scratch("commit-rollback");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            "t1".into(),
+            None,
+        )
+        .await
+        .unwrap();
+        let path = dir.join("library.json");
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir_all(&path).unwrap();
+        let patch = UserPatch {
+            progress: Some(3),
+            ..UserPatch::default()
+        };
+        assert!(update(&state, "tmdb:tv:7", patch, "t2".into(), None)
+            .await
+            .is_err());
+        assert!(remove(&state, "tmdb:tv:7", None).await.is_err());
+        let entries = load(&state).await;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].user.progress, 0);
+        assert_eq!(entries[0].updated_at, "t1");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -1,4 +1,4 @@
-# tauri-app — SvelteKit Special Pages
+# Aevum — SvelteKit Special Pages
 
 > SvelteKit file conventions and the routes in the app.
 

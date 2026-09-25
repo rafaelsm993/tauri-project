@@ -1,4 +1,4 @@
-# Contributing to tauri-app
+# Contributing to Aevum
 
 ## Branch Strategy
 

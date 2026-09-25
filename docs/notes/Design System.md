@@ -1,4 +1,4 @@
-# tauri-app — Design System
+# Aevum — Design System
 
 > Tokens and styling rules. Colors live only in the `:root` block of `src/lib/styles/global.css` (CSS custom properties, runtime). Non-color tokens (spacing, radii, fonts, breakpoints, motion) are SCSS in `src/lib/styles/variables.scss` (compile-time).
 

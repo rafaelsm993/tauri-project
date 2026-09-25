@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::builder()
-        .user_agent(concat!("tauri-app/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("aevum/", env!("CARGO_PKG_VERSION")))
         .build()
         .unwrap_or_else(|_| Client::new())
 });

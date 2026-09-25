@@ -1,4 +1,4 @@
-# Building and running tauri-app on Android
+# Building and running Aevum on Android
 
 Android runs from the Arch desktop. Develop on a **physical phone over Wireless debugging**: frontend edits hot-reload on the phone in about a second, Rust edits rebuild and reinstall on their own. The emulator does not work on this host (see [Emulator](#emulator)).
 
@@ -11,7 +11,7 @@ Android runs from the Arch desktop. Develop on a **physical phone over Wireless 
 
 ## Project
 
-The Android Studio project is generated in `src-tauri/gen/android` (committed; build output is ignored by its own `.gitignore`). Regenerate it only with `npm run tauri android init`, never by hand. The package is `com.user.tauri_app`: Tauri turns the `-` in the placeholder identifier into `_`. It changes, with a one-time re-init, when the app gets its final name.
+The Android Studio project is generated in `src-tauri/gen/android` (committed; build output is ignored by its own `.gitignore`). Regenerate it only with `npm run tauri android init`, never by hand. The package is `com.rafaelsm993.aevum`: Tauri turns the `-` in the placeholder identifier into `_`. It changes, with a one-time re-init, when the app gets its final name.
 
 ## One-time setup (Arch)
 

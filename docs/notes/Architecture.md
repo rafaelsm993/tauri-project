@@ -1,10 +1,15 @@
-# tauri-app — Architecture
+# Aevum — Architecture
 
 > Tauri 2 app: a SvelteKit SPA that calls a typed Rust facade, which fetches from four public media APIs and returns shared DTOs.
 
 ## Overview
 
-tauri-app (placeholder name) lets you browse movies, TV series, anime, manga, books and games. Today it has two real screens, **Home** (discovery and search) and **Detail**, plus placeholder routes for the library, profile, planner and welcome flow. There are no accounts and no cloud. There is no persistence yet: S2 adds local JSON storage in the app data dir.
+**Name.** *Aevum* is Latin for an age or a lifetime — in scholastic use, the time
+angels inhabit, between mortal hours and eternity. It fits an app whose subject is
+the hours you spend on stories and games. Locked 2026-09-24 with the identifier
+`com.rafaelsm993.aevum` (vault `GOALS-QA.md` §6.15).
+
+Aevum lets you browse movies, TV series, anime, manga, books and games. Today it has two real screens, **Home** (discovery and search) and **Detail**, plus placeholder routes for the library, profile, planner and welcome flow. There are no accounts and no cloud. There is no persistence yet: S2 adds local JSON storage in the app data dir.
 
 ```
 ┌──────────────────────────────────────────────────────────┐

@@ -1,4 +1,4 @@
-# tauri-app — Component Patterns
+# Aevum — Component Patterns
 
 > Conventions for the reusable UI components, with a reference entry for each.
 

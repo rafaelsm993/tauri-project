@@ -1,4 +1,4 @@
-package com.user.tauri_app
+package com.rafaelsm993.aevum
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

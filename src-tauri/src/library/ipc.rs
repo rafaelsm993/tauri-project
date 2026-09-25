@@ -68,6 +68,14 @@ pub async fn library_remove(
     commands::remove(&state, &key, event).await
 }
 
+// Called on reconnect: every missing poster is tried again right away.
+#[tauri::command]
+pub async fn library_retry_posters(state: State<'_, LibraryState>) -> Result<(), String> {
+    posters::forget_failures(&state).await;
+    tauri::async_runtime::spawn(posters::fill(state.inner().clone()));
+    Ok(())
+}
+
 // Absolute poster cache folder; the UI joins file names to it for convertFileSrc.
 #[tauri::command]
 pub fn library_poster_dir(state: State<'_, LibraryState>) -> String {

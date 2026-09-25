@@ -41,5 +41,9 @@ function posterDir(): Promise<string> {
   return invoke<string>("library_poster_dir");
 }
 
-export const library = { load, add, update, remove, posterDir };
+function retryPosters(): Promise<void> {
+  return invoke<void>("library_retry_posters");
+}
+
+export const library = { load, add, update, remove, posterDir, retryPosters };
 export type Library = typeof library;

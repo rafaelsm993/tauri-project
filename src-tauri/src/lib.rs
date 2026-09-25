@@ -69,6 +69,7 @@ pub fn run() {
             library::ipc::library_update,
             library::ipc::library_remove,
             library::ipc::library_poster_dir,
+            library::ipc::library_retry_posters,
             prefs::ipc::prefs_load,
             prefs::ipc::prefs_update
         ])

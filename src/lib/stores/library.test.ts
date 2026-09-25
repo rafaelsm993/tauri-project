@@ -53,6 +53,7 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
     ),
     remove: vi.fn(async () => true),
     posterDir: vi.fn(async () => "/data/posters"),
+    retryPosters: vi.fn(async () => {}),
     ...over,
   };
 }
@@ -261,5 +262,21 @@ describe("poster folder", () => {
     expect(store.error).toBe("");
     expect(store.posterDir).toBeNull();
     expect(store.entries).toHaveLength(1);
+  });
+});
+
+describe("poster retry", () => {
+  it("asks the backend to retry missing posters", async () => {
+    const client = fakeClient();
+    await new LibraryStore(client).retryPosters();
+    expect(client.retryPosters).toHaveBeenCalledTimes(1);
+  });
+
+  it("never surfaces a failure; posters fall back to remote images", async () => {
+    const store = new LibraryStore(
+      fakeClient({ retryPosters: vi.fn(async () => Promise.reject("no command")) }),
+    );
+    await expect(store.retryPosters()).resolves.toBeUndefined();
+    expect(store.error).toBe("");
   });
 });

@@ -210,6 +210,11 @@ pub async fn fill(state: LibraryState) {
     fill_with(state, fetch_image).await;
 }
 
+// Drops the retry cooldowns, e.g. when the network comes back.
+pub async fn forget_failures(state: &LibraryState) {
+    state.poster_failures.lock().await.clear();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -290,6 +295,18 @@ mod tests {
         fill_with(state.clone(), counting).await;
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
         state.poster_failures.lock().await.clear();
+        fill_with(state.clone(), png).await;
+        assert_eq!(poster_file(&dir).as_deref(), Some("tmdb_tv_7.png"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn library_retry_posters_clears_failure_timestamps() {
+        let (dir, state) = saved_with_poster("c6-reconnect", REMOTE).await;
+        fill_with(state.clone(), offline).await;
+        assert!(!state.poster_failures.lock().await.is_empty());
+        forget_failures(&state).await;
+        assert!(state.poster_failures.lock().await.is_empty());
         fill_with(state.clone(), png).await;
         assert_eq!(poster_file(&dir).as_deref(), Some("tmdb_tv_7.png"));
         std::fs::remove_dir_all(&dir).unwrap();

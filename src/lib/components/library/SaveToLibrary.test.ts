@@ -43,6 +43,7 @@ function storeWith(over: Partial<LibraryClient> = {}) {
     update: vi.fn(async () => SAVED),
     remove: vi.fn(async () => true),
     posterDir: vi.fn(async () => "/data/posters"),
+    retryPosters: vi.fn(async () => {}),
     ...over,
   };
   return { store: new LibraryStore(client), client };

@@ -80,4 +80,10 @@ describe("library client", () => {
     expect(event.at_utc).toBe("2026-09-26T01:30:00.000Z");
     expect(event.local_date).toBe(new Date("2026-09-26T01:30:00.000Z").toLocaleDateString("en-CA"));
   });
+
+  it("retryPosters sends one library_retry_posters call", async () => {
+    const calls = record(null);
+    await library.retryPosters();
+    expect(calls).toEqual([{ cmd: "library_retry_posters", args: {} }]);
+  });
 });

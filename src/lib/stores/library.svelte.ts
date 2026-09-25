@@ -11,6 +11,7 @@ export type LibraryClient = {
   update: (key: MediaKey, patch: Partial<UserData>) => Promise<LibraryEntry>;
   remove: (key: MediaKey) => Promise<boolean>;
   posterDir: () => Promise<string>;
+  retryPosters: () => Promise<void>;
 };
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
@@ -102,6 +103,15 @@ export class LibraryStore {
       return typeof dir === "string" && dir ? dir : null;
     } catch {
       return null;
+    }
+  }
+
+  // Best effort: cards keep the remote poster until a local copy exists.
+  async retryPosters(): Promise<void> {
+    try {
+      await this.client.retryPosters();
+    } catch (e) {
+      console.warn("[library] poster retry failed", e);
     }
   }
 

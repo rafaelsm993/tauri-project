@@ -13,6 +13,7 @@
   import { forwardConsole, reportCspViolations } from "$lib/logging/console";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
+  import { onReconnect } from "$lib/stores/online.svelte";
 
   let { children } = $props<{ children: Snippet }>();
 
@@ -27,6 +28,9 @@
   $effect(() => {
     prefsStore.hydrate();
   });
+
+  // Posters that failed while offline download again as soon as the network returns.
+  onReconnect(() => libraryStore.retryPosters());
 </script>
 
 <AppBackground />

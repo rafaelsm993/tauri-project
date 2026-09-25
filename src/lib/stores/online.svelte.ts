@@ -1,3 +1,4 @@
+import { untrack } from "svelte";
 import { isOfflineError } from "$lib/utils/errors";
 
 // Offline when the browser says so or a network-backed call failed since the last success.
@@ -31,3 +32,13 @@ export class OnlineStore {
 }
 
 export const onlineStore = new OnlineStore();
+
+// Runs `fn` on each offline → online transition; call during component setup.
+export function onReconnect(fn: () => void, store: OnlineStore = onlineStore): void {
+  let wasOnline = untrack(() => store.online);
+  $effect(() => {
+    const online = store.online;
+    if (online && !wasOnline) untrack(fn);
+    wasOnline = online;
+  });
+}

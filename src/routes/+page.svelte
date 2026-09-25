@@ -4,6 +4,7 @@
   import { resolve } from "$app/paths";
   import type { MediaItem } from "$lib/types/media";
   import { BrowseStore } from "$lib/stores/browse.svelte";
+  import { onReconnect } from "$lib/stores/online.svelte";
   import SearchBar from "$lib/components/ui/SearchBar.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
   import GenreCarousel from "$lib/components/ui/GenreCarousel.svelte";
@@ -36,6 +37,9 @@
   onMount(() => {
     browse.refreshView();
   });
+
+  // Carousels or a grid that failed while offline load again once the network returns.
+  onReconnect(() => browse.retryFailed());
 </script>
 
 <div class="page">

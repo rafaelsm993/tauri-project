@@ -121,6 +121,16 @@ export class BrowseStore {
     return this.loadSection(id);
   }
 
+  // After reconnecting: redo whatever failed, leave what loaded alone.
+  async retryFailed() {
+    if (this.error) {
+      await (this.carouselMode ? this.refreshView() : this.loadGrid(this.query));
+      return;
+    }
+    const failed = this.sections.filter((s) => s.error).map((s) => s.genre.id);
+    await Promise.all(failed.map((id) => this.retrySection(id)));
+  }
+
   setSelectedGenres(ids: GenreId[]) {
     this.selectedGenres = ids;
   }

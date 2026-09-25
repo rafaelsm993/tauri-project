@@ -107,6 +107,71 @@ describe("BrowseStore", () => {
     expect(cat.fetchPage).toHaveBeenCalledTimes(2);
   });
 
+  it("retryFailed: refetches only the failed carousels", async () => {
+    const cat = fakeCatalog({
+      fetchPage: vi.fn(async (_c, _q, _p, genre) => {
+        if (genre === 2) throw "offline: error sending request";
+        return page([genre as number]);
+      }),
+    });
+    const s = new BrowseStore(cat);
+    await s.refreshView();
+    await Promise.all([s.loadSection(1), s.loadSection(2)]);
+    vi.mocked(cat.fetchPage).mockClear();
+    vi.mocked(cat.fetchPage).mockResolvedValue(page([7]));
+    await s.retryFailed();
+    expect(cat.fetchPage).toHaveBeenCalledTimes(1);
+    expect(cat.fetchPage).toHaveBeenCalledWith("movie", "", 1, 2);
+    expect(s.sections[1]).toMatchObject({ error: "", loading: false });
+  });
+
+  it("retryFailed: reloads genres and carousels after an offline category switch", async () => {
+    let offline = true;
+    const cat = fakeCatalog({
+      fetchGenres: vi.fn(async () => {
+        if (offline) throw "offline: error sending request";
+        return genres(3);
+      }),
+      fetchPage: vi.fn(async () => {
+        if (offline) throw "offline: error sending request";
+        return page([1]);
+      }),
+    });
+    const s = new BrowseStore(cat);
+    await s.switchCategory("tv");
+    expect(s.error).toBe("error sending request");
+    offline = false;
+    await s.retryFailed();
+    expect(s.error).toBe("");
+    expect(s.sections).toHaveLength(3);
+  });
+
+  it("retryFailed: reruns a failed search", async () => {
+    let fail = true;
+    const cat = fakeCatalog({
+      fetchPage: vi.fn(async () => {
+        if (fail) throw "offline: error sending request";
+        return page([4]);
+      }),
+    });
+    const s = new BrowseStore(cat);
+    await s.search("heat");
+    fail = false;
+    await s.retryFailed();
+    expect(cat.fetchPage).toHaveBeenLastCalledWith("movie", "heat", 1, null);
+    expect(s.items.map((i) => i.id)).toEqual([4]);
+  });
+
+  it("retryFailed: does nothing when nothing failed", async () => {
+    const cat = fakeCatalog();
+    const s = new BrowseStore(cat);
+    await s.refreshView();
+    await s.loadSection(1);
+    vi.mocked(cat.fetchPage).mockClear();
+    await s.retryFailed();
+    expect(cat.fetchPage).not.toHaveBeenCalled();
+  });
+
   it("falls back to a flat grid when a category has no genres", async () => {
     const s = new BrowseStore(fakeCatalog({ fetchGenres: vi.fn(async () => []) }));
     await s.refreshView();

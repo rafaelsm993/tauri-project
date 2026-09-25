@@ -10,7 +10,7 @@ pub struct Versioned<T> {
     pub data: T,
 }
 
-fn sibling(path: &Path, ext: &str) -> PathBuf {
+pub(crate) fn sibling(path: &Path, ext: &str) -> PathBuf {
     let mut p = path.as_os_str().to_owned();
     p.push(ext);
     PathBuf::from(p)

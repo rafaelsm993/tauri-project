@@ -3,13 +3,16 @@ use super::posters;
 use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Status, UserData};
 use crate::api::types::{MediaItem, MediaType};
 use crate::store::writer::StoreHandle;
+use crate::store::{current_version, Migration};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-pub const SCHEMA_VERSION: u32 = 1;
+// library.json upgrade steps, oldest first; adding one bumps SCHEMA_VERSION.
+pub const MIGRATIONS: &[Migration] = &[];
+pub const SCHEMA_VERSION: u32 = current_version(MIGRATIONS);
 
 // The whole library as one file: key → entry.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

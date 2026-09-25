@@ -1,8 +1,8 @@
-use super::commands::{self, LibraryFile, LibraryState, UserPatch};
+use super::commands::{self, LibraryFile, LibraryState, UserPatch, MIGRATIONS};
 use super::posters;
 use super::types::{Event, LibraryEntry, UserData};
 use crate::api::types::MediaItem;
-use crate::store::file::{read_with_recovery, Versioned};
+use crate::store;
 use std::path::Path;
 use std::time::Duration;
 use tauri::State;
@@ -13,15 +13,18 @@ const AUTOSAVE: Duration = Duration::from_millis(500);
 pub fn init(dir: &Path) -> Result<LibraryState, String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
     let path = dir.join("library.json");
-    let file = read_with_recovery::<LibraryFile>(&path)?
-        .map(|v: Versioned<LibraryFile>| v.data)
-        .unwrap_or_default();
+    let loaded = store::load::<LibraryFile>(&path, MIGRATIONS)?;
+    let migrated = loaded.as_ref().is_some_and(|l| l.migrated);
+    let file = loaded.map(|l| l.data).unwrap_or_default();
     log::info!(
         "[library] {} entries from {}",
         file.entries.len(),
         dir.display()
     );
     let state = LibraryState::new(dir, file);
+    if migrated {
+        state.store.mark_dirty();
+    }
     state.store.clone().spawn_autosave(AUTOSAVE);
     tauri::async_runtime::spawn(posters::fill(state.clone()));
     Ok(state)
@@ -107,6 +110,18 @@ mod tests {
         let entries = commands::load(&second).await;
         assert_eq!(entries.len(), 1, "a restart must see the saved library");
         assert_eq!(entries[0].key, "tmdb:tv:7");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn init_refuses_a_library_from_a_newer_app_and_keeps_the_file() {
+        let dir = scratch("ipc-newer");
+        let path = dir.join("library.json");
+        std::fs::write(&path, br#"{"schema_version":99,"data":{"entries":{}}}"#).unwrap();
+        let before = std::fs::read(&path).unwrap();
+        let err = init(&dir).err().expect("a newer file must not load");
+        assert!(err.contains("newer version of the app"), "{err}");
+        assert_eq!(std::fs::read(&path).unwrap(), before);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

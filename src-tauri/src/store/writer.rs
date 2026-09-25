@@ -24,6 +24,11 @@ impl<T: Serialize + Send + 'static> StoreHandle<T> {
         })
     }
 
+    // Forces the next flush to write, e.g. after loading a migrated file.
+    pub fn mark_dirty(&self) {
+        self.dirty.store(true, Ordering::Release);
+    }
+
     pub async fn update<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
         let mut state = self.state.lock().await;
         let out = f(&mut state);
@@ -126,6 +131,17 @@ mod tests {
         task.abort();
         let saved: Versioned<Vec<u32>> = read_with_recovery(&path).unwrap().unwrap();
         assert_eq!(saved.data, vec![7]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn mark_dirty_makes_the_next_flush_write() {
+        let dir = scratch("mark-dirty");
+        let path = dir.join("x.json");
+        let store = StoreHandle::new(path.clone(), 1, vec![1u32]);
+        store.mark_dirty();
+        assert!(store.flush().await.unwrap());
+        assert!(path.exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

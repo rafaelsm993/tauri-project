@@ -21,3 +21,14 @@ test("settings controls are touch-sized on coarse pointers", async ({ page, isMo
     .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
   for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
 });
+
+test("the background pauses when the animation is turned off", async ({ page }) => {
+  await page.goto("/settings");
+  const bg = page.locator(".bg-area");
+  await expect(bg).not.toHaveClass(/paused/);
+  await page
+    .getByRole("group", { name: "Animated background" })
+    .getByRole("button", { name: "Off" })
+    .click();
+  await expect(bg).toHaveClass(/paused/);
+});

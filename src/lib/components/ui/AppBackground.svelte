@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
   import { ui } from "$lib/stores/ui.svelte";
+  import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
+
+  // The store prop exists for tests; the app uses the singleton.
+  let { prefs = prefsStore }: { prefs?: PrefsStore } = $props();
 
   const BUBBLE_COUNT = 20;
   let pulsing = $state(false);
@@ -23,7 +27,7 @@
 
   let hidden = $state(false);
   let blurred = $state(false);
-  const paused = $derived(hidden || blurred);
+  const paused = $derived(hidden || blurred || !prefs.prefs.background_animation);
 
   // Stops the infinite background loops while nobody can see them.
   $effect(() => {

@@ -14,6 +14,7 @@ function entry(key: string, type: MediaType, status: LibraryStatus): LibraryEntr
       title: key,
       poster_path: null,
       year: null,
+      poster_file: null,
     },
     user: { status, progress: 0, rating: null, review: null, length: emptyLength() },
     created_at: "t",

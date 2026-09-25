@@ -29,6 +29,7 @@ const SAVED: LibraryEntry = {
     title: "Arcane",
     poster_path: null,
     year: null,
+    poster_file: null,
   },
   user: { status: "planning", progress: 0, rating: null, review: null, length: emptyLength() },
   created_at: "t",
@@ -41,6 +42,7 @@ function storeWith(over: Partial<LibraryClient> = {}) {
     add: vi.fn(async () => SAVED),
     update: vi.fn(async () => SAVED),
     remove: vi.fn(async () => true),
+    posterDir: vi.fn(async () => "/data/posters"),
     ...over,
   };
   return { store: new LibraryStore(client), client };

@@ -74,7 +74,7 @@ struct RawBook {
 }
 
 // Rewrites Apple's `/100x100bb.jpg` artwork suffix to a larger square.
-fn upscale_cover(url: Option<&str>, size: u32) -> Option<String> {
+pub(crate) fn upscale_cover(url: Option<&str>, size: u32) -> Option<String> {
     let url = url.filter(|u| !u.is_empty())?;
     let (dir, file) = url.rsplit_once('/')?;
     let lower = file.to_ascii_lowercase();

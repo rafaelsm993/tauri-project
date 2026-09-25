@@ -1,8 +1,8 @@
-use super::commands::{self, LibraryFile, LibraryState, UserPatch, SCHEMA_VERSION};
+use super::commands::{self, LibraryFile, LibraryState, UserPatch};
+use super::posters;
 use super::types::{Event, LibraryEntry, UserData};
 use crate::api::types::MediaItem;
 use crate::store::file::{read_with_recovery, Versioned};
-use crate::store::writer::StoreHandle;
 use std::path::Path;
 use std::time::Duration;
 use tauri::State;
@@ -21,12 +21,10 @@ pub fn init(dir: &Path) -> Result<LibraryState, String> {
         file.entries.len(),
         dir.display()
     );
-    let store = StoreHandle::new(path, SCHEMA_VERSION, file);
-    store.clone().spawn_autosave(AUTOSAVE);
-    Ok(LibraryState {
-        store,
-        events: dir.join("events.jsonl"),
-    })
+    let state = LibraryState::new(dir, file);
+    state.store.clone().spawn_autosave(AUTOSAVE);
+    tauri::async_runtime::spawn(posters::fill(state.clone()));
+    Ok(state)
 }
 
 #[tauri::command]
@@ -42,7 +40,9 @@ pub async fn library_add(
     at: String,
     event: Option<Event>,
 ) -> Result<LibraryEntry, String> {
-    commands::add(&state, &item, user.unwrap_or_default(), at, event).await
+    let entry = commands::add(&state, &item, user.unwrap_or_default(), at, event).await?;
+    tauri::async_runtime::spawn(posters::fill(state.inner().clone()));
+    Ok(entry)
 }
 
 #[tauri::command]
@@ -63,6 +63,12 @@ pub async fn library_remove(
     event: Option<Event>,
 ) -> Result<bool, String> {
     commands::remove(&state, &key, event).await
+}
+
+// Absolute poster cache folder; the UI joins file names to it for convertFileSrc.
+#[tauri::command]
+pub fn library_poster_dir(state: State<'_, LibraryState>) -> String {
+    state.posters.to_string_lossy().into_owned()
 }
 
 #[cfg(test)]

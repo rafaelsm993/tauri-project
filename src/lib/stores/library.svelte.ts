@@ -10,6 +10,7 @@ export type LibraryClient = {
   add: (item: MediaItem, user?: Partial<UserData>) => Promise<LibraryEntry>;
   update: (key: MediaKey, patch: Partial<UserData>) => Promise<LibraryEntry>;
   remove: (key: MediaKey) => Promise<boolean>;
+  posterDir: () => Promise<string>;
 };
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
@@ -34,6 +35,7 @@ function optimisticEntry(item: MediaItem, user: Partial<UserData>): LibraryEntry
       title: item.title,
       poster_path: item.poster_path ?? null,
       year: null,
+      poster_file: null,
     },
     user: {
       status: "planning",
@@ -56,6 +58,7 @@ export class LibraryStore {
 
   ready = $state(false);
   error = $state("");
+  posterDir = $state<string | null>(null);
 
   entries = $derived(
     [...this.map.values()].sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
@@ -82,12 +85,23 @@ export class LibraryStore {
   async hydrate(): Promise<void> {
     if (this.ready) return;
     try {
-      const saved = await this.client.load();
+      const [saved, dir] = await Promise.all([this.client.load(), this.loadPosterDir()]);
+      this.posterDir = dir;
       this.map.clear();
       for (const e of saved) this.map.set(e.key, e);
       this.ready = true;
     } catch (e) {
       this.error = errorMessage(e, "Failed to load your library.");
+    }
+  }
+
+  // Without the folder the cards use remote posters; it must never fail the library.
+  private async loadPosterDir(): Promise<string | null> {
+    try {
+      const dir = await this.client.posterDir();
+      return typeof dir === "string" && dir ? dir : null;
+    } catch {
+      return null;
     }
   }
 

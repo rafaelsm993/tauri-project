@@ -23,6 +23,8 @@ pub struct MediaSnapshot {
     #[serde(default)]
     pub poster_path: Option<String>,
     #[serde(default)]
+    pub poster_file: Option<String>,
+    #[serde(default)]
     pub year: Option<String>,
 }
 
@@ -38,6 +40,7 @@ impl MediaSnapshot {
             media_type: item.media_type,
             title: item.title.clone(),
             poster_path: item.poster_path.clone(),
+            poster_file: None,
             year: date
                 .map(|d| d.chars().take(4).collect::<String>())
                 .filter(|y| y.len() == 4),
@@ -98,6 +101,13 @@ pub(crate) mod tests {
     use super::*;
     use crate::api::types::Id;
     use serde_json::{json, Value};
+
+    #[test]
+    fn an_old_snapshot_without_poster_file_still_loads() {
+        let json = r#"{"media_key":"tmdb:tv:7","provider":"tmdb","media_type":"tv","title":"Arcane","poster_path":"https://image.tmdb.org/t/p/w500/a.jpg","year":"2021"}"#;
+        let s: MediaSnapshot = serde_json::from_str(json).unwrap();
+        assert_eq!(s.poster_file, None);
+    }
 
     const CONTRACT: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),

@@ -37,5 +37,9 @@ function remove(key: MediaKey): Promise<boolean> {
   return invoke<boolean>("library_remove", { key, event: stamp("library_remove", key) });
 }
 
-export const library = { load, add, update, remove };
+function posterDir(): Promise<string> {
+  return invoke<string>("library_poster_dir");
+}
+
+export const library = { load, add, update, remove, posterDir };
 export type Library = typeof library;

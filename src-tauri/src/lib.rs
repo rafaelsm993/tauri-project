@@ -64,7 +64,8 @@ pub fn run() {
             library::ipc::library_load,
             library::ipc::library_add,
             library::ipc::library_update,
-            library::ipc::library_remove
+            library::ipc::library_remove,
+            library::ipc::library_poster_dir
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

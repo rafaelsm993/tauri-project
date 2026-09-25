@@ -30,6 +30,7 @@ const SAVED = {
     title: "Test movie 1",
     poster_path: null,
     year: "2024",
+    poster_file: null,
   },
   user: {
     status: "planning",

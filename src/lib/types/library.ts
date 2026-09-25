@@ -10,6 +10,8 @@ export interface MediaSnapshot {
   media_type: MediaType;
   title: string;
   poster_path: string | null;
+  // File name inside the poster cache folder; null until downloaded.
+  poster_file: string | null;
   year: string | null;
 }
 

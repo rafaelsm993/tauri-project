@@ -66,7 +66,7 @@
   {:else}
     <ul class="library-grid">
       {#each visible as entry (entry.key)}
-        <li><LibraryCard {entry} /></li>
+        <li><LibraryCard {entry} posterDir={store.posterDir} /></li>
       {/each}
     </ul>
   {/if}

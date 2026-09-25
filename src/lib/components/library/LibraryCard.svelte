@@ -2,19 +2,22 @@
   import { resolve } from "$app/paths";
   import { detailPath } from "$lib/domain/libraryView";
   import { resolveTotal } from "$lib/domain/length";
+  import { posterSources } from "$lib/domain/poster";
   import { isBinary, percent, progressLabel } from "$lib/domain/progress";
   import { STATUS_LABELS } from "$lib/stores/library.svelte";
   import { MEDIA_LABELS } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
 
-  let { entry }: { entry: LibraryEntry } = $props();
+  let { entry, posterDir = null }: { entry: LibraryEntry; posterDir?: string | null } = $props();
 
-  let errored = $state(false);
+  let failed = $state(0);
 
   const type = $derived(entry.snapshot.media_type);
   const total = $derived(resolveTotal(type, null, entry.user.length));
   const pct = $derived(isBinary(type) ? null : percent(entry.user.progress, total));
   const label = $derived(progressLabel(type, entry.user.progress, total));
+  const sources = $derived(posterSources(entry.snapshot, posterDir));
+  const src = $derived(sources[failed] ?? null);
   const path = $derived(detailPath(entry));
   const href = $derived(
     resolve("/media/[type]/[id]", { type: path.type, id: encodeURIComponent(path.id) }),
@@ -23,14 +26,8 @@
 
 <a class="lib-card" {href}>
   <div class="lib-card__poster">
-    {#if entry.snapshot.poster_path && !errored}
-      <img
-        src={entry.snapshot.poster_path}
-        alt=""
-        loading="lazy"
-        class="lib-card__img"
-        onerror={() => (errored = true)}
-      />
+    {#if src}
+      <img {src} alt="" loading="lazy" class="lib-card__img" onerror={() => failed++} />
     {:else}
       <div class="lib-card__no-poster" aria-hidden="true">No poster</div>
     {/if}

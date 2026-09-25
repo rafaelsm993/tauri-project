@@ -21,7 +21,19 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self' customprotocol: asset:",
+        "connect-src": "ipc: http://ipc.localhost",
+        "img-src": "'self' asset: http://asset.localhost data: blob: https://image.tmdb.org https://s4.anilist.co https://media.rawg.io https://*.mzstatic.com",
+        "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src": "'self' https://fonts.gstatic.com",
+        "frame-src": "https://www.youtube.com https://www.youtube-nocookie.com"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"],
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/posters/**"]
+      }
     }
   },
   "bundle": {

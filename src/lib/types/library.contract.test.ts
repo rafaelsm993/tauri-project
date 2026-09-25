@@ -16,6 +16,7 @@ const SNAPSHOT_KEYS = {
   media_type: 0,
   title: 0,
   poster_path: 0,
+  poster_file: 0,
   year: 0,
 } satisfies Record<keyof MediaSnapshot, 0>;
 

@@ -5,6 +5,7 @@
     "snapshot": {
       "media_key": "tmdb:tv:7",
       "media_type": "tv",
+      "poster_file": null,
       "poster_path": "https://example.com/p.jpg",
       "provider": "tmdb",
       "title": "Arcane",

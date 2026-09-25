@@ -18,6 +18,7 @@ function entry(id: number, type: MediaType, status: LibraryStatus): LibraryEntry
       title: `T${id}`,
       poster_path: null,
       year: null,
+      poster_file: null,
     },
     user: { status, progress: 0, rating: null, review: null, length: emptyLength() },
     created_at: "t",
@@ -31,6 +32,7 @@ async function storeWith(list: LibraryEntry[]) {
     add: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
+    posterDir: vi.fn(async () => "/data/posters"),
   });
   await store.hydrate();
   return store;

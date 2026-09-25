@@ -1,9 +1,10 @@
 use super::events::append_event;
+use super::posters;
 use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Status, UserData};
 use crate::api::types::{MediaItem, MediaType};
 use crate::store::writer::StoreHandle;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -16,10 +17,24 @@ pub struct LibraryFile {
     pub entries: BTreeMap<String, LibraryEntry>,
 }
 
-// Single owner of library.json plus the path of the append-only event log.
+// Single owner of library.json, the event log path and the poster cache folder.
+#[derive(Clone)]
 pub struct LibraryState {
     pub store: Arc<StoreHandle<LibraryFile>>,
     pub events: PathBuf,
+    pub posters: PathBuf,
+    pub poster_lock: Arc<tokio::sync::Mutex<()>>,
+}
+
+impl LibraryState {
+    pub fn new(dir: &std::path::Path, file: LibraryFile) -> Self {
+        Self {
+            store: StoreHandle::new(dir.join("library.json"), SCHEMA_VERSION, file),
+            events: dir.join("events.jsonl"),
+            posters: dir.join("posters"),
+            poster_lock: Arc::default(),
+        }
+    }
 }
 
 // Fields a caller may patch; absent = leave alone.
@@ -157,17 +172,49 @@ pub async fn update(
     Ok(entry)
 }
 
-/// Removes an entry; returns false when the key was not there.
+/// Removes an entry and its cached poster; returns false when the key was not there.
 pub async fn remove(state: &LibraryState, key: &str, event: Option<Event>) -> Result<bool, String> {
-    let removed = state
-        .store
-        .update(|f| f.entries.remove(key).is_some())
-        .await;
-    if removed {
-        log_event(state, event)?;
-        state.store.flush().await?;
+    let Some(entry) = state.store.update(|f| f.entries.remove(key)).await else {
+        return Ok(false);
+    };
+    log_event(state, event)?;
+    state.store.flush().await?;
+    if let Some(file) = entry.snapshot.poster_file {
+        posters::remove_quietly(&state.posters.join(file));
     }
-    Ok(removed)
+    Ok(true)
+}
+
+/// Records a downloaded poster; false when the entry was removed meanwhile.
+pub async fn attach_poster(state: &LibraryState, key: &str, file: &str) -> bool {
+    let attached = state
+        .store
+        .update(|f| match f.entries.get_mut(key) {
+            Some(e) => {
+                e.snapshot.poster_file = Some(file.to_string());
+                true
+            }
+            None => false,
+        })
+        .await;
+    if attached {
+        if let Err(e) = state.store.flush().await {
+            log::warn!("[posters] flush after attach: {e}");
+        }
+    }
+    attached
+}
+
+pub async fn poster_files(state: &LibraryState) -> BTreeSet<String> {
+    state
+        .store
+        .read(|f| {
+            f.entries
+                .values()
+                .filter_map(|e| e.snapshot.poster_file.clone())
+                .collect()
+        })
+        .await
 }
 
 #[cfg(test)]
@@ -217,14 +264,54 @@ mod tests {
     }
 
     fn state_in(dir: &std::path::Path) -> LibraryState {
-        LibraryState {
-            store: StoreHandle::new(
-                dir.join("library.json"),
-                SCHEMA_VERSION,
-                LibraryFile::default(),
-            ),
-            events: dir.join("events.jsonl"),
-        }
+        LibraryState::new(dir, LibraryFile::default())
+    }
+
+    #[tokio::test]
+    async fn attach_poster_records_the_file_and_ignores_a_removed_entry() {
+        let dir = scratch("c6-attach");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            "t1".into(),
+            None,
+        )
+        .await
+        .unwrap();
+        assert!(attach_poster(&state, "tmdb:tv:7", "tmdb_tv_7.jpg").await);
+        assert!(!attach_poster(&state, "tmdb:tv:404", "x.jpg").await);
+        let entry = &saved(&dir).entries["tmdb:tv:7"];
+        assert_eq!(entry.snapshot.poster_file.as_deref(), Some("tmdb_tv_7.jpg"));
+        assert_eq!(entry.updated_at, "t1");
+        assert_eq!(
+            poster_files(&state).await,
+            ["tmdb_tv_7.jpg".to_string()].into()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn remove_deletes_the_poster_file() {
+        let dir = scratch("c6-remove");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            "t1".into(),
+            None,
+        )
+        .await
+        .unwrap();
+        std::fs::create_dir_all(&state.posters).unwrap();
+        let file = state.posters.join("tmdb_tv_7.jpg");
+        std::fs::write(&file, b"jpg").unwrap();
+        attach_poster(&state, "tmdb:tv:7", "tmdb_tv_7.jpg").await;
+        assert!(remove(&state, "tmdb:tv:7", None).await.unwrap());
+        assert!(!file.exists());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     fn saved(dir: &std::path::Path) -> LibraryFile {
@@ -486,10 +573,7 @@ mod tests {
         .unwrap();
 
         let file = saved(&dir);
-        let reopened = LibraryState {
-            store: StoreHandle::new(dir.join("library.json"), SCHEMA_VERSION, file),
-            events: dir.join("events.jsonl"),
-        };
+        let reopened = LibraryState::new(&dir, file);
         let entries = load(&reopened).await;
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].user.rating, Some(10));

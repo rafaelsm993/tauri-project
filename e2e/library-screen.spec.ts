@@ -14,6 +14,7 @@ function saved(i: number) {
       title: `Saved title number ${i}`,
       poster_path: null,
       year: "2020",
+      poster_file: null,
     },
     user: {
       status: i % 2 ? "in_progress" : "planning",
@@ -35,15 +36,19 @@ function saved(i: number) {
   };
 }
 
-async function mockLibrary(page: Page) {
-  const entries = Array.from({ length: 8 }, (_, i) => saved(i + 1));
+async function mockLibrary(
+  page: Page,
+  entries: ReturnType<typeof saved>[] = Array.from({ length: 8 }, (_, i) => saved(i + 1)),
+) {
   await page.addInitScript((list) => {
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string) => {
         if (cmd === "library_load") return structuredClone(list);
+        if (cmd === "library_poster_dir") return "/nonexistent/posters";
         return { page: 1, total_pages: 1, total_results: 0, results: [], genres: [] };
       },
       transformCallback: () => 0,
+      convertFileSrc: (path: string) => `/missing-asset/${encodeURIComponent(path)}`,
       metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
     };
   }, entries);
@@ -76,4 +81,17 @@ test("a card opens the detail page", async ({ page }) => {
   await page.goto("/library");
   await page.getByRole("link", { name: /saved title number 1\b/i }).click();
   await expect(page).toHaveURL(/\/media\/tv\/1$/);
+});
+
+test("a cached poster that is gone falls back to the provider image", async ({ page }) => {
+  const base = saved(1);
+  const entry = {
+    ...base,
+    snapshot: { ...base.snapshot, poster_path: "/favicon.png", poster_file: "gone.jpg" },
+  };
+  await mockLibrary(page, [entry]);
+  await page.goto("/library");
+  const img = page.getByRole("link", { name: /saved title number 1/i }).locator("img");
+  await expect(img).toHaveAttribute("src", "/favicon.png");
+  await expect(img).toBeVisible();
 });

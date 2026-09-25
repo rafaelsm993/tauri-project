@@ -35,6 +35,7 @@ function entry(over: Partial<LibraryEntry> = {}): LibraryEntry {
       title: "Arcane",
       poster_path: "/p.jpg",
       year: "2021",
+      poster_file: null,
     },
     user: { ...USER },
     created_at: "2026-09-25T12:00:00Z",
@@ -51,6 +52,7 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
       entry({ user: { ...USER, ...patch }, updated_at: "2026-09-25T13:00:00Z" }),
     ),
     remove: vi.fn(async () => true),
+    posterDir: vi.fn(async () => "/data/posters"),
     ...over,
   };
 }
@@ -235,5 +237,29 @@ describe("derived views", () => {
     );
     await store.hydrate();
     expect(store.entries.map((e) => e.key)).toEqual(["new", "old"]);
+  });
+});
+
+describe("poster folder", () => {
+  it("is known after hydrate", async () => {
+    const store = new LibraryStore(fakeClient());
+    await store.hydrate();
+    expect(store.posterDir).toBe("/data/posters");
+  });
+
+  it("never blocks the library when it cannot be read", async () => {
+    const store = new LibraryStore(
+      fakeClient({
+        load: vi.fn(async () => [entry()]),
+        posterDir: vi.fn(async () => {
+          throw new Error("no command");
+        }),
+      }),
+    );
+    await store.hydrate();
+    expect(store.ready).toBe(true);
+    expect(store.error).toBe("");
+    expect(store.posterDir).toBeNull();
+    expect(store.entries).toHaveLength(1);
   });
 });

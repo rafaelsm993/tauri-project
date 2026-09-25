@@ -55,6 +55,7 @@ const FIXTURES: Record<string, unknown> = {
     studios: [],
   },
   library_load: [],
+  library_poster_dir: "/nonexistent/posters",
 };
 
 export const test = base.extend({

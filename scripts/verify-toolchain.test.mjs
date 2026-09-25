@@ -11,6 +11,7 @@ const read = (p) => readFileSync(join(repoRoot, p), "utf8");
 const has = (p) => existsSync(join(repoRoot, p));
 const WIN = process.platform === "win32";
 const LINUX = process.platform === "linux";
+const CI = !!process.env.CI;
 
 function run(cmd, args) {
   return execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -21,11 +22,18 @@ test("cargo is reachable and reports a stable version", () => {
   assert.match(out, /^cargo \d+\.\d+\.\d+/, `unexpected cargo version line: ${out}`);
 });
 
-test(".env supplies the compile-time API keys build.rs expects", () => {
+// CI has no .env; build.rs reads the same keys from the environment there.
+test(".env supplies the compile-time API keys build.rs expects", { skip: CI }, () => {
   assert.ok(has(".env"), ".env is missing at the repo root (copy .env.example)");
   const env = read(".env");
   for (const key of ["TMDB_API_KEY", "RAWG_API_KEY"]) {
     assert.match(env, new RegExp(`^${key}=.+$`, "m"), `.env has no non-empty ${key}`);
+  }
+});
+
+test("the compile-time API keys reach build.rs on CI", { skip: !CI }, () => {
+  for (const key of ["TMDB_API_KEY", "RAWG_API_KEY"]) {
+    assert.ok(process.env[key], `${key} is not set in the CI environment`);
   }
 });
 

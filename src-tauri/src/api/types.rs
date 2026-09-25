@@ -165,7 +165,7 @@ pub struct GenreOption {
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MediaItem {
     pub id: Id,
     pub provider: ProviderId,

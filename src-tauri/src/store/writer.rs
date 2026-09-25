@@ -31,6 +31,11 @@ impl<T: Serialize + Send + 'static> StoreHandle<T> {
         out
     }
 
+    // Read-only view; never marks the file dirty.
+    pub async fn read<R>(&self, f: impl FnOnce(&T) -> R) -> R {
+        f(&*self.state.lock().await)
+    }
+
     // Writes the state if it changed since the last flush; true when a write happened.
     pub async fn flush(&self) -> Result<bool, String> {
         let state = self.state.lock().await;

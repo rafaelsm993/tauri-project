@@ -3,7 +3,6 @@ pub mod library;
 pub mod logging;
 pub mod store;
 
-#[cfg(all(desktop, debug_assertions))]
 use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
@@ -44,6 +43,12 @@ pub fn run() {
         .plugin(log_plugin())
         .plugin(tauri_plugin_opener::init())
         .setup(|_app| {
+            let dir = _app
+                .path()
+                .app_data_dir()
+                .map_err(|e| format!("no app data dir: {e}"))?;
+            _app.manage(library::ipc::init(&dir)?);
+
             #[cfg(all(desktop, debug_assertions))]
             if devtools_requested(std::env::var("TAURI_APP_DEVTOOLS").ok().as_deref()) {
                 if let Some(window) = _app.get_webview_window("main") {
@@ -55,7 +60,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             api::catalog::catalog_genres,
             api::catalog::catalog_page,
-            api::catalog::catalog_detail
+            api::catalog::catalog_detail,
+            library::ipc::library_load,
+            library::ipc::library_add,
+            library::ipc::library_update,
+            library::ipc::library_remove
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

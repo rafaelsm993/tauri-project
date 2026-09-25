@@ -212,6 +212,13 @@
         filter: brightness(0.45);
       }
     }
+
+    // The always-on touch overlay repeats the title; two copies collide mid-card.
+    @include touch {
+      span {
+        display: none;
+      }
+    }
   }
 
   // ── Hover overlay ───────────────────────────────────────
@@ -259,6 +266,13 @@
     display: flex;
     flex-direction: column;
     gap: 5px;
+
+    // Always visible under touch, so it needs its own scrim over bright posters.
+    @include touch {
+      padding: $spacing-xs;
+      border-radius: $radius-sm;
+      background: rgb(var(--clr-scrim-rgb) / 0.72);
+    }
   }
 
   // ── Type badge ──────────────────────────────────────────

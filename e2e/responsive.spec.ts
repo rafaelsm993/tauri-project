@@ -120,7 +120,7 @@ test.describe("touch devices", () => {
     await expect(group).toBeHidden();
     await expect(headings).toHaveText(["Comedy", "Western"]);
     await expect(
-      page.getByRole("main").getByText("Test movie 1 ", { exact: false }).first(),
+      page.getByRole("main").locator(".card__label-title", { hasText: "Test movie 1" }).first(),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Genres · 2" }).click();
@@ -176,6 +176,18 @@ test.describe("touch devices", () => {
       .first()
       .evaluate((el) => getComputedStyle(el).opacity);
     expect(opacity).toBe("1");
+  });
+
+  test("the always-on overlay is legible: own scrim, no duplicate title behind it", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!isMobile, "the overlay only stays visible on touch devices");
+    const body = page.locator(".card__overlay-body").first();
+    const background = await body.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(background).not.toBe("rgba(0, 0, 0, 0)");
+    const fallback = page.locator(".card__no-poster span").first();
+    await expect(fallback).toBeHidden();
   });
 });
 

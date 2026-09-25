@@ -58,7 +58,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17, cache: gradle }
+      # The SDK repo dropped the obsolete "tools" package the action installs by default.
       - uses: android-actions/setup-android@v3
+        with: { packages: platform-tools }
       - name: Android NDK
         run: |
           sdkmanager --install "ndk;${NDK_VERSION}"

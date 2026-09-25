@@ -26,6 +26,7 @@
       label="Animated background"
       options={ON_OFF}
       value={store.prefs.background_animation ? "on" : "off"}
+      disabled={!store.ready}
       onchange={(v) => store.update({ background_animation: v === "on" })}
     />
   </section>
@@ -37,27 +38,18 @@
 
 <style lang="scss">
   .settings {
+    @include page-shell;
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-    max-width: 48rem;
-    margin-inline: auto;
-    padding: $spacing-lg clamp(#{$spacing-md}, 4vw, #{$spacing-2xl});
-    min-width: 0;
   }
 
-  // Same height as the profile button, so the title sits level with it and content starts below.
   .settings-title {
-    display: flex;
-    align-items: center;
-    min-height: $bar-height;
-    padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--clr-text);
+    @include page-title;
   }
 
   .settings-row {
+    max-width: 48rem;
     display: flex;
     flex-wrap: wrap;
     align-items: center;

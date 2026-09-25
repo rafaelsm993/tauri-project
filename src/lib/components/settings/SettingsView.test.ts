@@ -15,6 +15,7 @@ function storeWith(
     load: vi.fn(async () => ({ background_animation: true })),
     update,
   });
+  store.ready = true;
   return { store, update };
 }
 
@@ -31,6 +32,14 @@ describe("SettingsView", () => {
     await userEvent.click(screen.getByRole("button", { name: "Off" }));
     expect(update).toHaveBeenCalledWith({ background_animation: false });
     expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the toggle disabled until the saved prefs load", () => {
+    const { store } = storeWith();
+    store.ready = false;
+    render(SettingsView, { store });
+    expect(screen.getByRole("button", { name: "On" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Off" })).toBeDisabled();
   });
 
   it("shows the error when saving fails", async () => {

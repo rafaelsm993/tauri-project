@@ -56,8 +56,6 @@ const FIXTURES: Record<string, unknown> = {
   },
   library_load: [],
   library_poster_dir: "/nonexistent/posters",
-  prefs_load: { background_animation: true },
-  prefs_update: { background_animation: false },
 };
 
 export const test = base.extend({
@@ -65,10 +63,16 @@ export const test = base.extend({
     await page.addInitScript((fixtures) => {
       const empty = { page: 1, total_pages: 1, total_results: 0, results: [] };
       const calls: string[] = [];
+      const prefs = { background_animation: true };
       Object.assign(window, { __ipcCalls: calls });
       (window as any).__TAURI_INTERNALS__ = {
-        invoke: async (cmd: string) => {
+        invoke: async (cmd: string, args?: { patch?: object }) => {
           calls.push(cmd);
+          if (cmd === "prefs_load") return { ...prefs };
+          if (cmd === "prefs_update") {
+            Object.assign(prefs, args?.patch);
+            return { ...prefs };
+          }
           return structuredClone(fixtures[cmd] ?? empty);
         },
         transformCallback: () => 0,

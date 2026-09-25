@@ -12,6 +12,16 @@ test("turning the animated background off saves it", async ({ page }) => {
   expect(calls).toContain("prefs_update");
 });
 
+test("turning the background back on works too", async ({ page }) => {
+  await page.goto("/settings");
+  const group = page.getByRole("group", { name: "Animated background" });
+  await group.getByRole("button", { name: "Off" }).click();
+  await expect(page.locator(".bg-area")).toHaveClass(/paused/);
+  await group.getByRole("button", { name: "On" }).click();
+  await expect(group.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".bg-area")).not.toHaveClass(/paused/);
+});
+
 test("settings controls are touch-sized on coarse pointers", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mouse viewports may use compact targets");
   await page.goto("/settings");

@@ -56,6 +56,8 @@ const FIXTURES: Record<string, unknown> = {
   },
   library_load: [],
   library_poster_dir: "/nonexistent/posters",
+  prefs_load: { background_animation: true },
+  prefs_update: { background_animation: false },
 };
 
 export const test = base.extend({

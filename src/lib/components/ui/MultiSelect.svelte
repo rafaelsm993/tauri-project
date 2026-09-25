@@ -1,5 +1,7 @@
 <script lang="ts">
   // Popover gives top-layer rendering, light-dismiss and Esc; the panel is clamped to the viewport.
+  import { followTrigger } from "./popover";
+
   type Value = string | number;
   type Option = { value: Value; label: string };
 
@@ -31,33 +33,14 @@
     onchange(options.map((o: Option) => o.value).filter(isOn));
   }
 
-  const GAP = 6;
-  const EDGE = 8;
-
-  function place() {
-    if (!trigger || !panel) return;
-    const t = trigger.getBoundingClientRect();
-    const w = panel.offsetWidth;
-    const left = Math.min(Math.max(EDGE, t.right - w), window.innerWidth - w - EDGE);
-    panel.style.left = `${Math.max(EDGE, left)}px`;
-    panel.style.top = `${t.bottom + GAP}px`;
-    panel.style.maxHeight = `${Math.max(160, window.innerHeight - t.bottom - GAP - EDGE)}px`;
-  }
-
   function onToggle(e: ToggleEvent) {
     open = e.newState === "open";
-    if (open) place();
   }
 
   // Keep the panel attached to the trigger while open (scroll / resize).
   $effect(() => {
-    if (!open) return;
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, { capture: true, passive: true });
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, { capture: true });
-    };
+    if (!open || !trigger || !panel) return;
+    return followTrigger(trigger, panel);
   });
 </script>
 

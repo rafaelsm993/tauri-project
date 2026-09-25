@@ -1,6 +1,7 @@
 pub mod api;
 pub mod library;
 pub mod logging;
+pub mod prefs;
 pub mod store;
 
 use tauri::Manager;
@@ -48,6 +49,7 @@ pub fn run() {
                 .app_data_dir()
                 .map_err(|e| format!("no app data dir: {e}"))?;
             _app.manage(library::ipc::init(&dir)?);
+            _app.manage(prefs::ipc::init(&dir)?);
 
             #[cfg(all(desktop, debug_assertions))]
             if devtools_requested(std::env::var("TAURI_APP_DEVTOOLS").ok().as_deref()) {
@@ -65,7 +67,9 @@ pub fn run() {
             library::ipc::library_add,
             library::ipc::library_update,
             library::ipc::library_remove,
-            library::ipc::library_poster_dir
+            library::ipc::library_poster_dir,
+            prefs::ipc::prefs_load,
+            prefs::ipc::prefs_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

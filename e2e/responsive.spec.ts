@@ -7,6 +7,7 @@ const SCREENS = [
   { name: "profile", path: "/profile" },
   { name: "planner", path: "/planner" },
   { name: "welcome", path: "/welcome" },
+  { name: "settings", path: "/settings" },
 ];
 
 for (const screen of SCREENS) {

@@ -151,7 +151,7 @@ impl fmt::Display for Id {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Page<T> {
     pub results: Vec<T>,
     pub page: u32,
@@ -159,7 +159,7 @@ pub struct Page<T> {
     pub total_results: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GenreOption {
     pub id: Id,
     pub name: String,

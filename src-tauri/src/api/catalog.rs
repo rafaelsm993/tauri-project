@@ -1,4 +1,5 @@
 use super::anilist::Anilist;
+use super::cache_disk::{cached, GENRES_TTL, PAGE_TTL};
 use super::itunes::Itunes;
 use super::rawg::Rawg;
 use super::tmdb::Tmdb;
@@ -26,14 +27,56 @@ fn parse_detail_args(media_type: &str, id: &str) -> Result<(MediaType, Id), Stri
     Ok((media_type, id))
 }
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn catalog_genres(media_type: MediaType) -> Result<Vec<GenreOption>, String> {
-    log::debug!("[catalog] genres  {media_type:?}");
+// Disk-cache key for a genre list; books are local and never cached.
+fn genres_key(media_type: MediaType) -> Option<String> {
+    (media_type != MediaType::Book).then(|| format!("genres {media_type}"))
+}
+
+// Disk-cache key for a home carousel: first page, no search text.
+fn home_page_key(
+    media_type: MediaType,
+    query: &str,
+    page: u32,
+    genre: Option<&Id>,
+) -> Option<String> {
+    if page != 1 || !query.trim().is_empty() {
+        return None;
+    }
+    Some(match genre {
+        Some(g) => format!("page {media_type} g={g}"),
+        None => format!("page {media_type}"),
+    })
+}
+
+async fn fetch_genres(media_type: MediaType) -> Result<Vec<GenreOption>, String> {
     match media_type {
         MediaType::Movie | MediaType::Tv => Tmdb(media_type).genres().await,
         MediaType::Anime | MediaType::Manga => Anilist(media_type).genres().await,
         MediaType::Game => Rawg.genres().await,
         MediaType::Book => Itunes.genres().await,
+    }
+}
+
+async fn fetch_page(
+    media_type: MediaType,
+    query: &str,
+    page: u32,
+    genre: Option<Id>,
+) -> Result<Page<MediaItem>, String> {
+    match media_type {
+        MediaType::Movie | MediaType::Tv => Tmdb(media_type).page(query, page, genre).await,
+        MediaType::Anime | MediaType::Manga => Anilist(media_type).page(query, page, genre).await,
+        MediaType::Game => Rawg.page(query, page, genre).await,
+        MediaType::Book => Itunes.page(query, page, genre).await,
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn catalog_genres(media_type: MediaType) -> Result<Vec<GenreOption>, String> {
+    log::debug!("[catalog] genres  {media_type:?}");
+    match genres_key(media_type) {
+        Some(key) => cached(&key, GENRES_TTL, || fetch_genres(media_type)).await,
+        None => fetch_genres(media_type).await,
     }
 }
 
@@ -45,11 +88,14 @@ pub async fn catalog_page(
     genre: Option<Id>,
 ) -> Result<Page<MediaItem>, String> {
     log::debug!("[catalog] page  {media_type:?} query={query:?} page={page} genre={genre:?}");
-    match media_type {
-        MediaType::Movie | MediaType::Tv => Tmdb(media_type).page(&query, page, genre).await,
-        MediaType::Anime | MediaType::Manga => Anilist(media_type).page(&query, page, genre).await,
-        MediaType::Game => Rawg.page(&query, page, genre).await,
-        MediaType::Book => Itunes.page(&query, page, genre).await,
+    match home_page_key(media_type, &query, page, genre.as_ref()) {
+        Some(key) => {
+            cached(&key, PAGE_TTL, || {
+                fetch_page(media_type, &query, page, genre)
+            })
+            .await
+        }
+        None => fetch_page(media_type, &query, page, genre).await,
     }
 }
 
@@ -93,6 +139,30 @@ mod tests {
             parse_detail_args("podcast", "1"),
             Err("Invalid media type.".into())
         );
+    }
+
+    #[test]
+    fn genre_lists_are_disk_cached_except_local_books() {
+        assert_eq!(
+            genres_key(MediaType::Movie).as_deref(),
+            Some("genres movie")
+        );
+        assert_eq!(genres_key(MediaType::Book), None);
+    }
+
+    #[test]
+    fn only_home_carousel_pages_are_disk_cached() {
+        let g = Id::Num(28);
+        assert_eq!(
+            home_page_key(MediaType::Movie, "", 1, Some(&g)).as_deref(),
+            Some("page movie g=28")
+        );
+        assert_eq!(
+            home_page_key(MediaType::Game, "  ", 1, None).as_deref(),
+            Some("page game")
+        );
+        assert_eq!(home_page_key(MediaType::Movie, "", 2, None), None);
+        assert_eq!(home_page_key(MediaType::Movie, "star", 1, None), None);
     }
 
     // Hits the real providers; run with `cargo test live_ -- --ignored`.

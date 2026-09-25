@@ -50,6 +50,7 @@ pub fn run() {
                 .map_err(|e| format!("no app data dir: {e}"))?;
             _app.manage(library::ipc::init(&dir)?);
             _app.manage(prefs::ipc::init(&dir)?);
+            api::cache_disk::init(&dir);
 
             #[cfg(all(desktop, debug_assertions))]
             if devtools_requested(std::env::var("TAURI_APP_DEVTOOLS").ok().as_deref()) {

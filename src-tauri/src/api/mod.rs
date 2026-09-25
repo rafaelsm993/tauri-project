@@ -1,5 +1,6 @@
 pub mod anilist;
 pub mod cache;
+pub mod cache_disk;
 pub mod catalog;
 pub mod http;
 pub mod itunes;

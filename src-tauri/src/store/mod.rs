@@ -40,12 +40,14 @@ pub fn load<T: DeserializeOwned>(
     steps: &[Migration],
 ) -> Result<Option<Loaded<T>>, String> {
     let current = current_version(steps);
+    let mut found_file = false;
     for candidate in [path.to_path_buf(), sibling(path, ".bak")] {
         let bytes = match std::fs::read(&candidate) {
             Ok(bytes) => bytes,
             Err(e) if e.kind() == ErrorKind::NotFound => continue,
             Err(e) => return Err(format!("read {}: {e}", candidate.display())),
         };
+        found_file = true;
         let raw: Versioned<Value> = match serde_json::from_slice(&bytes) {
             Ok(raw) => raw,
             Err(e) => {
@@ -75,6 +77,13 @@ pub fn load<T: DeserializeOwned>(
                 candidate.display()
             ),
         }
+    }
+    // A present file must never be silently replaced by an empty default.
+    if found_file {
+        return Err(format!(
+            "{} exists but cannot be read by this version of the app; the file was left untouched",
+            path.display()
+        ));
     }
     Ok(None)
 }
@@ -188,6 +197,30 @@ mod tests {
         let err = load::<Book>(&path, &STEPS).unwrap_err();
         assert!(err.contains("newer version of the app"), "{err}");
         assert_eq!(fs::read(&path).unwrap(), before);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn load_refuses_when_files_exist_but_none_is_usable() {
+        let dir = scratch("load-all-unusable");
+        let path = dir.join("x.json");
+        fs::write(&path, b"{ truncated").unwrap();
+        fs::write(sibling(&path, ".bak"), b"also junk").unwrap();
+        let before = fs::read(&path).unwrap();
+        let err = load::<Book>(&path, &STEPS).unwrap_err();
+        assert!(err.contains("left untouched"), "{err}");
+        assert_eq!(fs::read(&path).unwrap(), before);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn load_refuses_a_lone_file_that_does_not_fit_the_schema() {
+        let dir = scratch("load-unfit");
+        let path = dir.join("x.json");
+        put(&path, 2, json!({ "no_title": true }));
+        std::fs::remove_file(sibling(&path, ".bak")).ok();
+        let err = load::<Book>(&path, &STEPS).unwrap_err();
+        assert!(err.contains("left untouched"), "{err}");
         fs::remove_dir_all(&dir).unwrap();
     }
 

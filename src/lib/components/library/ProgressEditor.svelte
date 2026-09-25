@@ -10,6 +10,7 @@
     onprogress,
     onrating,
     disabled = false,
+    plannable = true,
   } = $props<{
     mediaType: MediaType;
     progress: number;
@@ -18,6 +19,7 @@
     onprogress: (value: number) => void;
     onrating: (value: number | null) => void;
     disabled?: boolean;
+    plannable?: boolean;
   }>();
 
   const id = $props.id();
@@ -71,6 +73,10 @@
     {/if}
     <span class="progress-text">{label}</span>
   </div>
+
+  {#if !plannable}
+    <p class="length-hint">Add length to plan it.</p>
+  {/if}
 
   {#if pct !== null}
     <div
@@ -151,6 +157,11 @@
     height: 100%;
     background: var(--clr-primary);
     transition: width 0.24s ease;
+  }
+
+  .length-hint {
+    font-size: 0.78rem;
+    color: var(--clr-text-3);
   }
 
   .rating-select {

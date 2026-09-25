@@ -57,6 +57,7 @@ describe("SaveToLibrary", () => {
     const { store, client } = storeWith();
     render(SaveToLibrary, { item: ITEM, store });
     await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    await userEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(client.add).toHaveBeenCalledTimes(1);
     expect(await screen.findByLabelText(/status/i)).toHaveValue("planning");
   });
@@ -69,6 +70,7 @@ describe("SaveToLibrary", () => {
     });
     render(SaveToLibrary, { item: ITEM, store });
     await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    await userEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(await screen.findByText(/disk full/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /add to library/i })).toBeInTheDocument();
   });
@@ -87,5 +89,34 @@ describe("SaveToLibrary", () => {
     render(SaveToLibrary, { item: ITEM, store });
     await userEvent.click(screen.getByRole("button", { name: /remove/i }));
     expect(client.remove).toHaveBeenCalledWith("tmdb:tv:7");
+  });
+
+  it("opens the add sheet instead of saving straight away", async () => {
+    const { store, client } = storeWith();
+    render(SaveToLibrary, { item: ITEM, store, detail: null });
+    await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(client.add).not.toHaveBeenCalled();
+  });
+
+  it("saves with the length the sheet collected", async () => {
+    const { store, client } = storeWith();
+    render(SaveToLibrary, { item: ITEM, store, detail: null });
+    await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    await userEvent.type(screen.getByLabelText(/minutes per episode/i), "40");
+    await userEvent.click(screen.getByRole("button", { name: /^save/i }));
+    expect(client.add).toHaveBeenCalledWith(ITEM, {
+      length: { ...emptyLength(), episode_minutes: 40 },
+      review: null,
+    });
+  });
+
+  it("saves nothing when the sheet is cancelled", async () => {
+    const { store, client } = storeWith();
+    render(SaveToLibrary, { item: ITEM, store, detail: null });
+    await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(client.add).not.toHaveBeenCalled();
   });
 });

@@ -1,15 +1,29 @@
 <script lang="ts">
+  import AddSheet from "./AddSheet.svelte";
+  import { lengthFromDetail } from "$lib/domain/length";
   import { libraryStore, LibraryStore, STATUSES, STATUS_LABELS } from "$lib/stores/library.svelte";
-  import type { LibraryStatus } from "$lib/types/library";
-  import type { MediaItem } from "$lib/types/media";
+  import type { Length, LibraryStatus } from "$lib/types/library";
+  import type { MediaDetail, MediaItem } from "$lib/types/media";
 
-  let { item, store = libraryStore } = $props<{ item: MediaItem; store?: LibraryStore }>();
+  let {
+    item,
+    detail = null,
+    store = libraryStore,
+  } = $props<{ item: MediaItem; detail?: MediaDetail | null; store?: LibraryStore }>();
 
   const id = $props.id();
   const statusId = `${id}-status`;
 
   const entry = $derived(store.get(item.media_key));
   const busy = $derived(store.isPending(item.media_key));
+  const prefill = $derived(lengthFromDetail(item.media_type, detail));
+
+  let sheetOpen = $state(false);
+
+  function saveFromSheet(value: { length: Length; review: string | null }) {
+    sheetOpen = false;
+    store.add(item, value);
+  }
 
   function pickStatus(event: Event) {
     const status = (event.currentTarget as HTMLSelectElement).value as LibraryStatus;
@@ -36,11 +50,32 @@
       Remove
     </button>
   {:else}
-    <button class="add-btn" disabled={busy} aria-busy={busy} onclick={() => store.add(item)}>
+    <button
+      type="button"
+      class="add-btn"
+      disabled={busy || sheetOpen}
+      aria-busy={busy}
+      aria-expanded={sheetOpen}
+      onclick={() => (sheetOpen = true)}
+    >
       + Add to library
     </button>
   {/if}
 </div>
+
+{#if sheetOpen && !entry}
+  <div class="sheet-wrap" role="dialog" aria-label="Add to library">
+    <AddSheet
+      mediaType={item.media_type}
+      title={item.title}
+      length={prefill}
+      review={null}
+      {busy}
+      onsave={saveFromSheet}
+      oncancel={() => (sheetOpen = false)}
+    />
+  </div>
+{/if}
 
 {#if store.error}
   <p class="save-error">⚠ {store.error}</p>
@@ -106,6 +141,10 @@
       color: var(--clr-error);
       border-color: rgb(var(--clr-error-rgb) / 0.4);
     }
+  }
+
+  .sheet-wrap {
+    margin-bottom: $spacing-md;
   }
 
   .save-error {

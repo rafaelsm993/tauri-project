@@ -53,11 +53,14 @@ const SAVED = {
 async function mockIpc(page: import("@playwright/test").Page, addFails: boolean) {
   await page.addInitScript(
     ({ detail, saved, fails }) => {
-      (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+      const w = window as unknown as Record<string, unknown>;
+      w.__addCalls = 0;
+      w.__TAURI_INTERNALS__ = {
         invoke: async (cmd: string) => {
           if (cmd === "catalog_detail") return structuredClone(detail);
           if (cmd === "library_load") return [];
           if (cmd === "library_add") {
+            w.__addCalls = (w.__addCalls as number) + 1;
             if (fails) throw "disk full";
             return structuredClone(saved);
           }
@@ -80,6 +83,7 @@ test("a rejected save rolls back and shows why", async ({ page }) => {
   const addButton = page.getByRole("button", { name: /add to library/i });
   await expect(addButton).toBeVisible();
   await addButton.click();
+  await page.getByRole("button", { name: /skip/i }).click();
 
   await expect(page.getByText(/disk full/i)).toBeVisible();
   await expect(addButton).toBeVisible();
@@ -91,7 +95,39 @@ test("a successful save shows the status control", async ({ page }) => {
   await page.goto("/media/movie/1");
 
   await page.getByRole("button", { name: /add to library/i }).click();
+  await page.getByRole("button", { name: /skip/i }).click();
 
   await expect(page.getByLabel(/status/i)).toHaveValue("planning");
   await expect(page.getByRole("button", { name: /add to library/i })).toHaveCount(0);
+});
+
+test("adding opens the sheet first and saves nothing until the user answers", async ({ page }) => {
+  await mockIpc(page, false);
+  await page.goto("/media/movie/1");
+
+  await page.getByRole("button", { name: /add to library/i }).click();
+
+  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByLabel(/runtime/i)).toHaveValue("128");
+  expect(await page.evaluate(() => (window as unknown as { __addCalls: number }).__addCalls)).toBe(
+    0,
+  );
+
+  await sheet.getByRole("button", { name: /^save/i }).click();
+  await expect(page.getByLabel(/status/i)).toHaveValue("planning");
+  expect(await page.evaluate(() => (window as unknown as { __addCalls: number }).__addCalls)).toBe(
+    1,
+  );
+});
+
+test("the add sheet fits the narrowest window", async ({ page }) => {
+  await mockIpc(page, false);
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: /add to library/i }).click();
+
+  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  const box = await sheet.boundingBox();
+  const width = page.viewportSize()?.width ?? 0;
+  expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true);
 });

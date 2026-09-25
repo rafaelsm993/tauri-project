@@ -5,7 +5,7 @@
   import { onDestroy } from "svelte";
   import { catalog } from "$lib/api/catalog";
   import { toMediaItem, type MediaDetail } from "$lib/types/media";
-  import { totalFor } from "$lib/domain/progress";
+  import { emptyLength, isPlannable, resolveTotal } from "$lib/domain/length";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { ui } from "$lib/stores/ui.svelte";
   import { errorMessage } from "$lib/utils/errors";
@@ -34,7 +34,9 @@
   );
 
   const savedEntry = $derived(detail ? libraryStore.get(detail.media_key) : undefined);
-  const savedTotal = $derived(detail ? totalFor(detail.media_type, detail) : null);
+  const savedLength = $derived(savedEntry?.user.length ?? emptyLength());
+  const savedTotal = $derived(detail ? resolveTotal(detail.media_type, detail, savedLength) : null);
+  const savedPlannable = $derived(detail ? isPlannable(detail.media_type, savedLength) : true);
 
   async function fetchDetail(type: string, id: string) {
     loading = true;
@@ -87,13 +89,14 @@
     <div class="detail-info">
       <DetailMeta {detail} />
 
-      <SaveToLibrary item={toMediaItem(detail)} />
+      <SaveToLibrary item={toMediaItem(detail)} {detail} />
 
       {#if savedEntry}
         <ProgressEditor
           mediaType={detail.media_type}
           progress={savedEntry.user.progress}
           total={savedTotal}
+          plannable={savedPlannable}
           rating={savedEntry.user.rating}
           disabled={libraryStore.isPending(detail.media_key)}
           onprogress={(progress) => libraryStore.update(savedEntry.key, { progress })}

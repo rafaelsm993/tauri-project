@@ -58,4 +58,20 @@ describe("ProgressEditor", () => {
     await userEvent.selectOptions(screen.getByLabelText(/rating/i), "");
     expect(onrating).toHaveBeenLastCalledWith(null);
   });
+
+  it("hints that length is missing instead of showing an error", () => {
+    render(ProgressEditor, {
+      ...base,
+      mediaType: "book",
+      progress: 12,
+      total: null,
+      plannable: false,
+    });
+    expect(screen.getByText(/add length to plan it/i)).toBeInTheDocument();
+  });
+
+  it("shows no hint once the item is plannable", () => {
+    render(ProgressEditor, { ...base, plannable: true });
+    expect(screen.queryByText(/add length to plan it/i)).not.toBeInTheDocument();
+  });
 });

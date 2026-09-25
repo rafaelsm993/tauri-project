@@ -59,6 +59,8 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17, cache: gradle }
       - uses: android-actions/setup-android@v3
+        with:
+          packages: "" # the default set installs the obsolete 'tools' package and fails
       - name: Android NDK
         run: |
           sdkmanager --install "ndk;${NDK_VERSION}"

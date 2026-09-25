@@ -39,6 +39,8 @@ export class BrowseStore {
   selectedGenres = $state<GenreId[]>([]);
 
   carouselMode = $derived(!this.isSearch && this.activeGenre === null);
+  // Carousel mode falls back to the flat grid when no genre list could be loaded.
+  gridMode = $derived(!this.carouselMode || (this.sections.length === 0 && !this.genresLoading));
   genreOptions = $derived(this.genres.map((g) => ({ value: g.id, label: g.name })));
   visibleSections = $derived(
     this.selectedGenres.length === 0
@@ -186,6 +188,7 @@ export class BrowseStore {
     if (this.carouselMode) {
       const list = await this.refreshGenres(this.activeCategory);
       if (!GENRE_SUPPORTED.has(this.activeCategory) || list.length === 0) {
+        this.sections = [];
         await this.loadGrid("");
         return;
       }

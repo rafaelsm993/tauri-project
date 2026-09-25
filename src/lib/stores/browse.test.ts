@@ -146,6 +146,28 @@ describe("BrowseStore", () => {
     expect(s.sections).toHaveLength(3);
   });
 
+  it("a failed genre fetch drops the previous carousels and shows the grid error", async () => {
+    let offline = false;
+    const cat = fakeCatalog({
+      fetchGenres: vi.fn(async () => {
+        if (offline) throw "offline: error sending request";
+        return genres(3);
+      }),
+      fetchPage: vi.fn(async () => {
+        if (offline) throw "offline: error sending request";
+        return page([1]);
+      }),
+    });
+    const s = new BrowseStore(cat);
+    await s.refreshView();
+    expect(s.gridMode).toBe(false);
+    offline = true;
+    await s.switchCategory("tv");
+    expect(s.sections).toEqual([]);
+    expect(s.gridMode).toBe(true);
+    expect(s.error).toBe("error sending request");
+  });
+
   it("retryFailed: reruns a failed search", async () => {
     let fail = true;
     const cat = fakeCatalog({

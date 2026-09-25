@@ -75,36 +75,32 @@
         onAllGenres={() => browse.switchGenre(null)}
       />
 
-      {#if browse.error && !browse.carouselMode}
+      {#if browse.error && browse.gridMode}
         <div class="page-error">
           <span>⚠ {browse.error}</span>
-          <button onclick={() => browse.loadGrid(browse.query)}>Try again</button>
+          <button onclick={() => browse.retryFailed()}>Try again</button>
         </div>
       {/if}
 
-      {#if browse.carouselMode}
-        {#if browse.sections.length === 0 && !browse.genresLoading}
-          <p class="page-empty">No genres available.</p>
-        {:else}
-          {#each browse.visibleSections as section (section.genre.id)}
-            <div
-              class="carousel-slot"
-              {@attach whenVisible(() => browse.loadSection(section.genre.id), {
-                rootMargin: PRELOAD_MARGIN,
-              })}
-            >
-              <GenreCarousel
-                title={section.genre.name}
-                items={section.items}
-                loading={section.loading}
-                error={section.error}
-                onCardClick={openDetail}
-                onSeeMore={() => browse.switchGenre(section.genre.id)}
-                onRetry={() => browse.retrySection(section.genre.id)}
-              />
-            </div>
-          {/each}
-        {/if}
+      {#if !browse.gridMode}
+        {#each browse.visibleSections as section (section.genre.id)}
+          <div
+            class="carousel-slot"
+            {@attach whenVisible(() => browse.loadSection(section.genre.id), {
+              rootMargin: PRELOAD_MARGIN,
+            })}
+          >
+            <GenreCarousel
+              title={section.genre.name}
+              items={section.items}
+              loading={section.loading}
+              error={section.error}
+              onCardClick={openDetail}
+              onSeeMore={() => browse.switchGenre(section.genre.id)}
+              onRetry={() => browse.retrySection(section.genre.id)}
+            />
+          </div>
+        {/each}
       {:else}
         <ResultsGrid
           items={browse.items}
@@ -196,13 +192,5 @@
         background: rgb(var(--clr-error-rgb) / 0.1);
       }
     }
-  }
-
-  .page-empty {
-    text-align: center;
-    color: var(--clr-text-3);
-    font-size: 0.78rem;
-    letter-spacing: 0.08em;
-    padding: $spacing-2xl 0;
   }
 </style>

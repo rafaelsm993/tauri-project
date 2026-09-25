@@ -50,11 +50,23 @@ fn cache_key(req: &RequestBuilder) -> Option<String> {
     Some(format!("{} {} {body}", built.method(), built.url()))
 }
 
+// Marks errors where the network itself failed; mirrored by src/lib/api/offline.ts.
+pub const OFFLINE_PREFIX: &str = "offline: ";
+
+fn is_network_failure(e: &reqwest::Error) -> bool {
+    e.is_connect() || e.is_timeout() || (e.is_request() && e.status().is_none())
+}
+
 /// Strips the URL from the error so API keys in query params never reach logs or the UI.
 pub fn request_error(provider: &str, e: reqwest::Error) -> String {
+    let offline = is_network_failure(&e);
     let msg = e.without_url().to_string();
     log::error!("[{provider}] {msg}");
-    msg
+    if offline {
+        format!("{OFFLINE_PREFIX}{msg}")
+    } else {
+        msg
+    }
 }
 
 /// Serves a fresh cached body or joins an identical request in flight, else fetches.
@@ -233,6 +245,17 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn request_error_marks_a_refused_connection_as_offline() {
+        let msg = request_error("test", failing_request().await);
+        assert!(msg.starts_with(OFFLINE_PREFIX), "not marked offline: {msg}");
+    }
+
+    #[test]
+    fn the_offline_marker_matches_the_frontend_literal() {
+        assert_eq!(OFFLINE_PREFIX, "offline: ");
+    }
+
+    #[tokio::test]
     async fn fetch_json_returns_the_body_on_success() {
         let url = serve_once("200 OK", r#"{"results":[1,2,3]}"#).await;
         let body = fetch_json("test", "op", client().get(url)).await.unwrap();
@@ -251,6 +274,10 @@ mod tests {
             .unwrap_err();
         assert!(err.contains("Invalid API key"), "got: {err}");
         assert!(!err.contains(SECRET), "key leaked: {err}");
+        assert!(
+            !err.starts_with(OFFLINE_PREFIX),
+            "http error marked offline: {err}"
+        );
     }
 
     #[tokio::test]

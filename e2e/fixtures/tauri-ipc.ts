@@ -54,6 +54,7 @@ const FIXTURES: Record<string, unknown> = {
     videos: [],
     studios: [],
   },
+  library_load: [],
 };
 
 export const test = base.extend({

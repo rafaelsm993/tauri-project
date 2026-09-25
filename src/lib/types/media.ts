@@ -111,6 +111,25 @@ export const GENRE_SUPPORTED: ReadonlySet<MediaType> = new Set<MediaType>([
   "game",
 ]);
 
+// A detail response carries everything a list item needs, plus extras the library drops.
+export function toMediaItem(detail: MediaDetail): MediaItem {
+  return {
+    id: detail.id,
+    provider: detail.provider,
+    media_key: detail.media_key,
+    media_type: detail.media_type,
+    title: detail.title,
+    overview: detail.overview ?? "",
+    poster_path: detail.poster_path ?? null,
+    backdrop_path: detail.backdrop_path ?? null,
+    vote_average: detail.vote_average ?? 0,
+    vote_count: detail.vote_count ?? 0,
+    release_date: detail.release_date,
+    episodes: detail.episodes ?? null,
+    chapters: detail.chapters ?? null,
+  };
+}
+
 // Numeric for TMDB, string slug for AniList/iTunes/RAWG.
 export type GenreId = number | string;
 export interface GenreOption {

@@ -4,7 +4,9 @@
   import { resolve } from "$app/paths";
   import { onDestroy } from "svelte";
   import { catalog } from "$lib/api/catalog";
-  import type { MediaDetail } from "$lib/types/media";
+  import { toMediaItem, type MediaDetail } from "$lib/types/media";
+  import { totalFor } from "$lib/domain/progress";
+  import { libraryStore } from "$lib/stores/library.svelte";
   import { ui } from "$lib/stores/ui.svelte";
   import { errorMessage } from "$lib/utils/errors";
   import DetailSkeleton from "$lib/components/detail/DetailSkeleton.svelte";
@@ -14,6 +16,8 @@
   import TrailerEmbed from "$lib/components/detail/TrailerEmbed.svelte";
   import ScreenshotStrip from "$lib/components/detail/ScreenshotStrip.svelte";
   import CastRow from "$lib/components/detail/CastRow.svelte";
+  import SaveToLibrary from "$lib/components/library/SaveToLibrary.svelte";
+  import ProgressEditor from "$lib/components/library/ProgressEditor.svelte";
 
   let detail = $state<MediaDetail | null>(null);
   let loading = $state(true);
@@ -28,6 +32,9 @@
   const trailer = $derived(
     detail?.videos.find((v) => v.type === "Trailer") ?? detail?.videos[0] ?? null,
   );
+
+  const savedEntry = $derived(detail ? libraryStore.get(detail.media_key) : undefined);
+  const savedTotal = $derived(detail ? totalFor(detail.media_type, detail) : null);
 
   async function fetchDetail(type: string, id: string) {
     loading = true;
@@ -79,6 +86,20 @@
 
     <div class="detail-info">
       <DetailMeta {detail} />
+
+      <SaveToLibrary item={toMediaItem(detail)} />
+
+      {#if savedEntry}
+        <ProgressEditor
+          mediaType={detail.media_type}
+          progress={savedEntry.user.progress}
+          total={savedTotal}
+          rating={savedEntry.user.rating}
+          disabled={libraryStore.isPending(detail.media_key)}
+          onprogress={(progress) => libraryStore.update(savedEntry.key, { progress })}
+          onrating={(rating) => libraryStore.update(savedEntry.key, { rating })}
+        />
+      {/if}
 
       {#if detail.overview}
         <p class="overview">{detail.overview}</p>

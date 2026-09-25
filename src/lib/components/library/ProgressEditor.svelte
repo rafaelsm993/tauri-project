@@ -11,6 +11,7 @@
     onrating,
     disabled = false,
     plannable = true,
+    onaddlength = undefined,
   } = $props<{
     mediaType: MediaType;
     progress: number;
@@ -20,6 +21,7 @@
     onrating: (value: number | null) => void;
     disabled?: boolean;
     plannable?: boolean;
+    onaddlength?: () => void;
   }>();
 
   const id = $props.id();
@@ -75,7 +77,14 @@
   </div>
 
   {#if !plannable}
-    <p class="length-hint">Add length to plan it.</p>
+    <p class="length-hint">
+      Length unknown.
+      {#if onaddlength}
+        <button type="button" class="length-link" {disabled} onclick={onaddlength}>
+          Add length
+        </button>
+      {/if}
+    </p>
   {/if}
 
   {#if pct !== null}
@@ -162,6 +171,20 @@
   .length-hint {
     font-size: 0.78rem;
     color: var(--clr-text-3);
+  }
+
+  .length-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--clr-accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    @include touch {
+      min-height: $touch-target;
+    }
   }
 
   .rating-select {

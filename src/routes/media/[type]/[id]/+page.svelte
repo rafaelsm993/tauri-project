@@ -22,6 +22,7 @@
   let detail = $state<MediaDetail | null>(null);
   let loading = $state(true);
   let error = $state("");
+  let editingLength = $state(false);
 
   // Detail pages use the geometric background.
   ui.detailMode = true;
@@ -89,7 +90,7 @@
     <div class="detail-info">
       <DetailMeta {detail} />
 
-      <SaveToLibrary item={toMediaItem(detail)} {detail} />
+      <SaveToLibrary item={toMediaItem(detail)} {detail} bind:editing={editingLength} />
 
       {#if savedEntry}
         <ProgressEditor
@@ -101,6 +102,7 @@
           disabled={libraryStore.isPending(detail.media_key)}
           onprogress={(progress) => libraryStore.update(savedEntry.key, { progress })}
           onrating={(rating) => libraryStore.update(savedEntry.key, { rating })}
+          onaddlength={() => (editingLength = true)}
         />
       {/if}
 

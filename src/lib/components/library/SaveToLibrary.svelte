@@ -9,7 +9,13 @@
     item,
     detail = null,
     store = libraryStore,
-  } = $props<{ item: MediaItem; detail?: MediaDetail | null; store?: LibraryStore }>();
+    editing = $bindable(false),
+  }: {
+    item: MediaItem;
+    detail?: MediaDetail | null;
+    store?: LibraryStore;
+    editing?: boolean;
+  } = $props();
 
   const id = $props.id();
   const statusId = `${id}-status`;
@@ -18,11 +24,25 @@
   const busy = $derived(store.isPending(item.media_key));
   const prefill = $derived(lengthFromDetail(item.media_type, detail));
 
-  let sheetOpen = $state(false);
+  let adding = $state(false);
+  const sheetOpen = $derived(adding || (editing && !!entry));
+  const sheetLength = $derived(entry ? entry.user.length : prefill);
+  const sheetReview = $derived(entry ? entry.user.review : null);
+
+  function close() {
+    adding = false;
+    editing = false;
+  }
 
   function saveFromSheet(value: { length: Length; review: string | null }) {
-    sheetOpen = false;
-    store.add(item, value);
+    close();
+    if (entry) store.update(item.media_key, value);
+    else store.add(item, value);
+  }
+
+  // Moves focus into the sheet when it opens.
+  function focusFirst(node: HTMLElement) {
+    node.querySelector<HTMLElement>("input, textarea, button")?.focus();
   }
 
   function pickStatus(event: Event) {
@@ -56,23 +76,30 @@
       disabled={busy || sheetOpen}
       aria-busy={busy}
       aria-expanded={sheetOpen}
-      onclick={() => (sheetOpen = true)}
+      onclick={() => (adding = true)}
     >
       + Add to library
     </button>
   {/if}
 </div>
 
-{#if sheetOpen && !entry}
-  <div class="sheet-wrap" role="dialog" aria-label="Add to library">
+{#if sheetOpen}
+  <div
+    class="sheet-wrap"
+    role="dialog"
+    aria-label="Add to library"
+    tabindex="-1"
+    {@attach focusFirst}
+    onkeydown={(event) => event.key === "Escape" && close()}
+  >
     <AddSheet
       mediaType={item.media_type}
       title={item.title}
-      length={prefill}
-      review={null}
+      length={sheetLength}
+      review={sheetReview}
       {busy}
       onsave={saveFromSheet}
-      oncancel={() => (sheetOpen = false)}
+      oncancel={close}
     />
   </div>
 {/if}

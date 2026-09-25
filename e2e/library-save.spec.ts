@@ -131,3 +131,18 @@ test("the add sheet fits the narrowest window", async ({ page }) => {
   const width = page.viewportSize()?.width ?? 0;
   expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true);
 });
+
+test("a saved item without length can add it later", async ({ page }) => {
+  await mockIpc(page, false);
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: /add to library/i }).click();
+  await page.getByRole("button", { name: /skip/i }).click();
+  await expect(page.getByLabel(/status/i)).toHaveValue("planning");
+
+  await page.getByRole("button", { name: /add length/i }).click();
+  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByLabel(/runtime/i)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+});

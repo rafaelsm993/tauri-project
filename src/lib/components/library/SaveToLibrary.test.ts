@@ -119,4 +119,29 @@ describe("SaveToLibrary", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(client.add).not.toHaveBeenCalled();
   });
+
+  it("reopens the sheet for a saved item and patches only length and review", async () => {
+    const { store, client } = storeWith({ load: vi.fn(async () => [SAVED]) });
+    await store.hydrate();
+    render(SaveToLibrary, { item: ITEM, store, editing: true });
+
+    const sheet = screen.getByRole("dialog", { name: /add to library/i });
+    expect(sheet.contains(document.activeElement)).toBe(true);
+    await userEvent.type(screen.getByLabelText(/^episodes/i), "9");
+    await userEvent.click(screen.getByRole("button", { name: /^save/i }));
+
+    expect(client.update).toHaveBeenCalledWith("tmdb:tv:7", {
+      length: expect.objectContaining({ episodes: 9 }),
+      review: null,
+    });
+  });
+
+  it("closes the sheet on Escape without saving", async () => {
+    const { store, client } = storeWith();
+    render(SaveToLibrary, { item: ITEM, store });
+    await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(client.add).not.toHaveBeenCalled();
+  });
 });

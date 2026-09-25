@@ -67,11 +67,18 @@ describe("ProgressEditor", () => {
       total: null,
       plannable: false,
     });
-    expect(screen.getByText(/add length to plan it/i)).toBeInTheDocument();
+    expect(screen.getByText(/length unknown/i)).toBeInTheDocument();
   });
 
   it("shows no hint once the item is plannable", () => {
     render(ProgressEditor, { ...base, plannable: true });
-    expect(screen.queryByText(/add length to plan it/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/length unknown/i)).not.toBeInTheDocument();
+  });
+
+  it("offers to add length when the item is not plannable", async () => {
+    const onaddlength = vi.fn();
+    render(ProgressEditor, { ...base, plannable: false, onaddlength });
+    await userEvent.click(screen.getByRole("button", { name: /add length/i }));
+    expect(onaddlength).toHaveBeenCalledOnce();
   });
 });

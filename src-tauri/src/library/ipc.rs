@@ -71,6 +71,13 @@ mod tests {
     use crate::api::types::{Id, MediaType, ProviderId};
     use crate::store::file::tests::scratch;
 
+    #[test]
+    fn init_works_outside_a_tokio_runtime_like_tauri_setup() {
+        let dir = scratch("ipc-no-runtime");
+        assert!(init(&dir).is_ok());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[tokio::test]
     async fn init_creates_a_missing_dir_and_starts_empty() {
         let dir = scratch("ipc-fresh").join("nested");

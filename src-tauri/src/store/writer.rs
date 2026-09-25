@@ -54,8 +54,11 @@ impl<T: Serialize + Send + 'static> StoreHandle<T> {
     }
 
     // Flushes dirty state every `every`; the caller keeps the handle to stop it.
-    pub fn spawn_autosave(self: Arc<Self>, every: Duration) -> tokio::task::JoinHandle<()> {
-        tokio::spawn(async move {
+    pub fn spawn_autosave(
+        self: Arc<Self>,
+        every: Duration,
+    ) -> tauri::async_runtime::JoinHandle<()> {
+        tauri::async_runtime::spawn(async move {
             let mut tick = tokio::time::interval(every);
             tick.tick().await;
             loop {

@@ -45,6 +45,22 @@ test("on home the avatar sits on the search bar's line and the carousels' right 
   expect(overlaps, "avatar overlaps the search bar").toBe(false);
 });
 
+for (const path of ["/library", "/settings", "/profile"]) {
+  test(`the avatar sits level with the page title and on its right edge on ${path}`, async ({
+    page,
+  }) => {
+    await page.goto(path);
+    const avatar = (await page.getByRole("button", { name: "Profile menu" }).boundingBox())!;
+    const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+    const mid = (b: { y: number; height: number }) => b.y + b.height / 2;
+    expect(Math.abs(mid(avatar) - mid(title)), "vertical centre vs title").toBeLessThan(2);
+    expect(
+      Math.abs(avatar.x + avatar.width - (title.x + title.width)),
+      "right edge vs page frame",
+    ).toBeLessThan(2);
+  });
+}
+
 test("Escape closes the menu", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Profile menu" }).click();

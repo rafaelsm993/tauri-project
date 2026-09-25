@@ -120,9 +120,7 @@
 
 <style lang="scss">
   .page {
-    padding: $spacing-lg $spacing-xl $spacing-2xl;
-    max-width: $page-max-width;
-    margin-inline: auto;
+    @include page-shell;
     overflow-x: clip; // contain any wide carousel rail
   }
 

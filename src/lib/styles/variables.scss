@@ -110,6 +110,25 @@ $touch-target: 44px;
 $bar-height: 52px;
 $page-max-width: 1440px;
 
+// One frame for every screen, matching the home page and the floating profile button.
+@mixin page-shell {
+  max-width: $page-max-width;
+  margin-inline: auto;
+  padding: $spacing-lg $spacing-xl $spacing-2xl;
+  min-width: 0;
+}
+
+// Page heading sized to sit level with the floating profile button.
+@mixin page-title {
+  display: flex;
+  align-items: center;
+  min-height: $bar-height;
+  padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--clr-text);
+}
+
 // Truncate text with ellipsis
 @mixin truncate {
   white-space: nowrap;

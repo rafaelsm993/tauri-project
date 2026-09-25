@@ -74,11 +74,10 @@
 
 <style lang="scss">
   .library {
+    @include page-shell;
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-    padding: $spacing-lg clamp(#{$spacing-md}, 4vw, #{$spacing-2xl});
-    min-width: 0;
   }
 
   .library-head,
@@ -89,15 +88,8 @@
     min-width: 0;
   }
 
-  // Same height as the profile button, so the title sits level with it and content starts below.
   .library-title {
-    display: flex;
-    align-items: center;
-    min-height: $bar-height;
-    padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--clr-text);
+    @include page-title;
   }
 
   .library-grid {

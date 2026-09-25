@@ -13,22 +13,21 @@
 
 <style lang="scss">
   .placeholder {
-    max-width: 40rem;
-    margin: $spacing-2xl auto;
-    padding: $spacing-xl;
-    text-align: center;
+    @include page-shell;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-sm;
   }
 
   .placeholder-title {
-    font-family: $font-display;
-    font-size: clamp(2rem, 6vw, 3rem);
-    color: var(--clr-text);
-    margin-bottom: $spacing-sm;
+    @include page-title;
+    width: 100%;
   }
 
   .placeholder-text {
     color: var(--clr-text-2);
-    margin-bottom: $spacing-lg;
+    margin-bottom: $spacing-md;
   }
 
   .placeholder-link {

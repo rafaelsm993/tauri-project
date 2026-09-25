@@ -45,6 +45,19 @@ impl MediaSnapshot {
     }
 }
 
+// The user's own length data; every field is optional and only the planner needs it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Length {
+    pub runtime_minutes: Option<u32>,
+    pub episodes: Option<u32>,
+    pub episode_minutes: Option<u32>,
+    pub chapters: Option<u32>,
+    pub chapter_minutes: Option<u32>,
+    pub pages: Option<u32>,
+    pub hours: Option<u32>,
+}
+
 // The user's own data for one entry; units are per media type (undecided).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -53,6 +66,7 @@ pub struct UserData {
     pub progress: u32,
     pub rating: Option<u8>,
     pub review: Option<String>,
+    pub length: Length,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -118,6 +132,11 @@ pub(crate) mod tests {
                 progress: 3,
                 rating: Some(9),
                 review: Some("Great".into()),
+                length: Length {
+                    episodes: Some(9),
+                    episode_minutes: Some(40),
+                    ..Length::default()
+                },
             },
             created_at: "2026-09-24T02:00:00Z".into(),
             updated_at: "2026-09-24T02:00:00Z".into(),
@@ -160,6 +179,36 @@ pub(crate) mod tests {
         assert_eq!(e.user, UserData::default());
         assert_eq!(e.user.status, Status::Planning);
         assert_eq!(e.snapshot.title, "");
+    }
+
+    #[test]
+    fn length_defaults_to_all_unknown() {
+        let user = UserData::default();
+        assert_eq!(user.length, Length::default());
+        assert!(user.length.pages.is_none());
+        assert!(user.length.hours.is_none());
+    }
+
+    #[test]
+    fn old_files_without_length_still_load() {
+        let json = r#"{"status":"completed","progress":3,"rating":8,"review":null}"#;
+        let user: UserData = serde_json::from_str(json).expect("legacy UserData must load");
+        assert_eq!(user.progress, 3);
+        assert_eq!(user.length, Length::default());
+    }
+
+    #[test]
+    fn length_round_trips_through_json() {
+        let user = UserData {
+            length: Length {
+                pages: Some(350),
+                ..Length::default()
+            },
+            ..UserData::default()
+        };
+        let text = serde_json::to_string(&user).unwrap();
+        let back: UserData = serde_json::from_str(&text).unwrap();
+        assert_eq!(back.length.pages, Some(350));
     }
 
     fn contract() -> Value {

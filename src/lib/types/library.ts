@@ -13,12 +13,23 @@ export interface MediaSnapshot {
   year: string | null;
 }
 
-// Progress units per media type and the rating scale are not decided yet.
+// The user's own length data; only the planner requires it.
+export interface Length {
+  runtime_minutes: number | null;
+  episodes: number | null;
+  episode_minutes: number | null;
+  chapters: number | null;
+  chapter_minutes: number | null;
+  pages: number | null;
+  hours: number | null;
+}
+
 export interface UserData {
   status: LibraryStatus;
   progress: number;
   rating: number | null;
   review: string | null;
+  length: Length;
 }
 
 export interface LibraryEntry {

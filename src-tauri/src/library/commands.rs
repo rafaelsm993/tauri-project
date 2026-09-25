@@ -1,5 +1,5 @@
 use super::events::append_event;
-use super::types::{Event, LibraryEntry, MediaSnapshot, Status, UserData};
+use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Status, UserData};
 use crate::api::types::{MediaItem, MediaType};
 use crate::store::writer::StoreHandle;
 use serde::{Deserialize, Serialize};
@@ -29,6 +29,7 @@ pub struct UserPatch {
     pub progress: Option<u32>,
     pub rating: Option<Option<u8>>,
     pub review: Option<Option<String>>,
+    pub length: Option<Length>,
 }
 
 // Ratings are 1–10 whole numbers (GOALS-QA J2); None means unrated.
@@ -66,6 +67,9 @@ pub fn apply_patch(user: &mut UserData, patch: UserPatch) {
     }
     if let Some(r) = patch.review {
         user.review = r;
+    }
+    if let Some(l) = patch.length {
+        user.length = l;
     }
 }
 
@@ -190,6 +194,26 @@ mod tests {
             local_date: "2026-09-25".into(),
             payload: serde_json::Value::Null,
         }
+    }
+
+    #[test]
+    fn a_patch_can_set_length_without_touching_other_fields() {
+        let mut user = UserData {
+            progress: 4,
+            rating: Some(7),
+            ..UserData::default()
+        };
+        let patch = UserPatch {
+            length: Some(Length {
+                pages: Some(320),
+                ..Length::default()
+            }),
+            ..UserPatch::default()
+        };
+        apply_patch(&mut user, patch);
+        assert_eq!(user.length.pages, Some(320));
+        assert_eq!(user.progress, 4);
+        assert_eq!(user.rating, Some(7));
     }
 
     fn state_in(dir: &std::path::Path) -> LibraryState {
@@ -453,6 +477,7 @@ mod tests {
                 progress: 9,
                 rating: Some(10),
                 review: Some("Great".into()),
+                ..UserData::default()
             },
             "t1".into(),
             Some(event("e1")),

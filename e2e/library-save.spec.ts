@@ -31,7 +31,21 @@ const SAVED = {
     poster_path: null,
     year: "2024",
   },
-  user: { status: "planning", progress: 0, rating: null, review: null },
+  user: {
+    status: "planning",
+    progress: 0,
+    rating: null,
+    review: null,
+    length: {
+      runtime_minutes: null,
+      episodes: null,
+      episode_minutes: null,
+      chapters: null,
+      chapter_minutes: null,
+      pages: null,
+      hours: null,
+    },
+  },
   created_at: "2026-09-25T12:00:00Z",
   updated_at: "2026-09-25T12:00:00Z",
 };

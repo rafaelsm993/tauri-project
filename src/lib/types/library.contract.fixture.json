@@ -12,6 +12,15 @@
     },
     "updated_at": "2026-09-24T02:00:00Z",
     "user": {
+      "length": {
+        "chapter_minutes": null,
+        "chapters": null,
+        "episode_minutes": 40,
+        "episodes": 9,
+        "hours": null,
+        "pages": null,
+        "runtime_minutes": null
+      },
       "progress": 3,
       "rating": 9,
       "review": "Great",

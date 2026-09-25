@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { LibraryStore, type LibraryClient } from "./library.svelte";
+import { emptyLength } from "$lib/domain/length";
 import type { LibraryEntry, UserData } from "$lib/types/library";
 import type { MediaItem } from "$lib/types/media";
 
@@ -16,7 +17,13 @@ const ITEM = {
   vote_count: 0,
 } as unknown as MediaItem;
 
-const USER: UserData = { status: "planning", progress: 0, rating: null, review: null };
+const USER: UserData = {
+  status: "planning",
+  progress: 0,
+  rating: null,
+  review: null,
+  length: emptyLength(),
+};
 
 function entry(over: Partial<LibraryEntry> = {}): LibraryEntry {
   return {
@@ -152,7 +159,7 @@ describe("optimistic update", () => {
     const store = new LibraryStore(
       fakeClient({
         load: vi.fn(async () => [
-          entry({ user: { status: "in_progress", progress: 3, rating: 8, review: null } }),
+          entry({ user: { ...USER, status: "in_progress", progress: 3, rating: 8 } }),
         ]),
         update: vi.fn(async () => {
           throw new Error("rating 11 is outside 1-10");

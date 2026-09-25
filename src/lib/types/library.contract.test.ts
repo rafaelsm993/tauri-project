@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixture from "./library.contract.fixture.json";
-import type { LibraryEntry, LibraryEvent, MediaSnapshot, UserData } from "./library";
+import type { Length, LibraryEntry, LibraryEvent, MediaSnapshot, UserData } from "./library";
 
 const ENTRY_KEYS = {
   key: 0,
@@ -19,10 +19,20 @@ const SNAPSHOT_KEYS = {
   year: 0,
 } satisfies Record<keyof MediaSnapshot, 0>;
 
-const USER_KEYS = { status: 0, progress: 0, rating: 0, review: 0 } satisfies Record<
+const USER_KEYS = { status: 0, progress: 0, rating: 0, review: 0, length: 0 } satisfies Record<
   keyof UserData,
   0
 >;
+
+const LENGTH_KEYS = {
+  runtime_minutes: 0,
+  episodes: 0,
+  episode_minutes: 0,
+  chapters: 0,
+  chapter_minutes: 0,
+  pages: 0,
+  hours: 0,
+} satisfies Record<keyof Length, 0>;
 
 const EVENT_KEYS = {
   id: 0,
@@ -41,6 +51,7 @@ describe("library contract (Rust library types ↔ library.ts)", () => {
     expect(keys(fixture.entry)).toEqual(keys(ENTRY_KEYS));
     expect(keys(fixture.entry.snapshot)).toEqual(keys(SNAPSHOT_KEYS));
     expect(keys(fixture.entry.user)).toEqual(keys(USER_KEYS));
+    expect(keys(fixture.entry.user.length)).toEqual(keys(LENGTH_KEYS));
   });
 
   it("LibraryEvent has exactly the Rust fields", () => {

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import SaveToLibrary from "./SaveToLibrary.svelte";
 import { LibraryStore, type LibraryClient } from "$lib/stores/library.svelte";
+import { emptyLength } from "$lib/domain/length";
 import type { LibraryEntry } from "$lib/types/library";
 import type { MediaItem } from "$lib/types/media";
 
@@ -29,7 +30,7 @@ const SAVED: LibraryEntry = {
     poster_path: null,
     year: null,
   },
-  user: { status: "planning", progress: 0, rating: null, review: null },
+  user: { status: "planning", progress: 0, rating: null, review: null, length: emptyLength() },
   created_at: "t",
   updated_at: "t",
 };

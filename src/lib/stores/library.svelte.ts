@@ -1,5 +1,6 @@
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { library as defaultClient } from "$lib/api/library";
+import { emptyLength } from "$lib/domain/length";
 import { errorMessage } from "$lib/utils/errors";
 import type { LibraryEntry, LibraryStatus, UserData } from "$lib/types/library";
 import type { MediaItem, MediaKey } from "$lib/types/media";
@@ -13,7 +14,7 @@ export type LibraryClient = {
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
 
-// Neutral wording; per-media-type copy is still undecided.
+// Neutral wording for every media type (GOALS-QA L1).
 export const STATUS_LABELS: Record<LibraryStatus, string> = {
   planning: "Planning",
   in_progress: "In progress",
@@ -34,7 +35,14 @@ function optimisticEntry(item: MediaItem, user: Partial<UserData>): LibraryEntry
       poster_path: item.poster_path ?? null,
       year: null,
     },
-    user: { status: "planning", progress: 0, rating: null, review: null, ...user },
+    user: {
+      status: "planning",
+      progress: 0,
+      rating: null,
+      review: null,
+      length: emptyLength(),
+      ...user,
+    },
     created_at: now,
     updated_at: now,
   };

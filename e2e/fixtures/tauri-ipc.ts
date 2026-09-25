@@ -68,6 +68,10 @@ export const test = base.extend({
       (window as any).__TAURI_INTERNALS__ = {
         invoke: async (cmd: string, args?: { patch?: object }) => {
           calls.push(cmd);
+          // Tests set window.__offline to simulate a dropped network for provider calls.
+          if ((window as { __offline?: boolean }).__offline && cmd.startsWith("catalog_")) {
+            throw "offline: network unreachable";
+          }
           if (cmd === "prefs_load") return { ...prefs };
           if (cmd === "prefs_update") {
             Object.assign(prefs, args?.patch);

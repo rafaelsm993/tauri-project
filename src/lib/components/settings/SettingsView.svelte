@@ -46,7 +46,12 @@
     min-width: 0;
   }
 
+  // Same height as the profile button, so the title sits level with it and content starts below.
   .settings-title {
+    display: flex;
+    align-items: center;
+    min-height: $bar-height;
+    padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
     font-size: 1.4rem;
     font-weight: 700;
     color: var(--clr-text);

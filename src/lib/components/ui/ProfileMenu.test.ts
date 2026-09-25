@@ -16,11 +16,12 @@ describe("ProfileMenu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("lists Profile, Library and Settings in that order", () => {
+  it("lists Home, Profile, Library and Settings in that order", () => {
     const { panel } = setup();
     const nav = within(panel).getByRole("navigation", { name: "Profile", hidden: true });
     const links = within(nav).getAllByRole("link", { hidden: true });
     expect(links.map((a) => [a.textContent?.trim(), a.getAttribute("href")])).toEqual([
+      ["Home", "/"],
       ["Profile", "/profile"],
       ["Library", "/library"],
       ["Settings", "/settings"],
@@ -33,5 +34,11 @@ describe("ProfileMenu", () => {
     expect(current).toHaveAttribute("aria-current", "page");
     const other = within(panel).getByRole("link", { name: "Library", hidden: true });
     expect(other).not.toHaveAttribute("aria-current");
+  });
+
+  it("marks Home only on the home page", () => {
+    const { panel } = setup("/");
+    const home = within(panel).getByRole("link", { name: "Home", hidden: true });
+    expect(home).toHaveAttribute("aria-current", "page");
   });
 });

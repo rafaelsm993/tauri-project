@@ -37,10 +37,16 @@
 </div>
 
 <style lang="scss">
-  // Its own row, so it can never cover a page's search bar or back button.
+  // Mirrors the home page box so the button lines up with the search bar and carousels.
   .app-bar {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: var(--z-raised);
     display: flex;
     justify-content: flex-end;
-    padding: $spacing-sm clamp(#{$spacing-md}, 4vw, #{$spacing-2xl}) 0;
+    max-width: $page-max-width;
+    margin-inline: auto;
+    padding: $spacing-lg $spacing-xl 0;
+    pointer-events: none;
   }
 </style>

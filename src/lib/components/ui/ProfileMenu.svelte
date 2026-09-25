@@ -9,6 +9,7 @@
   const panelId = `${id}-panel`;
 
   const LINKS = [
+    { href: resolve("/"), label: "Home" },
     { href: resolve("/profile"), label: "Profile" },
     { href: resolve("/library"), label: "Library" },
     { href: resolve("/settings"), label: "Settings" },
@@ -65,9 +66,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: $bar-height;
+    height: $bar-height;
     padding: 0;
+    pointer-events: auto;
     border: 1px solid var(--clr-border-2);
     border-radius: $radius-full;
     background: var(--clr-surface);
@@ -93,11 +95,6 @@
       color: var(--clr-text);
       border-color: var(--clr-primary);
     }
-
-    @include touch {
-      width: $touch-target;
-      height: $touch-target;
-    }
   }
 
   .pm-icon {
@@ -111,6 +108,7 @@
 
   // Top-layer panel; left/top/max-height come from followTrigger.
   .pm-panel {
+    pointer-events: auto;
     position: fixed;
     inset: auto;
     margin: 0;

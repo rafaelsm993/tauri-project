@@ -40,10 +40,12 @@
 
 <div class="page">
   <header class="page-header">
-    <SearchBar
-      onSearch={(q) => browse.search(q)}
-      placeholder="Search movies, TV shows, anime, manga, books…"
-    />
+    <div class="search-slot">
+      <SearchBar
+        onSearch={(q) => browse.search(q)}
+        placeholder="Search movies, TV shows, anime, manga, books…"
+      />
+    </div>
 
     <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)}>
       {#snippet trailing()}
@@ -119,7 +121,7 @@
 <style lang="scss">
   .page {
     padding: $spacing-lg $spacing-xl $spacing-2xl;
-    max-width: 1440px;
+    max-width: $page-max-width;
     margin-inline: auto;
     overflow-x: clip; // contain any wide carousel rail
   }
@@ -131,6 +133,19 @@
     align-items: center;
     gap: $spacing-sm;
     padding-bottom: $spacing-lg;
+  }
+
+  // Leaves room for the profile button once the bar can no longer sit centred beside it.
+  .search-slot {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+
+    @include respond-to(md) {
+      justify-content: flex-start;
+      padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
+    }
   }
 
   // ── Body: single column ─────────────────────────────────

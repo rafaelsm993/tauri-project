@@ -86,7 +86,7 @@
     display: flex;
     align-items: center;
     width: min(560px, 100%);
-    height: 52px;
+    height: $bar-height;
     border-radius: $radius-full;
     padding: 0 $spacing-sm;
     /* Solid background — backdrop-filter unreliable across stacking contexts */

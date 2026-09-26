@@ -1,5 +1,5 @@
 # scripts/dev.ps1
-# Starts tauri-app in development mode with the MSVC toolchain on PATH.
+# Starts Aevum in development mode with the MSVC toolchain on PATH.
 # Usage (from Windows PowerShell, repo root):
 #   PS> powershell -ExecutionPolicy Bypass -File scripts\dev.ps1
 $ErrorActionPreference = "Stop"

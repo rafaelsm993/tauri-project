@@ -1,10 +1,10 @@
 # `verify` is the same gate as local `npm run verify`; `windows` and `android` prove the other two targets build.
-# Runs on pushes to main and PRs into main/release/*.
+# Runs on every branch push (no PRs until release) and on PRs into main/release/*.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
     branches: [main, "release/*"]
 

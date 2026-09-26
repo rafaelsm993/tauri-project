@@ -36,6 +36,13 @@ export class PrefsStore {
     }
   }
 
+  // An import replaced the data underneath; read it again.
+  async reload(): Promise<void> {
+    this.ready = false;
+    this.error = "";
+    await this.hydrate();
+  }
+
   async update(patch: PrefsPatch): Promise<void> {
     const before = this.prefs;
     this.error = "";

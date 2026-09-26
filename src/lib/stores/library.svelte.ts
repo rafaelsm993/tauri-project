@@ -96,6 +96,13 @@ export class LibraryStore {
     }
   }
 
+  // An import replaced the data underneath; read it again.
+  async reload(): Promise<void> {
+    this.ready = false;
+    this.error = "";
+    await this.hydrate();
+  }
+
   // Without the folder the cards use remote posters; it must never fail the library.
   private async loadPosterDir(): Promise<string | null> {
     try {

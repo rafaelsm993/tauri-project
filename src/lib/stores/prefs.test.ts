@@ -12,6 +12,15 @@ function fakeClient(over: Partial<PrefsClient> = {}): PrefsClient {
 }
 
 describe("PrefsStore", () => {
+  it("reload re-reads the backend after an import", async () => {
+    const load = vi.fn(async () => ({ background_animation: true }));
+    const store = new PrefsStore(fakeClient({ load }));
+    await store.hydrate();
+    load.mockResolvedValue({ background_animation: false });
+    await store.reload();
+    expect(store.prefs.background_animation).toBe(false);
+  });
+
   it("starts with the defaults so the UI never waits for the file", () => {
     expect(new PrefsStore(fakeClient()).prefs.background_animation).toBe(true);
   });

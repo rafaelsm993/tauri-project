@@ -58,6 +58,17 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
   };
 }
 
+describe("reload", () => {
+  it("re-reads the backend after an import", async () => {
+    const load = vi.fn(async () => [entry()]);
+    const store = new LibraryStore(fakeClient({ load }));
+    await store.hydrate();
+    load.mockResolvedValue([entry(), entry({ key: "tmdb:tv:8" })]);
+    await store.reload();
+    expect(store.entries.length).toBe(2);
+  });
+});
+
 describe("hydrate", () => {
   it("loads the saved library once and exposes it", async () => {
     const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [entry()]) }));

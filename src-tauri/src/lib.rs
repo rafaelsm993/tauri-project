@@ -44,6 +44,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(log_plugin())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|_app| {
             let dir = _app
                 .path()
@@ -51,6 +52,7 @@ pub fn run() {
                 .map_err(|e| format!("no app data dir: {e}"))?;
             _app.manage(library::ipc::init(&dir)?);
             _app.manage(prefs::ipc::init(&dir)?);
+            _app.manage(backup::ipc::BackupState::default());
             api::cache_disk::init(&dir);
             let handle = _app.handle().clone();
             api::http::on_network_outcome(move |online| {
@@ -80,7 +82,11 @@ pub fn run() {
             library::ipc::library_poster_dir,
             library::ipc::library_retry_posters,
             prefs::ipc::prefs_load,
-            prefs::ipc::prefs_update
+            prefs::ipc::prefs_update,
+            backup::ipc::backup_export,
+            backup::ipc::backup_pick_import,
+            backup::ipc::backup_apply_import,
+            backup::ipc::backup_cancel_import
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

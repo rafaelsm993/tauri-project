@@ -1,30 +1,36 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import LibraryCard from "$lib/components/library/LibraryCard.svelte";
+  import SearchField from "$lib/components/ui/SearchField.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
+  import { libraryFilters, LibraryFilters } from "$lib/stores/ui.svelte";
   import {
     filterEntries,
+    searchEntries,
     statusOptions,
     typeOptions,
-    type StatusFilter,
-    type TypeFilter,
   } from "$lib/domain/libraryView";
 
-  // The store prop exists for tests; the app uses the singleton.
-  let { store = libraryStore }: { store?: LibraryStore } = $props();
+  // The store and filters props exist for tests; the app uses the singletons.
+  let {
+    store = libraryStore,
+    filters = libraryFilters,
+  }: { store?: LibraryStore; filters?: LibraryFilters } = $props();
 
-  let status = $state<StatusFilter>("all");
-  let type = $state<TypeFilter>("all");
-
-  const visible = $derived(filterEntries(store.entries, { status, type }));
-  const statuses = $derived(statusOptions(store.entries, type));
-  const types = $derived(typeOptions(store.entries));
-  const emptyFilterText = $derived(
-    status === "all"
+  const matching = $derived(searchEntries(store.entries, filters.query));
+  const types = $derived(typeOptions(matching, store.entries));
+  // A kept type whose last entry was removed would otherwise hide everything.
+  const type = $derived(types.some((t) => t.value === filters.type) ? filters.type : "all");
+  const status = $derived(filters.status);
+  const visible = $derived(filterEntries(matching, { status, type }));
+  const statuses = $derived(statusOptions(matching, type));
+  const emptyFilterText = $derived.by(() => {
+    if (matching.length === 0) return `No titles match \u201c${filters.query.trim()}\u201d.`;
+    return status === "all"
       ? "No items of this type."
-      : `No ${STATUS_LABELS[status].toLowerCase()} items.`,
-  );
+      : `No ${STATUS_LABELS[status].toLowerCase()} items.`;
+  });
 </script>
 
 <main class="library">
@@ -32,18 +38,24 @@
     <h1 class="library-title">Library</h1>
     {#if store.entries.length > 0}
       <div class="library-filters">
+        <SearchField
+          label="Search your library"
+          placeholder="Search by title"
+          value={filters.query}
+          onchange={(v) => (filters.query = v)}
+        />
         <SegmentedControl
           label="Status"
           options={statuses}
           value={status}
-          onchange={(v) => (status = v)}
+          onchange={(v) => (filters.status = v)}
         />
         {#if types.length > 2}
           <SegmentedControl
             label="Type"
             options={types}
             value={type}
-            onchange={(v) => (type = v)}
+            onchange={(v) => (filters.type = v)}
           />
         {/if}
       </div>

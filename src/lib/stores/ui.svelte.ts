@@ -1,3 +1,5 @@
+import type { StatusFilter, TypeFilter } from "$lib/domain/libraryView";
+
 class UIStore {
   // Hue (0-360) of the hovered poster; null restores the default background.
   activeHue = $state<number | null>(null);
@@ -26,3 +28,12 @@ class UIStore {
 }
 
 export const ui = new UIStore();
+
+// Library screen filters; kept for the session so they survive opening a card.
+export class LibraryFilters {
+  status = $state<StatusFilter>("all");
+  type = $state<TypeFilter>("all");
+  query = $state("");
+}
+
+export const libraryFilters = new LibraryFilters();

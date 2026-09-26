@@ -65,6 +65,17 @@ describe("typeOptions", () => {
   it("lists All plus only the types present in the library", () => {
     expect(typeOptions(LIST).map((o) => o.value)).toEqual(["all", "movie", "tv", "anime", "game"]);
   });
+
+  it("keeps the library's types while counting only the matching entries", () => {
+    const counts = typeOptions([LIST[1]], LIST).map((o) => [o.value, o.count]);
+    expect(counts).toEqual([
+      ["all", 1],
+      ["movie", 0],
+      ["tv", 1],
+      ["anime", 0],
+      ["game", 0],
+    ]);
+  });
 });
 
 describe("detailPath", () => {

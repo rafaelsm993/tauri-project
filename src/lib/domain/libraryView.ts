@@ -50,11 +50,16 @@ export function statusOptions(
   ];
 }
 
-export function typeOptions(entries: LibraryEntry[]): FilterOption<TypeFilter>[] {
+// Offers the types in `library` so the control stays put while a search narrows `entries`.
+export function typeOptions(
+  entries: LibraryEntry[],
+  library: LibraryEntry[] = entries,
+): FilterOption<TypeFilter>[] {
+  const has = (t: MediaType) => library.some((e) => e.snapshot.media_type === t);
   const count = (t: MediaType) => entries.filter((e) => e.snapshot.media_type === t).length;
   return [
     { value: "all", label: "All", count: entries.length },
-    ...TYPE_ORDER.filter((t) => count(t) > 0).map((t) => ({
+    ...TYPE_ORDER.filter(has).map((t) => ({
       value: t,
       label: MEDIA_LABELS[t],
       count: count(t),

@@ -95,3 +95,47 @@ test("a cached poster that is gone falls back to the provider image", async ({ p
   await expect(img).toHaveAttribute("src", "/favicon.png");
   await expect(img).toBeVisible();
 });
+
+test("searching narrows the library by title and clearing restores it", async ({ page }) => {
+  await mockLibrary(page);
+  await page.goto("/library");
+  const cards = page.getByRole("list").getByRole("link");
+  await expect(cards).toHaveCount(8);
+  const search = page.getByRole("searchbox", { name: "Search your library" });
+  await search.fill("NUMBER 3");
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText("Saved title number 3");
+  await page.getByRole("button", { name: "Clear search" }).click();
+  await expect(cards).toHaveCount(8);
+  await expect(search).toBeFocused();
+});
+
+test("the search survives opening a card and coming back", async ({ page }) => {
+  await mockLibrary(page);
+  await page.goto("/library");
+  await page.getByRole("searchbox", { name: "Search your library" }).fill("number 1");
+  await page.getByRole("link", { name: /saved title number 1\b/i }).click();
+  await expect(page).toHaveURL(/\/media\/tv\/1$/);
+  await page.goBack();
+  await expect(page.getByRole("searchbox", { name: "Search your library" })).toHaveValue(
+    "number 1",
+  );
+  await expect(page.getByRole("list").getByRole("link")).toHaveCount(1);
+});
+
+test("the search field and its clear button are touch-sized", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "mouse viewports may use compact targets");
+  await mockLibrary(page);
+  await page.goto("/library");
+  const search = page.getByRole("searchbox", { name: "Search your library" });
+  await search.fill("a long query that keeps going well past the width of a small phone");
+  for (const el of [search, page.getByRole("button", { name: "Clear search" })]) {
+    const box = await el.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+  }
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+});

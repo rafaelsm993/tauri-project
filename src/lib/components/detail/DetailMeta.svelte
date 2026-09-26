@@ -3,7 +3,7 @@
   import type { MediaDetail } from "$lib/types/media";
   import { formatRuntime } from "$lib/utils/format";
 
-  let { detail } = $props<{ detail: MediaDetail }>();
+  let { detail }: { detail: MediaDetail } = $props();
 
   const year = $derived(detail.release_date?.slice(0, 4) ?? "");
   const rating = $derived(detail.vote_average > 0 ? detail.vote_average.toFixed(1) : "");

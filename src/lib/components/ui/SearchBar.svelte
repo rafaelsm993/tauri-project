@@ -2,10 +2,13 @@
   import { fade, scale } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
 
-  let { placeholder = "Search movies, TV shows, anime...", onSearch } = $props<{
+  let {
+    placeholder = "Search movies, TV shows, anime...",
+    onSearch,
+  }: {
     placeholder?: string;
     onSearch?: (query: string) => void;
-  }>();
+  } = $props();
 
   let query = $state("");
   let isFocused = $state(false);

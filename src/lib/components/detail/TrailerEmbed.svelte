@@ -1,6 +1,6 @@
 <script lang="ts">
   // 16:9 YouTube embed.
-  let { videoKey, name } = $props<{ videoKey: string; name: string }>();
+  let { videoKey, name }: { videoKey: string; name: string } = $props();
 </script>
 
 <div class="trailer-wrapper">

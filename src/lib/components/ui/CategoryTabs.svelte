@@ -13,12 +13,16 @@
     { key: "game", label: "Games" },
   ];
 
-  let { active, onchange, trailing } = $props<{
+  let {
+    active,
+    onchange,
+    trailing,
+  }: {
     active: MediaType;
     onchange: (category: MediaType) => void;
     // Optional control after the tabs; outside the scrolling nav so its popups aren't clipped.
     trailing?: Snippet;
-  }>();
+  } = $props();
 </script>
 
 <div class="category-bar">

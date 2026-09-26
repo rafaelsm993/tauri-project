@@ -11,13 +11,13 @@
     selected = [],
     onchange,
     disabled = false,
-  } = $props<{
+  }: {
     label: string;
     options: Option[];
     selected: Value[];
     onchange: (next: Value[]) => void;
     disabled?: boolean;
-  }>();
+  } = $props();
 
   const id = $props.id();
   const panelId = `${id}-panel`;

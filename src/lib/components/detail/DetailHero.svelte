@@ -1,11 +1,16 @@
 <script lang="ts">
   // Backdrop image with title, tagline and the back button.
-  let { title, tagline, backdropUrl, onBack } = $props<{
+  let {
+    title,
+    tagline,
+    backdropUrl,
+    onBack,
+  }: {
     title: string;
     tagline: string;
     backdropUrl: string | null;
     onBack: () => void;
-  }>();
+  } = $props();
 </script>
 
 <div class="hero">

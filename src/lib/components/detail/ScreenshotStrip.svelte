@@ -1,6 +1,6 @@
 <script lang="ts">
   // Horizontally scrolling gallery (games).
-  let { screenshots } = $props<{ screenshots: string[] }>();
+  let { screenshots }: { screenshots: string[] } = $props();
 </script>
 
 <div class="shots-scroll">

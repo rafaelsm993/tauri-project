@@ -13,7 +13,7 @@
     disabled = false,
     plannable = true,
     onaddlength = undefined,
-  } = $props<{
+  }: {
     mediaType: MediaType;
     progress: number;
     total: number | null;
@@ -23,7 +23,7 @@
     disabled?: boolean;
     plannable?: boolean;
     onaddlength?: () => void;
-  }>();
+  } = $props();
 
   const id = $props.id();
   const progressId = `${id}-progress`;

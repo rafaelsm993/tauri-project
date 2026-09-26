@@ -2,7 +2,7 @@
   // Temporary body for routes whose feature hasn't landed yet.
   import { resolve } from "$app/paths";
 
-  let { title } = $props<{ title: string }>();
+  let { title }: { title: string } = $props();
 </script>
 
 <section class="placeholder">

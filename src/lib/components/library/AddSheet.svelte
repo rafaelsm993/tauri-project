@@ -12,7 +12,7 @@
     onsave,
     oncancel,
     busy = false,
-  } = $props<{
+  }: {
     mediaType: MediaType;
     title: string;
     length: Length;
@@ -20,7 +20,7 @@
     onsave: (value: { length: Length; review: string | null }) => void;
     oncancel: () => void;
     busy?: boolean;
-  }>();
+  } = $props();
 
   const id = $props.id();
   const fields = $derived(REQUIRED_LENGTH_FIELDS[mediaType as MediaType]);

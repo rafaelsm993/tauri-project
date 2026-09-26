@@ -3,7 +3,15 @@
   import type { MediaItem } from "$lib/types/media";
   import MediaCard from "$lib/components/media/MediaCard.svelte";
 
-  let { items, loading, appending, hasMore, hasError, onCardClick, onLoadMore } = $props<{
+  let {
+    items,
+    loading,
+    appending,
+    hasMore,
+    hasError,
+    onCardClick,
+    onLoadMore,
+  }: {
     items: MediaItem[];
     loading: boolean;
     appending: boolean;
@@ -11,7 +19,7 @@
     hasError: boolean;
     onCardClick: (item: MediaItem) => void;
     onLoadMore: () => void;
-  }>();
+  } = $props();
 
   let sentinel = $state<HTMLDivElement | undefined>(undefined);
 

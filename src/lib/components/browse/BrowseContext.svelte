@@ -1,12 +1,18 @@
 <script lang="ts">
   // One-line context above the results: search term, selected genre, or default.
-  let { isSearch, query, genreName, onClearSearch, onAllGenres } = $props<{
+  let {
+    isSearch,
+    query,
+    genreName,
+    onClearSearch,
+    onAllGenres,
+  }: {
     isSearch: boolean;
     query: string;
     genreName: string | null;
     onClearSearch: () => void;
     onAllGenres: () => void;
-  }>();
+  } = $props();
 </script>
 
 <p class="page-context">

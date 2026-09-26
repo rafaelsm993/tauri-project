@@ -3,7 +3,7 @@
   import type { CastMember } from "$lib/types/media";
   import { initials } from "$lib/utils/format";
 
-  let { cast } = $props<{ cast: CastMember[] }>();
+  let { cast }: { cast: CastMember[] } = $props();
 
   let castEl = $state<HTMLDivElement | undefined>(undefined);
   let dragging = $state(false);

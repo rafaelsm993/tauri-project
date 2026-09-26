@@ -2,10 +2,13 @@
   import type { MediaItem, MediaType } from "$lib/types/media";
   import { getPosterUrl, getYear, getRating, MEDIA_LABELS } from "$lib/types/media";
 
-  let { item, onclick } = $props<{
+  let {
+    item,
+    onclick,
+  }: {
     item: MediaItem;
     onclick?: () => void;
-  }>();
+  } = $props();
 
   let loaded = $state(false);
   let errored = $state(false);

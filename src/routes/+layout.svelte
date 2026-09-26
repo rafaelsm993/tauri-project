@@ -17,7 +17,7 @@
   import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
   import { afterNavigate } from "$app/navigation";
 
-  let { children } = $props<{ children: Snippet }>();
+  let { children }: { children: Snippet } = $props();
 
   // Side effect only (patches console.*), per the $effect rule in AGENTS.md.
   $effect(() => forwardConsole());

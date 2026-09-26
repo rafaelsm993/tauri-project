@@ -11,7 +11,7 @@
     onCardClick,
     onSeeMore,
     onRetry,
-  } = $props<{
+  }: {
     title: string;
     items: MediaItem[];
     loading?: boolean;
@@ -19,7 +19,7 @@
     onCardClick: (item: MediaItem) => void;
     onSeeMore?: () => void;
     onRetry?: () => void;
-  }>();
+  } = $props();
 
   let railEl = $state<HTMLDivElement | undefined>(undefined);
   let canScrollLeft = $state(false);

@@ -1,10 +1,13 @@
 <script lang="ts">
   // Scrolls the window: the document is the scroller, `.app-content` has no overflow.
-  let { threshold, label = "Back to top" } = $props<{
+  let {
+    threshold,
+    label = "Back to top",
+  }: {
     /** Pixels scrolled before the button appears. Defaults to one viewport height. */
     threshold?: number;
     label?: string;
-  }>();
+  } = $props();
 
   let scrollY = $state(0);
   let viewportHeight = $state(0);

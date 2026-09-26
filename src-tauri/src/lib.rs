@@ -4,7 +4,7 @@ pub mod logging;
 pub mod prefs;
 pub mod store;
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 /// Dev-only opt-in (`TAURI_APP_DEVTOOLS=1`) since a docked inspector costs viewport and CPU.
@@ -51,6 +51,13 @@ pub fn run() {
             _app.manage(library::ipc::init(&dir)?);
             _app.manage(prefs::ipc::init(&dir)?);
             api::cache_disk::init(&dir);
+            let handle = _app.handle().clone();
+            api::http::on_network_outcome(move |online| {
+                let status = api::http::NetworkStatus { online };
+                if let Err(e) = handle.emit(api::http::NETWORK_EVENT, status) {
+                    log::warn!("network event not sent: {e}");
+                }
+            });
 
             #[cfg(all(desktop, debug_assertions))]
             if devtools_requested(std::env::var("TAURI_APP_DEVTOOLS").ok().as_deref()) {

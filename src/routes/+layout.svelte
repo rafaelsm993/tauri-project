@@ -14,6 +14,7 @@
   import { libraryStore } from "$lib/stores/library.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
+  import { watchNetwork } from "$lib/api/offline";
 
   let { children } = $props<{ children: Snippet }>();
 
@@ -27,6 +28,12 @@
   });
   $effect(() => {
     prefsStore.hydrate();
+  });
+
+  // The backend knows when a cached answer hid a failed request; the pill follows it.
+  $effect(() => {
+    const stop = watchNetwork();
+    return () => void stop.then((unlisten) => unlisten());
   });
 
   // Posters that failed while offline download again as soon as the network returns.

@@ -1,7 +1,7 @@
 import { untrack } from "svelte";
 import { isOfflineError } from "$lib/utils/errors";
 
-// Offline when the browser says so or a network-backed call failed since the last success.
+// Offline when the browser says so or the backend last failed to reach the network.
 export class OnlineStore {
   private browserOnline = $state(true);
   private failed = $state(false);
@@ -26,8 +26,8 @@ export class OnlineStore {
     if (isOfflineError(e)) this.failed = true;
   }
 
-  noteSuccess(): void {
-    this.failed = false;
+  noteNetwork(online: boolean): void {
+    this.failed = !online;
   }
 }
 

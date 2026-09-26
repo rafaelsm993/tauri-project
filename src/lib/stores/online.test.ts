@@ -25,16 +25,22 @@ describe("OnlineStore", () => {
     expect(store.online).toBe(true);
   });
 
-  it("a success after a failure restores it", () => {
+  it("the backend reaching the network restores it", () => {
     const store = new OnlineStore(new EventTarget(), true);
     store.noteFailure(OFFLINE);
-    store.noteSuccess();
+    store.noteNetwork(true);
     expect(store.online).toBe(true);
   });
 
-  it("a success cannot override the browser being offline", () => {
+  it("the backend losing the network flips it offline", () => {
+    const store = new OnlineStore(new EventTarget(), true);
+    store.noteNetwork(false);
+    expect(store.online).toBe(false);
+  });
+
+  it("the backend cannot override the browser being offline", () => {
     const store = new OnlineStore(new EventTarget(), false);
-    store.noteSuccess();
+    store.noteNetwork(true);
     expect(store.online).toBe(false);
   });
 

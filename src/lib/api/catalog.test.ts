@@ -5,7 +5,7 @@ import { onlineStore } from "$lib/stores/online.svelte";
 
 afterEach(() => {
   clearMocks();
-  onlineStore.noteSuccess();
+  onlineStore.noteNetwork(true);
 });
 
 const EMPTY = { page: 1, total_pages: 1, total_results: 0, results: [] };
@@ -70,11 +70,12 @@ describe("catalog online reporting", () => {
     expect(onlineStore.online).toBe(false);
   });
 
-  it("the next success brings it back online", async () => {
+  // A resolved call may be a stale disk-cache answer; only the backend's network event says online.
+  it("a resolved call does not claim the network is back", async () => {
     mockIPC(() => Promise.reject("offline: error sending request"));
     await catalog.fetchGenres("movie").catch(() => {});
     record([]);
     await catalog.fetchGenres("movie");
-    expect(onlineStore.online).toBe(true);
+    expect(onlineStore.online).toBe(false);
   });
 });

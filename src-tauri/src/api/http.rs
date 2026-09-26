@@ -2,9 +2,10 @@
 use super::cache::ResponseCache;
 use reqwest::{Client, RequestBuilder};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 static CLIENT: LazyLock<Client> = LazyLock::new(|| {
@@ -53,6 +54,29 @@ fn cache_key(req: &RequestBuilder) -> Option<String> {
 // Marks errors where the network itself failed; mirrored by src/lib/api/offline.ts.
 pub const OFFLINE_PREFIX: &str = "offline: ";
 
+// Tauri event carrying `NetworkStatus`; mirrored by src/lib/api/offline.ts.
+pub const NETWORK_EVENT: &str = "network";
+
+#[derive(Clone, Serialize)]
+pub struct NetworkStatus {
+    pub online: bool,
+}
+
+type NetworkListener = Box<dyn Fn(bool) + Send + Sync>;
+
+static NETWORK_LISTENER: OnceLock<NetworkListener> = OnceLock::new();
+
+/// Registers the one callback told whether each real request reached the network.
+pub fn on_network_outcome(f: impl Fn(bool) + Send + Sync + 'static) {
+    let _ = NETWORK_LISTENER.set(Box::new(f));
+}
+
+fn note_network(online: bool) {
+    if let Some(listener) = NETWORK_LISTENER.get() {
+        listener(online);
+    }
+}
+
 fn is_network_failure(e: &reqwest::Error) -> bool {
     e.is_connect() || e.is_timeout() || (e.is_request() && e.status().is_none())
 }
@@ -63,6 +87,7 @@ pub fn request_error(provider: &str, e: reqwest::Error) -> String {
     let msg = e.without_url().to_string();
     log::error!("[{provider}] {msg}");
     if offline {
+        note_network(false);
         format!("{OFFLINE_PREFIX}{msg}")
     } else {
         msg
@@ -99,6 +124,7 @@ async fn fetch_uncached(provider: &str, op: &str, req: RequestBuilder) -> Result
     }
     let started = Instant::now();
     let resp = req.send().await.map_err(|e| request_error(provider, e))?;
+    note_network(true);
     let status = resp.status();
     let retry_after = resp
         .headers()
@@ -224,6 +250,27 @@ mod tests {
             sock.write_all(resp.as_bytes()).await.unwrap();
         });
         format!("http://{addr}/x{}?api_key={SECRET}", addr.port())
+    }
+
+    #[tokio::test]
+    async fn the_network_listener_hears_failures_and_successes() {
+        use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+        static DOWN: AtomicUsize = AtomicUsize::new(0);
+        static UP: AtomicUsize = AtomicUsize::new(0);
+        on_network_outcome(|online| {
+            if online { &UP } else { &DOWN }.fetch_add(1, SeqCst);
+        });
+        let (down, up) = (DOWN.load(SeqCst), UP.load(SeqCst));
+        request_error("test", failing_request().await);
+        assert!(DOWN.load(SeqCst) > down, "offline failure not heard");
+        let url = serve_once("404 Not Found", "{}").await;
+        let _ = fetch_json("test-listener", "op", client().get(url)).await;
+        assert!(UP.load(SeqCst) > up, "a reached server not heard as online");
+    }
+
+    #[test]
+    fn the_network_event_matches_the_frontend_literal() {
+        assert_eq!(NETWORK_EVENT, "network");
     }
 
     #[test]

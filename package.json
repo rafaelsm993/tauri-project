@@ -21,7 +21,7 @@
     "verify:fe": "npm run lint && npm run check && npm run test && npm run test:ui",
     "verify:rs": "cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test",
     "verify": "npm run verify:fe && npm run verify:rs",
-    "lint:guards": "node --test scripts/svelte-props.test.mjs scripts/docs-notes.test.mjs scripts/verify-toolchain.test.mjs scripts/build-docs.test.mjs scripts/offline-fonts.test.mjs"
+    "lint:guards": "node --test scripts/svelte-props.test.mjs scripts/css-tokens.test.mjs scripts/docs-notes.test.mjs scripts/verify-toolchain.test.mjs scripts/build-docs.test.mjs scripts/offline-fonts.test.mjs"
   },
   "license": "MIT",
   "dependencies": {

@@ -51,7 +51,7 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 
 | Role               | Font       | CSS Variable     | SCSS Variable   |
 | ------------------ | ---------- | ---------------- | --------------- |
-| Display / Titles   | Bebas Neue | `--font-display` | `$font-display` |
+| Display / Titles   | Bebas Neue | —                | `$font-display` |
 | Body / UI          | DM Sans    | `--font-body`    | `$font-body`    |
 | Monospace / Labels | DM Mono    | `--font-mono`    | `$font-mono`    |
 
@@ -59,7 +59,6 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 
 | Token        | Size     | Pixels |
 | ------------ | -------- | ------ |
-| `--size-2xs` | 0.625rem | 10px   |
 | `--size-xs`  | 0.75rem  | 12px   |
 | `--size-sm`  | 0.875rem | 14px   |
 | `--size-md`  | 1rem     | 16px   |
@@ -67,21 +66,14 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 | `--size-xl`  | 1.375rem | 22px   |
 | `--size-2xl` | 1.75rem  | 28px   |
 | `--size-3xl` | 2.25rem  | 36px   |
-| `--size-4xl` | 3rem     | 48px   |
-| `--size-5xl` | 4rem     | 64px   |
-| `--size-6xl` | 6rem     | 96px   |
-
-Below 768px (`@media (max-width: 768px)`), `global.css` shrinks `--size-6xl` to 4rem, `--size-5xl` to 3rem and `--size-4xl` to 2.5rem.
 
 ### Line Height & Letter Spacing
 
 | Token               | Value  |
 | ------------------- | ------ |
-| `--leading-tight`   | 1.1    |
 | `--leading-snug`    | 1.3    |
 | `--leading-normal`  | 1.5    |
 | `--tracking-wide`   | 0.06em |
-| `--tracking-wider`  | 0.12em |
 | `--tracking-widest` | 0.2em  |
 
 ---
@@ -101,7 +93,7 @@ Below 768px (`@media (max-width: 768px)`), `global.css` shrinks `--size-6xl` to 
 
 ### CSS Custom Properties (global)
 
-`--space-1` (4px) through `--space-32` (128px) — follows 4px base grid.
+`--space-1` … `--space-6` and `--space-8` (4px to 32px) — follows the 4px base grid.
 
 ---
 
@@ -112,22 +104,16 @@ Below 768px (`@media (max-width: 768px)`), `global.css` shrinks `--size-6xl` to 
 | `$radius-sm` / `--radius-sm`     | 4px    |
 | `$radius-md` / `--radius-md`     | 8px    |
 | `$radius-lg` / `--radius-lg`     | 14px   |
-| `$radius-xl` / `--radius-xl`     | 20px   |
-| `--radius-2xl`                   | 32px   |
+| `$radius-xl`                     | 20px   |
 | `$radius-full` / `--radius-full` | 9999px |
 
 ---
 
-## Shadows & Glows
+## Glows
 
 | Token           | Usage                                      |
 | --------------- | ------------------------------------------ |
-| `--shadow-sm`   | Subtle card shadow                         |
-| `--shadow-md`   | Standard elevation                         |
-| `--shadow-lg`   | Modals, dropdowns                          |
-| `--shadow-xl`   | Hero sections                              |
 | `--glow-primary` | Primary (red) glow — same as `@include glow-primary` |
-| `--glow-accent` / `--glow-teal` | Accent / success glows            |
 
 ---
 
@@ -174,9 +160,7 @@ Input, not width: `@include touch` (`hover: none` or coarse pointer) and `@inclu
 | Background | 0                  | `.bg-layer` — CSS bubbles, glows, vignette (`AppBackground`) |
 | Content    | 1                  | `.app-content` — all page content                     |
 | Film grain | 4                  | `body::before` — noise overlay (pointer-events: none) |
-| Base       | `--z-base: 1`      | Default stacking                                      |
 | Raised     | `--z-raised: 10`   | Cards on hover                                        |
-| Overlay    | `--z-overlay: 100` | Dropdowns, tooltips                                   |
 | Modal      | `--z-modal: 200`   | Modal dialogs                                         |
 | Toast      | `--z-toast: 300`   | Notifications                                         |
 

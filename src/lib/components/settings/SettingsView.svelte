@@ -1,5 +1,6 @@
 <script lang="ts">
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import BackupSection from "./BackupSection.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
 
   // The store prop exists for tests; the app uses the singleton.
@@ -34,6 +35,8 @@
   {#if store.error}
     <p class="settings-error" role="alert">{store.error}</p>
   {/if}
+
+  <BackupSection />
 </main>
 
 <style lang="scss">

@@ -10,6 +10,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Renamed from the `tauri-app` placeholder to **Aevum** (Latin: an age, a lifetime); bundle identifier `com.user.tauri-app` → `com.rafaelsm993.aevum`. The Android project was regenerated for the new package; a device with the old debug APK must reinstall.
 
 ### Added
+- Backup: export the library, activity, posters and settings to one zip from Settings, and import it back by merging or replacing (a safety copy is saved before a replace). API keys are never exported.
+- A readable screen when saved data cannot be opened (a file from a newer version, or an unreadable one) instead of the app not starting; the file is left untouched.
 - Six media categories: movies/TV (TMDB), anime/manga (AniList GraphQL), games (RAWG), and books (iTunes)
 - Shared `MediaItem`/`MediaDetail` mappings across providers
 - Search, genre filtering, and per-genre discovery carousels

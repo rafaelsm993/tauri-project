@@ -13,3 +13,14 @@ export function formatRuntime(runtime: number | null | undefined, type: MediaTyp
   if (!runtime) return "";
   return type === "book" ? `${runtime} pages` : `${Math.floor(runtime / 60)}h ${runtime % 60}m`;
 }
+
+export function plural(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+// Short English date ("Sep 20, 2026"); anything unparseable is shown unchanged.
+export function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}

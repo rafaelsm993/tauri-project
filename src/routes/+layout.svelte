@@ -8,6 +8,9 @@
   import AppBackground from "$lib/components/ui/AppBackground.svelte";
   import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
   import ProfileMenu from "$lib/components/ui/ProfileMenu.svelte";
+  import StartupProblem from "$lib/components/ui/StartupProblem.svelte";
+  import { startupStatus } from "$lib/api/startup";
+  import type { StartupProblem as Problem } from "$lib/types/startup";
   import { page } from "$app/state";
   import type { Snippet } from "svelte";
   import { forwardConsole, reportCspViolations } from "$lib/logging/console";
@@ -23,11 +26,18 @@
   $effect(() => forwardConsole());
   $effect(() => reportCspViolations());
 
+  // undefined while asking; a problem means the saved data was refused and nothing may load it.
+  let problem = $state<Problem | null | undefined>(undefined);
+  $effect(() => {
+    startupStatus()
+      .then((p) => (problem = p))
+      .catch(() => (problem = null));
+  });
+
   // The saved library and preferences are loaded once for the whole app.
   $effect(() => {
+    if (problem !== null) return;
     libraryStore.hydrate();
-  });
-  $effect(() => {
     prefsStore.hydrate();
   });
 
@@ -42,17 +52,25 @@
   $effect(() => watchConnectivity(() => void checkNetwork()));
 
   // Posters that failed while offline download again as soon as the network returns.
-  onReconnect(() => libraryStore.retryPosters());
+  onReconnect(() => {
+    if (problem === null) libraryStore.retryPosters();
+  });
 </script>
 
 <AppBackground />
-<div class="app-content">
-  <header class="app-bar">
-    <ProfileMenu current={page.url.pathname} />
-  </header>
-  {@render children()}
-</div>
-<OfflineBanner />
+{#if problem}
+  <div class="app-content">
+    <StartupProblem {problem} />
+  </div>
+{:else}
+  <div class="app-content">
+    <header class="app-bar">
+      <ProfileMenu current={page.url.pathname} />
+    </header>
+    {@render children()}
+  </div>
+  <OfflineBanner />
+{/if}
 
 <style lang="scss">
   // Mirrors the home page box so the button lines up with the search bar and carousels.

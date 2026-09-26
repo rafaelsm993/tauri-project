@@ -58,9 +58,22 @@ test("cargo dev profile is tuned for fast links and smooth runtime", () => {
 });
 
 test("the Windows launcher scripts exist", () => {
-  for (const f of ["scripts/dev.ps1", "scripts/build.ps1", "scripts/wdev.sh"]) {
+  for (const f of ["scripts/dev.ps1", "scripts/build.ps1", "scripts/gate.ps1", "scripts/wdev.sh"]) {
     assert.ok(has(f), `${f} is missing`);
   }
+});
+
+test("the Windows gate runs an npm script inside the MSVC env and fails loudly", () => {
+  const gate = read("scripts/gate.ps1");
+  assert.match(gate, /vcvars64\.bat/, "gate.ps1 does not load the MSVC environment");
+  assert.match(gate, /npm run \$Script/, "gate.ps1 does not run the requested npm script");
+  assert.match(gate, /\$LASTEXITCODE -ne 0/, "gate.ps1 hides a failed run");
+  assert.match(read("scripts/wdev.sh"), /gate\)/, "wdev.sh has no gate mode");
+  assert.match(
+    read("docs/BUILD_AND_RUN.md"),
+    /wdev\.sh gate/,
+    "runbook does not document the gate",
+  );
 });
 
 test("the build/run runbook covers both machines", () => {

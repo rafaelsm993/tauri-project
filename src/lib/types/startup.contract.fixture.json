@@ -1,0 +1,9 @@
+{
+  "kinds": ["newer", "unreadable"],
+  "problem": {
+    "detail": "update the app",
+    "dir": "/data/aevum",
+    "file": "library.json",
+    "kind": "newer"
+  }
+}

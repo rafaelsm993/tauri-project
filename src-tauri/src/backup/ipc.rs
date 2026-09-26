@@ -1,4 +1,4 @@
-use super::apply::{apply, ImportMode, ImportReport};
+use super::apply::{import, ImportMode, ImportReport};
 use super::bundle::{Bundle, Limits};
 use super::{default_name, export_to, load_bundle, with_zip_ext, ExportReport, ImportPreview};
 use crate::library::commands::LibraryState;
@@ -80,7 +80,6 @@ pub async fn backup_pick_import(
     Ok(Some(preview))
 }
 
-// Replace keeps a copy of the current data next to library.json first.
 #[tauri::command]
 pub async fn backup_apply_import(
     library: State<'_, LibraryState>,
@@ -94,14 +93,7 @@ pub async fn backup_apply_import(
         .await
         .take()
         .ok_or("Choose a backup file first.")?;
-    if mode == ImportMode::Replace {
-        let dir = library.events.parent().ok_or("no data folder")?;
-        let at = bundle.manifest.created_at.clone();
-        export_to(&dir.join("pre-import-backup.zip"), &library, &prefs, &at)
-            .await
-            .map_err(|e| format!("could not save a safety copy first, nothing was changed: {e}"))?;
-    }
-    let report = apply(&library, &prefs, bundle, mode).await?;
+    let report = import(&library, &prefs, bundle, mode).await?;
     posters::forget_failures(&library).await;
     tauri::async_runtime::spawn(posters::fill(library.inner().clone()));
     Ok(report)

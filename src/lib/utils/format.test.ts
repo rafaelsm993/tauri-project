@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { formatRuntime, initials } from "./format";
+import { formatDate, formatRuntime, initials, plural } from "./format";
+
+describe("plural", () => {
+  it("adds an s except for one", () => {
+    expect(plural(1, "item")).toBe("1 item");
+    expect(plural(0, "poster")).toBe("0 posters");
+    expect(plural(3, "activity record")).toBe("3 activity records");
+  });
+});
+
+describe("formatDate", () => {
+  it("shows an ISO timestamp as an English date", () => {
+    expect(formatDate("2026-09-20T10:00:00.000Z")).toBe("Sep 20, 2026");
+  });
+
+  it("returns an unreadable value as is", () => {
+    expect(formatDate("yesterday")).toBe("yesterday");
+  });
+});
 
 describe("initials", () => {
   it("takes first + last initial, uppercased", () => {

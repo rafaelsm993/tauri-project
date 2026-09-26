@@ -45,6 +45,25 @@ Components never call `invoke` directly; stores and routes go through `catalog`.
 
 One keyless HEAD request (iTunes, 5 s timeout); any HTTP answer is online. It emits the same `network` event as provider calls, so the Offline pill updates on screens that make no provider calls. The root layout calls it via `checkNetwork()` (`src/lib/api/offline.ts`) after every navigation, every 30 s and on window focus.
 
+### Backup (`src-tauri/src/backup/ipc.rs`)
+
+| Command | Args | Returns |
+| --- | --- | --- |
+| `backup_export` | `at: string` (ISO time) | `ExportReport \| null` (null: dialog closed) |
+| `backup_pick_import` | — | `ImportPreview \| null`; keeps the parsed backup pending |
+| `backup_apply_import` | `mode: "merge" \| "replace"` | `ImportReport` |
+| `backup_cancel_import` | — | — |
+
+The zip holds `manifest.json`, `library.json`, `events.jsonl`, `prefs.json` and `posters/`; API keys are never in it. The native file dialogs run in Rust, so the WebView has no dialog or fs permission. Import rejects zip-slip paths, oversized archives and files from a newer app before anything changes. Merge keeps every item and takes the newer `updated_at`; replace first writes `pre-import-backup.zip` next to `library.json` and returns its path as `safety_copy`. Android `content://` URIs are not supported yet. Client: `src/lib/api/backup.ts`; UI: `BackupSection.svelte` on `/settings`.
+
+### Startup (`src-tauri/src/startup.rs`)
+
+| Command | Args | Returns |
+| --- | --- | --- |
+| `startup_status` | — | `StartupProblem \| null` |
+
+If `library.json` or `prefs.json` is from a newer app or cannot be read, setup keeps the file untouched, skips the library and prefs state, and the root layout shows `StartupProblem.svelte` (why, the data folder, a copy button) instead of the app.
+
 ## The `Provider` trait
 
 ```rust

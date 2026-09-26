@@ -23,7 +23,10 @@ pub struct ImportReport {
     pub removed: usize,
     pub posters: usize,
     pub prefs_restored: bool,
+    pub safety_copy: Option<String>,
 }
+
+pub const SAFETY_COPY: &str = "pre-import-backup.zip";
 
 // Newer `updated_at` wins per entry (ISO strings compare in time order); nothing is deleted.
 pub fn merge(current: &LibraryFile, incoming: &LibraryFile) -> (LibraryFile, ImportReport) {
@@ -126,6 +129,28 @@ pub async fn apply(
     Ok(report)
 }
 
+// Replace first saves the current data next to library.json; the report says where.
+pub async fn import(
+    library: &LibraryState,
+    prefs: &PrefsState,
+    bundle: Bundle,
+    mode: ImportMode,
+) -> Result<ImportReport, String> {
+    let mut copy = None;
+    if mode == ImportMode::Replace {
+        let dir = library.events.parent().ok_or("no data folder")?;
+        let path = dir.join(SAFETY_COPY);
+        let at = bundle.manifest.created_at.clone();
+        crate::backup::export_to(&path, library, prefs, &at)
+            .await
+            .map_err(|e| format!("could not save a safety copy first, nothing was changed: {e}"))?;
+        copy = Some(path.display().to_string());
+    }
+    let mut report = apply(library, prefs, bundle, mode).await?;
+    report.safety_copy = copy;
+    Ok(report)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,6 +239,41 @@ mod tests {
             .unwrap();
         assert!(!r.prefs_restored);
         assert!(crate::prefs::ipc::load(&prefs).await.background_animation);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn import_replace_saves_the_previous_data_first_and_says_where() {
+        let (dir, lib, prefs) = fresh("import-replace-copy");
+        apply(&lib, &prefs, sample(), ImportMode::Merge)
+            .await
+            .unwrap();
+        let mut smaller = sample();
+        smaller.library.entries.clear();
+        let r = import(&lib, &prefs, smaller, ImportMode::Replace)
+            .await
+            .unwrap();
+        let copy = dir.join(SAFETY_COPY);
+        assert_eq!(r.safety_copy, Some(copy.display().to_string()));
+        let saved =
+            crate::backup::load_bundle(&copy, &crate::backup::bundle::Limits::DEFAULT).unwrap();
+        assert_eq!(
+            saved.library.entries.len(),
+            2,
+            "the copy holds the library before the replace"
+        );
+        assert!(load(&lib).await.is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn import_merge_writes_no_safety_copy() {
+        let (dir, lib, prefs) = fresh("import-merge-copy");
+        let r = import(&lib, &prefs, sample(), ImportMode::Merge)
+            .await
+            .unwrap();
+        assert_eq!(r.safety_copy, None);
+        assert!(!dir.join(SAFETY_COPY).exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

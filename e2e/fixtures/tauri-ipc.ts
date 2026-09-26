@@ -56,6 +56,31 @@ const FIXTURES: Record<string, unknown> = {
   },
   library_load: [],
   library_poster_dir: "/nonexistent/posters",
+  // A long Windows path on purpose: the status line must wrap at 360 px.
+  backup_export: {
+    path: "C:\\Users\\someone-with-a-long-name\\Documents\\Backups\\aevum-backup-2026-09-26.zip",
+    entries: 2,
+    posters: 1,
+    bytes: 4096,
+  },
+  backup_pick_import: {
+    created_at: "2026-09-20T10:00:00.000Z",
+    app_version: "0.1.0",
+    entries: 3,
+    events: 5,
+    posters: 2,
+  },
+  backup_apply_import: {
+    added: 2,
+    updated: 1,
+    kept: 0,
+    removed: 0,
+    posters: 2,
+    prefs_restored: false,
+    safety_copy: null,
+  },
+  backup_cancel_import: null,
+  startup_status: null,
 };
 
 export const test = base.extend({
@@ -66,18 +91,32 @@ export const test = base.extend({
       const prefs = { background_animation: true };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
-        invoke: async (cmd: string, args?: { patch?: object }) => {
+        invoke: async (cmd: string, args?: { patch?: object; mode?: string }) => {
           calls.push(cmd);
           // Tests set window.__offline to simulate a dropped network for provider calls.
           if ((window as { __offline?: boolean }).__offline && cmd.startsWith("catalog_")) {
             throw "offline: network unreachable";
           }
+          // Tests set window.__startupProblem to simulate a refused save file.
+          const refused = (window as { __startupProblem?: object }).__startupProblem;
+          if (cmd === "startup_status" && refused) return refused;
           if (cmd === "prefs_load") return { ...prefs };
           if (cmd === "network_check") return !(window as { __offline?: boolean }).__offline;
           if (cmd === "prefs_update") {
             Object.assign(prefs, args?.patch);
             return { ...prefs };
           }
+          // Tests set window.__dialogClosed to simulate the user closing a file dialog.
+          const closed = (window as { __dialogClosed?: boolean }).__dialogClosed;
+          if (closed && (cmd === "backup_export" || cmd === "backup_pick_import")) return null;
+          if (cmd === "backup_apply_import" && args?.mode === "replace") {
+            return {
+              ...(fixtures[cmd] as object),
+              prefs_restored: true,
+              safety_copy: "C:\\Users\\someone\\AppData\\Roaming\\aevum\\pre-import-backup.zip",
+            };
+          }
+          if (cmd in fixtures && fixtures[cmd] === null) return null;
           return structuredClone(fixtures[cmd] ?? empty);
         },
         transformCallback: () => 0,

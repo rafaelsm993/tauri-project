@@ -3,15 +3,17 @@ import { libraryStore } from "./library.svelte";
 import { prefsStore } from "./prefs.svelte";
 import type { ImportMode, ImportPreview, ImportReport } from "$lib/types/backup";
 import { errorMessage } from "$lib/utils/errors";
-
-const count = (n: number, noun: string) => `${n} ${noun}${n === 1 ? "" : "s"}`;
+import { plural as count } from "$lib/utils/format";
 
 export function importSummary(report: ImportReport, mode: ImportMode): string {
   if (mode === "merge") {
     return `Merged: ${report.added} new, ${report.updated} updated, ${report.kept} kept.`;
   }
   const settings = report.prefs_restored ? " Settings restored." : "";
-  return `Library replaced with ${count(report.added + report.updated, "item")}.${settings}`;
+  const copy = report.safety_copy
+    ? ` Your previous library was saved to ${report.safety_copy}.`
+    : "";
+  return `Library replaced with ${count(report.added + report.updated, "item")}.${settings}${copy}`;
 }
 
 type Reload = (mode: ImportMode) => Promise<void>;

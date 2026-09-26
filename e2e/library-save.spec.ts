@@ -60,6 +60,7 @@ async function mockIpc(page: import("@playwright/test").Page, addFails: boolean)
         invoke: async (cmd: string) => {
           if (cmd === "catalog_detail") return structuredClone(detail);
           if (cmd === "library_load") return [];
+          if (cmd === "startup_status") return null;
           if (cmd === "library_add") {
             w.__addCalls = (w.__addCalls as number) + 1;
             if (fails) throw "disk full";

@@ -66,10 +66,17 @@ PS> powershell -ExecutionPolicy Bypass -File scripts\verify.ps1
 | Task                    | Where         | Command                                       |
 | ----------------------- | ------------- | --------------------------------------------- |
 | Edit, git, review       | WSL           | your editor                                   |
-| TypeScript/Svelte check | WSL           | `npm run check`                               |
+| TypeScript/Svelte check | WSL → Windows | `./scripts/wdev.sh gate check`                |
 | Run the app             | WSL → Windows | `./scripts/wdev.sh`                           |
 | Release bundles         | WSL → Windows | `./scripts/wdev.sh build`                     |
+| Full gate (`verify`)    | WSL → Windows | `./scripts/wdev.sh gate` (close the app first) |
+| One npm script          | WSL → Windows | `./scripts/wdev.sh gate verify:rs`            |
 | Rust typecheck          | WSL           | `cd src-tauri && cargo.exe check --locked`    |
+
+`npm ci` runs on Windows, so `node_modules` holds only the Windows builds of esbuild/rollup: Vite,
+Vitest and svelte-check run through `wdev.sh gate`, not from WSL. Playwright needs its Chromium once
+(`PS> npx playwright install chromium`). Its web server is Vite on port 1420, the same one `tauri dev`
+uses, so close the app before the full gate (each `svelte-kit sync` reloads it anyway).
 
 ## Performance notes
 

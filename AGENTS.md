@@ -11,6 +11,8 @@ RAWG (games), iTunes (books). No persistence yet (S2 adds local JSON storage); n
 | Providers (`impl Provider`: raw serde structs → pure `map_*`) | `src-tauri/src/api/<provider>.rs` |
 | Shared DTOs | `src-tauri/src/api/types.rs` |
 | Shared HTTP client | `src-tauri/src/api/http.rs` (`use super::http::client as http;`) |
+| Backup zip (export, merge/replace import, safety copy) | `src-tauri/src/backup/` → `src/lib/api/backup.ts`, `BackupSection.svelte` |
+| Startup check (a refused save file → explanation screen) | `src-tauri/src/startup.rs` → `StartupProblem.svelte` in `+layout.svelte` |
 | Command registration | `src-tauri/src/lib.rs` → `generate_handler![]` |
 | Permissions / capabilities | `src-tauri/capabilities/*.json` |
 | IPC client | `src/lib/api/catalog.ts` (3 typed `invoke`s, no mapping) |

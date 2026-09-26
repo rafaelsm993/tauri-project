@@ -23,4 +23,6 @@ export interface ImportReport {
   removed: number;
   posters: number;
   prefs_restored: boolean;
+  // Where replace saved the previous data first; null on merge.
+  safety_copy: string | null;
 }

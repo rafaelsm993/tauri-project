@@ -21,6 +21,7 @@ const REPORT = {
   removed: 0,
   posters: 0,
   prefs_restored: 0,
+  safety_copy: 0,
 } satisfies Record<keyof ImportReport, 0>;
 const MODES: ImportMode[] = ["replace", "merge"];
 

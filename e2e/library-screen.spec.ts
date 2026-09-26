@@ -44,6 +44,7 @@ async function mockLibrary(
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
       invoke: async (cmd: string) => {
         if (cmd === "library_load") return structuredClone(list);
+        if (cmd === "startup_status") return null;
         if (cmd === "library_poster_dir") return "/nonexistent/posters";
         return { page: 1, total_pages: 1, total_results: 0, results: [], genres: [] };
       },

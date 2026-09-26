@@ -3,6 +3,7 @@ pub mod backup;
 pub mod library;
 pub mod logging;
 pub mod prefs;
+pub mod startup;
 pub mod store;
 
 use tauri::{Emitter, Manager};
@@ -50,8 +51,17 @@ pub fn run() {
                 .path()
                 .app_data_dir()
                 .map_err(|e| format!("no app data dir: {e}"))?;
-            _app.manage(library::ipc::init(&dir)?);
-            _app.manage(prefs::ipc::init(&dir)?);
+            match startup::load(&dir) {
+                Ok((library, prefs)) => {
+                    _app.manage(library);
+                    _app.manage(prefs);
+                    _app.manage(startup::StartupState::default());
+                }
+                Err(problem) => {
+                    log::error!("[startup] {}: {}", problem.file, problem.detail);
+                    _app.manage(startup::StartupState(Some(problem)));
+                }
+            }
             _app.manage(backup::ipc::BackupState::default());
             api::cache_disk::init(&dir);
             let handle = _app.handle().clone();
@@ -86,7 +96,8 @@ pub fn run() {
             backup::ipc::backup_export,
             backup::ipc::backup_pick_import,
             backup::ipc::backup_apply_import,
-            backup::ipc::backup_cancel_import
+            backup::ipc::backup_cancel_import,
+            startup::startup_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

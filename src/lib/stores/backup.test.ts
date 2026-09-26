@@ -17,6 +17,7 @@ const REPORT: ImportReport = {
   removed: 0,
   posters: 2,
   prefs_restored: false,
+  safety_copy: null,
 };
 
 function make(over: Partial<BackupClient> = {}) {
@@ -44,6 +45,14 @@ describe("importSummary", () => {
   it("counts a replace and mentions restored settings", () => {
     expect(importSummary({ ...REPORT, prefs_restored: true }, "replace")).toBe(
       "Library replaced with 3 items. Settings restored.",
+    );
+  });
+
+  it("says where a replace saved the previous library", () => {
+    expect(
+      importSummary({ ...REPORT, safety_copy: "/data/pre-import-backup.zip" }, "replace"),
+    ).toBe(
+      "Library replaced with 3 items. Your previous library was saved to /data/pre-import-backup.zip.",
     );
   });
 });

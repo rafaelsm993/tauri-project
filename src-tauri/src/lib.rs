@@ -71,6 +71,7 @@ pub fn run() {
             api::catalog::catalog_genres,
             api::catalog::catalog_page,
             api::catalog::catalog_detail,
+            api::http::network_check,
             library::ipc::library_load,
             library::ipc::library_add,
             library::ipc::library_update,

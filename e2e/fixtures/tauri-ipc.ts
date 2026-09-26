@@ -73,6 +73,7 @@ export const test = base.extend({
             throw "offline: network unreachable";
           }
           if (cmd === "prefs_load") return { ...prefs };
+          if (cmd === "network_check") return !(window as { __offline?: boolean }).__offline;
           if (cmd === "prefs_update") {
             Object.assign(prefs, args?.patch);
             return { ...prefs };

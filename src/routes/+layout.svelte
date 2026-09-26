@@ -14,7 +14,8 @@
   import { libraryStore } from "$lib/stores/library.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
-  import { watchNetwork } from "$lib/api/offline";
+  import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
+  import { afterNavigate } from "$app/navigation";
 
   let { children } = $props<{ children: Snippet }>();
 
@@ -35,6 +36,10 @@
     const stop = watchNetwork();
     return () => void stop.then((unlisten) => unlisten());
   });
+
+  // Screens without provider calls (library, settings) still learn when the network drops.
+  afterNavigate(() => void checkNetwork());
+  $effect(() => watchConnectivity(() => void checkNetwork()));
 
   // Posters that failed while offline download again as soon as the network returns.
   onReconnect(() => libraryStore.retryPosters());

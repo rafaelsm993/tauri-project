@@ -81,6 +81,27 @@ fn is_network_failure(e: &reqwest::Error) -> bool {
     e.is_connect() || e.is_timeout() || (e.is_request() && e.status().is_none())
 }
 
+// Keyless host the connectivity probe asks; any HTTP answer means online.
+const PROBE_URL: &str = "https://itunes.apple.com/";
+const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// One HEAD request; reports the outcome like any real request and returns it.
+pub async fn probe(url: &str) -> bool {
+    let sent = client().head(url).timeout(PROBE_TIMEOUT).send().await;
+    let online = match sent {
+        Ok(_) => true,
+        Err(e) => !is_network_failure(&e),
+    };
+    note_network(online);
+    online
+}
+
+/// Lets screens that make no provider calls still learn the network state.
+#[tauri::command]
+pub async fn network_check() -> bool {
+    probe(PROBE_URL).await
+}
+
 /// Strips the URL from the error so API keys in query params never reach logs or the UI.
 pub fn request_error(provider: &str, e: reqwest::Error) -> String {
     let offline = is_network_failure(&e);
@@ -266,6 +287,17 @@ mod tests {
         let url = serve_once("404 Not Found", "{}").await;
         let _ = fetch_json("test-listener", "op", client().get(url)).await;
         assert!(UP.load(SeqCst) > up, "a reached server not heard as online");
+    }
+
+    #[tokio::test]
+    async fn a_probe_that_reaches_any_server_is_online() {
+        let url = serve_once("404 Not Found", "{}").await;
+        assert!(probe(&url).await);
+    }
+
+    #[tokio::test]
+    async fn a_probe_that_cannot_connect_is_offline() {
+        assert!(!probe("http://127.0.0.1:1/").await);
     }
 
     #[test]

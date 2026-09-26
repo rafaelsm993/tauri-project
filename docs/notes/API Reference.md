@@ -37,6 +37,14 @@ catalog.fetchDetail(type: string, id: string)                        → MediaDe
 
 Components never call `invoke` directly; stores and routes go through `catalog`.
 
+### Connectivity (`src-tauri/src/api/http.rs`)
+
+| Command | Args | Returns |
+| --- | --- | --- |
+| `network_check` | — | `boolean` |
+
+One keyless HEAD request (iTunes, 5 s timeout); any HTTP answer is online. It emits the same `network` event as provider calls, so the Offline pill updates on screens that make no provider calls. The root layout calls it via `checkNetwork()` (`src/lib/api/offline.ts`) after every navigation, every 30 s and on window focus.
+
 ## The `Provider` trait
 
 ```rust

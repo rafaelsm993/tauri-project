@@ -54,3 +54,30 @@ test.describe("offline", () => {
     expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true);
   });
 });
+
+test.describe("offline on screens without provider calls", () => {
+  const pill = (page: Page) => page.getByRole("status").filter({ hasText: "Offline" });
+
+  test("a cold start on the library while offline shows the pill", async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as unknown as Win).__offline = true;
+    });
+    await page.goto("/library");
+    await expect(pill(page)).toBeVisible();
+  });
+
+  test("going offline on the library shows the pill after the next navigation", async ({
+    page,
+  }) => {
+    await page.goto("/library");
+    await expect(page.getByRole("heading", { name: "Library" })).toBeVisible();
+    await expect(pill(page)).toHaveCount(0);
+    await setOffline(page, true);
+    await page.getByRole("button", { name: "Profile menu" }).click();
+    await page.getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/settings/);
+    await expect(pill(page)).toBeVisible();
+    await setOffline(page, false);
+    await expect(pill(page)).toHaveCount(0);
+  });
+});

@@ -34,12 +34,40 @@ pub struct Loaded<T> {
     pub migrated: bool,
 }
 
+// Why a versioned value could not become `T`.
+#[derive(Debug, PartialEq)]
+pub enum UpgradeError {
+    Newer { found: u32, current: u32 },
+    Migrate(String),
+    Unfit(String),
+}
+
+// Upgrades one versioned value with `steps`; refuses data from a newer app.
+pub fn upgrade<T: DeserializeOwned>(
+    raw: Versioned<Value>,
+    steps: &[Migration],
+) -> Result<Loaded<T>, UpgradeError> {
+    let current = current_version(steps);
+    if raw.schema_version > current {
+        return Err(UpgradeError::Newer {
+            found: raw.schema_version,
+            current,
+        });
+    }
+    let from = raw.schema_version.max(1) - 1;
+    let value = migrate(raw.data, from, steps).map_err(UpgradeError::Migrate)?;
+    let data = serde_json::from_value(value).map_err(|e| UpgradeError::Unfit(e.to_string()))?;
+    Ok(Loaded {
+        data,
+        migrated: raw.schema_version < current,
+    })
+}
+
 // Reads `path` (else `.bak`), upgrades it with `steps`, and refuses files from a newer app.
 pub fn load<T: DeserializeOwned>(
     path: &Path,
     steps: &[Migration],
 ) -> Result<Option<Loaded<T>>, String> {
-    let current = current_version(steps);
     let mut found_file = false;
     for candidate in [path.to_path_buf(), sibling(path, ".bak")] {
         let bytes = match std::fs::read(&candidate) {
@@ -55,27 +83,20 @@ pub fn load<T: DeserializeOwned>(
                 continue;
             }
         };
-        if raw.schema_version > current {
-            return Err(format!(
-                "{} was written by a newer version of the app (schema v{}, this app reads up to v{current}); update the app",
-                candidate.display(),
-                raw.schema_version
-            ));
-        }
-        let from = raw.schema_version.max(1) - 1;
-        let value = migrate(raw.data, from, steps)
-            .map_err(|e| format!("upgrade {}: {e}", candidate.display()))?;
-        match serde_json::from_value(value) {
-            Ok(data) => {
-                return Ok(Some(Loaded {
-                    data,
-                    migrated: raw.schema_version < current,
-                }))
+        match upgrade(raw, steps) {
+            Ok(loaded) => return Ok(Some(loaded)),
+            Err(UpgradeError::Newer { found, current }) => {
+                return Err(format!(
+                    "{} was written by a newer version of the app (schema v{found}, this app reads up to v{current}); update the app",
+                    candidate.display()
+                ))
             }
-            Err(e) => log::warn!(
-                "[store] {} does not fit the schema: {e}",
-                candidate.display()
-            ),
+            Err(UpgradeError::Migrate(e)) => {
+                return Err(format!("upgrade {}: {e}", candidate.display()))
+            }
+            Err(UpgradeError::Unfit(e)) => {
+                log::warn!("[store] {} does not fit the schema: {e}", candidate.display())
+            }
         }
     }
     // A present file must never be silently replaced by an empty default.
@@ -233,5 +254,37 @@ mod tests {
         let got: Loaded<Book> = load(&path, &STEPS).unwrap().unwrap();
         assert_eq!(got.data.title, "Old");
         fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn raw(version: u32, data: Value) -> Versioned<Value> {
+        Versioned {
+            schema_version: version,
+            data,
+        }
+    }
+
+    #[test]
+    fn upgrade_migrates_an_older_value_and_says_so() {
+        let got: Loaded<Book> = upgrade(raw(1, json!({ "title": "Dune" })), &STEPS).unwrap();
+        assert_eq!(got.data.status.as_deref(), Some("planning"));
+        assert!(got.migrated);
+    }
+
+    #[test]
+    fn upgrade_refuses_a_newer_value() {
+        let err = upgrade::<Book>(raw(9, json!({ "title": "Dune" })), &STEPS).unwrap_err();
+        assert_eq!(
+            err,
+            UpgradeError::Newer {
+                found: 9,
+                current: 2
+            }
+        );
+    }
+
+    #[test]
+    fn upgrade_reports_a_value_that_does_not_fit() {
+        let err = upgrade::<Book>(raw(2, json!({ "no_title": true })), &STEPS).unwrap_err();
+        assert!(matches!(err, UpgradeError::Unfit(_)), "{err:?}");
     }
 }

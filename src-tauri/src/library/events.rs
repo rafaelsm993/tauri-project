@@ -1,4 +1,5 @@
 use super::types::Event;
+use crate::store::file::write_atomic;
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};
@@ -28,11 +29,15 @@ pub fn append_event(path: &Path, event: &Event) -> Result<(), String> {
 
 // Reads the log in order, keeping the first event per id and skipping unreadable lines.
 pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
-    let text = match fs::read_to_string(path) {
-        Ok(t) => t,
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(e) => return Err(format!("read {}: {e}", path.display())),
-    };
+    match fs::read_to_string(path) {
+        Ok(text) => Ok(parse_jsonl(&text, &path.display().to_string())),
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(Vec::new()),
+        Err(e) => Err(format!("read {}: {e}", path.display())),
+    }
+}
+
+// `source` only names the text in warnings.
+pub fn parse_jsonl(text: &str, source: &str) -> Vec<Event> {
     let mut seen = HashSet::new();
     let mut events = Vec::new();
     for (n, line) in text.lines().enumerate() {
@@ -42,10 +47,24 @@ pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
         match serde_json::from_str::<Event>(line) {
             Ok(e) if seen.insert(e.id.clone()) => events.push(e),
             Ok(_) => {}
-            Err(e) => log::warn!("[events] {} line {}: {e}", path.display(), n + 1),
+            Err(e) => log::warn!("[events] {source} line {}: {e}", n + 1),
         }
     }
-    Ok(events)
+    events
+}
+
+pub fn to_jsonl(events: &[Event]) -> Result<Vec<u8>, String> {
+    let mut out = Vec::new();
+    for e in events {
+        out.extend(serde_json::to_vec(e).map_err(|err| format!("serialize event: {err}"))?);
+        out.push(b'\n');
+    }
+    Ok(out)
+}
+
+// Rewrites the whole log atomically, e.g. after an import.
+pub fn write_events(path: &Path, events: &[Event]) -> Result<(), String> {
+    write_atomic(path, &to_jsonl(events)?)
 }
 
 #[cfg(test)]
@@ -97,6 +116,24 @@ mod tests {
     fn a_missing_log_is_empty() {
         let dir = scratch("nolog");
         assert!(read_events(&dir.join("events.jsonl")).unwrap().is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn jsonl_text_round_trips_and_dedupes() {
+        let bytes = to_jsonl(&[event("a"), event("b"), event("a")]).unwrap();
+        let text = String::from_utf8(bytes).unwrap();
+        assert_eq!(text.lines().count(), 3);
+        assert_eq!(ids(&parse_jsonl(&text, "test")), ["a", "b"]);
+    }
+
+    #[test]
+    fn write_events_replaces_the_whole_log() {
+        let dir = scratch("rewrite");
+        let path = dir.join("events.jsonl");
+        append_event(&path, &event("old")).unwrap();
+        write_events(&path, &[event("x"), event("y")]).unwrap();
+        assert_eq!(ids(&read_events(&path).unwrap()), ["x", "y"]);
         fs::remove_dir_all(&dir).unwrap();
     }
 }

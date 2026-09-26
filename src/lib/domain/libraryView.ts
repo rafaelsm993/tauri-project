@@ -19,6 +19,21 @@ export function filterEntries(
   );
 }
 
+// Case- and accent-insensitive form used for title search.
+export function normalizeTitle(s: string): string {
+  return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+// Keeps entries whose title contains every word of the query, in any order.
+export function searchEntries(entries: LibraryEntry[], query: string): LibraryEntry[] {
+  const words = normalizeTitle(query).split(" ").filter(Boolean);
+  if (words.length === 0) return entries;
+  return entries.filter((e) => {
+    const title = normalizeTitle(e.snapshot.title);
+    return words.every((w) => title.includes(w));
+  });
+}
+
 // Counts follow the type filter so the numbers match what a click would show.
 export function statusOptions(
   entries: LibraryEntry[],

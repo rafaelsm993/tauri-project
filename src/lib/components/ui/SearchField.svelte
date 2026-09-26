@@ -94,7 +94,9 @@
     }
 
     &::-webkit-search-cancel-button {
+      -webkit-appearance: none;
       appearance: none;
+      display: none;
     }
 
     &:focus-visible {

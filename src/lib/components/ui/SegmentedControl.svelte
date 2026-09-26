@@ -5,16 +5,19 @@
     value,
     onchange,
     disabled = false,
+    wrap = false,
   }: {
     label: string;
     options: { value: T; label: string; count?: number }[];
     value: T;
     onchange: (value: T) => void;
     disabled?: boolean;
+    /** Wrap onto more rows instead of scrolling; for long option sets like a 1–10 rating. */
+    wrap?: boolean;
   } = $props();
 </script>
 
-<div class="segmented" role="group" aria-label={label}>
+<div class="segmented" class:wrap role="group" aria-label={label}>
   {#each options as option (option.value)}
     <button
       type="button"
@@ -39,6 +42,11 @@
     overflow-x: auto;
     scrollbar-width: none;
     min-width: 0;
+
+    &.wrap {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
   }
 
   .segment {

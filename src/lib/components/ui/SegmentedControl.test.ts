@@ -41,4 +41,23 @@ describe("SegmentedControl", () => {
     });
     expect(screen.getByRole("button", { name: /dropped 0/i })).toBeEnabled();
   });
+
+  it("scrolls by default and wraps only when asked", () => {
+    const { unmount } = render(SegmentedControl, {
+      label: "Status",
+      options: OPTIONS,
+      value: "all",
+      onchange: vi.fn(),
+    });
+    expect(screen.getByRole("group", { name: "Status" })).not.toHaveClass("wrap");
+    unmount();
+    render(SegmentedControl, {
+      label: "Rating",
+      options: OPTIONS,
+      value: "all",
+      onchange: vi.fn(),
+      wrap: true,
+    });
+    expect(screen.getByRole("group", { name: "Rating" })).toHaveClass("wrap");
+  });
 });

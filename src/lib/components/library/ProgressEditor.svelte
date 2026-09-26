@@ -94,6 +94,7 @@
     <div class="rating-control">
       <SegmentedControl
         label="Rating"
+        wrap
         options={ratingOptions}
         value={rating === null ? "" : String(rating)}
         {disabled}

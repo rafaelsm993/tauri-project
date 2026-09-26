@@ -153,3 +153,21 @@ test("a saved item without length can add it later", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
 });
+
+test("every rating pill is visible without scrolling", async ({ page }) => {
+  await mockIpc(page, false);
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: /add to library/i }).click();
+  await page.getByRole("button", { name: /skip/i }).click();
+
+  const group = page.getByRole("group", { name: "Rating" });
+  await expect(group).toBeVisible();
+  const { scroll, client } = await group.evaluate((el) => ({
+    scroll: el.scrollWidth,
+    client: el.clientWidth,
+  }));
+  expect(scroll).toBeLessThanOrEqual(client);
+  for (const name of ["Unrated", "1", "10"]) {
+    await expect(group.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
+  }
+});

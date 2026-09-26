@@ -18,13 +18,25 @@
   let trigger = $state<HTMLButtonElement>();
   let panel = $state<HTMLDivElement>();
   let open = $state(false);
+  let navigating = false;
 
+  // Focus moves to the current link on open and back to the button on dismiss, not on navigation.
   function onToggle(e: ToggleEvent) {
     open = e.newState === "open";
+    if (open) {
+      const target =
+        panel?.querySelector<HTMLAnchorElement>('[aria-current="page"]') ??
+        panel?.querySelector<HTMLAnchorElement>(".pm-link");
+      target?.focus();
+    } else if (!navigating && panel?.contains(document.activeElement)) {
+      trigger?.focus();
+    }
+    navigating = false;
   }
 
   // A SPA navigation does not close a popover by itself.
   function close() {
+    navigating = true;
     panel?.hidePopover?.();
   }
 

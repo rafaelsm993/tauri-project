@@ -92,3 +92,30 @@ test("menu targets are touch-sized on coarse pointers", async ({ page, isMobile 
     .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
   for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
 });
+
+test("opening the menu moves focus into it, Escape returns it to the button", async ({ page }) => {
+  await page.goto("/library");
+  const trigger = page.getByRole("button", { name: "Profile menu" });
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(menu(page).getByRole("link", { name: "Library" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(menu(page).getByRole("link", { name: "Settings" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu(page)).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("on a page outside the menu, focus lands on the first link", async ({ page }) => {
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: "Profile menu" }).click();
+  await expect(menu(page).getByRole("link", { name: "Home" })).toBeFocused();
+});
+
+test("choosing a link leaves focus on the new page, not on the menu button", async ({ page }) => {
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Profile menu" }).click();
+  await menu(page).getByRole("link", { name: "Settings" }).click();
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByRole("button", { name: "Profile menu" })).not.toBeFocused();
+});

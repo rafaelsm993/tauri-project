@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // jsdom has neither; LayerChart reads both when it loads.
 vi.hoisted(() => {
@@ -19,9 +19,12 @@ vi.hoisted(() => {
   } as unknown as typeof ResizeObserver;
 });
 
+import { tick } from "svelte";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import ProfileView from "./ProfileView.svelte";
 import { GamificationStore } from "$lib/stores/gamification.svelte";
+import { prefsStore } from "$lib/stores/prefs.svelte";
+import { DEFAULT_PREFS } from "$lib/types/prefs";
 import type { Length, LibraryEntry, LibraryEvent, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
 
@@ -93,6 +96,11 @@ function storeWith(events: LibraryEvent[] | Error, entries: LibraryEntry[] = LIB
 }
 
 const LOG = [ev("1", "2026-09-19"), ev("2", "2026-09-20")];
+
+afterEach(() => {
+  prefsStore.prefs = { ...DEFAULT_PREFS };
+  prefsStore.ready = false;
+});
 
 // A store that just crossed a level live, so its ring owes a burst.
 async function burstingStore() {
@@ -198,7 +206,26 @@ describe("ProfileView", () => {
     render(ProfileView, { store, motion: false });
     const ring = await screen.findByRole("img", { name: /^Level 1,/ });
     expect(ring).not.toHaveAttribute("data-burst");
-    expect(store.burst).toBe(false);
+  });
+
+  it("follows the animation setting once the saved settings arrive", async () => {
+    const store = await burstingStore();
+    prefsStore.prefs = { ...DEFAULT_PREFS, background_animation: false };
+    prefsStore.ready = true;
+    render(ProfileView, { store });
+    const ring = await screen.findByRole("img", { name: /^Level 1,/ });
+    expect(ring).not.toHaveAttribute("data-burst");
+    prefsStore.prefs = { ...DEFAULT_PREFS, background_animation: true };
+    await tick();
+    expect(ring).toHaveAttribute("data-burst");
+  });
+
+  it("holds the burst until the saved settings say motion is allowed", async () => {
+    const store = await burstingStore();
+    prefsStore.ready = false;
+    render(ProfileView, { store });
+    const ring = await screen.findByRole("img", { name: /^Level 1,/ });
+    expect(ring).not.toHaveAttribute("data-burst");
   });
 
   it("moves to a new day when the window comes back", async () => {

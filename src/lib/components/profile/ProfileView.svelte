@@ -10,25 +10,22 @@
   import ForecastCard from "./ForecastCard.svelte";
   import { gamificationStore, GamificationStore } from "$lib/stores/gamification.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
+  import { MediaQuery } from "svelte/reactivity";
 
-  const reducedMotion = () =>
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const reduced = new MediaQuery("prefers-reduced-motion: reduce");
 
-  // `store` and `motion` exist for tests; the app uses the singleton, the OS and the app setting.
-  let {
-    store = gamificationStore,
-    motion = !reducedMotion() && prefsStore.prefs.background_animation,
-  }: { store?: GamificationStore; motion?: boolean } = $props();
+  // `store` and `motion` exist for tests; the app follows the OS and the saved setting.
+  let { store = gamificationStore, motion }: { store?: GamificationStore; motion?: boolean } =
+    $props();
+
+  const moves = $derived(
+    motion ?? (prefsStore.ready && prefsStore.prefs.background_animation && !reduced.current),
+  );
 
   // The layout loads the log once and live saves keep it current; a visit only moves the day.
   onMount(() => {
     if (store.ready) store.refreshDay();
     else store.load();
-  });
-
-  // Side effect only: with motion off the burst is owed but never shown, so settle it now.
-  $effect(() => {
-    if (store.burst && !motion) store.burstDone();
   });
 
   // The app may stay open past midnight; "today" moves when you come back to it.
@@ -54,7 +51,7 @@
       level={store.level}
       title={store.title}
       xp={store.xp}
-      burst={store.burst && motion}
+      burst={store.burst && moves}
       onburstend={() => store.burstDone()}
     />
     {#if showCharts}

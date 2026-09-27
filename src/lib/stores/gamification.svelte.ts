@@ -58,6 +58,8 @@ export class GamificationStore {
   // One queue per load in flight; only the newest load's answer is kept.
   private queues: LibraryEvent[][] = [];
   private loads = 0;
+  // Highest level congratulated this session; survives a failed or stale settings write.
+  private celebrated = 0;
 
   events = $state<LibraryEvent[]>([]);
   moment = $state<Moment | null>(null);
@@ -107,22 +109,30 @@ export class GamificationStore {
 
   dismiss(): void {
     this.moment = null;
+    this.burst = false;
   }
 
   burstDone(): void {
     this.burst = false;
   }
 
-  // Compares the level with the last one congratulated; `quiet` adopts it (imports, first run).
+  // Congratulates a level above the highest one seen; `quiet` (imports) adopts the level as is.
   check(quiet = false): void {
-    const seen = this.seen.get();
-    if (!this.ready || seen === null) return;
+    const saved = this.seen.get();
+    if (!this.ready || saved === null) return;
     const level = this.level.level;
-    const next = quiet ? { show: null, seen: level } : celebration(seen, level);
-    if (next.seen !== seen) void this.seen.set(next.seen);
+    const mark = Math.max(saved, this.celebrated);
+    const next = quiet ? { show: null, seen: level } : celebration(mark, level);
+    if (!quiet && next.seen < mark) return;
+    this.celebrated = next.seen;
+    if (next.seen !== saved) this.remember(next.seen);
     if (!next.show) return;
     this.moment = next.show;
     this.burst = true;
+  }
+
+  private remember(level: number): void {
+    this.seen.set(level).catch((e) => console.warn("[gamification] could not save the level", e));
   }
 
   // "Today" moves at midnight even with the app left open; the log itself is unchanged.

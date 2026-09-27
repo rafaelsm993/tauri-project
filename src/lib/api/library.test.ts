@@ -97,7 +97,13 @@ describe("library client", () => {
 
 describe("live events", () => {
   it("hands every saved event to listeners, the same one that was sent", async () => {
-    const calls = record({});
+    const calls: Array<{ cmd: string; args: Record<string, unknown> }> = [];
+    mockIPC((cmd, args) => {
+      const a = args as Record<string, unknown>;
+      calls.push({ cmd, args: a });
+      if (cmd === "library_add") return { created_at: a.at };
+      return cmd === "library_remove" ? true : {};
+    });
     const seen: unknown[] = [];
     const stop = library.onEvent((e) => seen.push(e));
     await library.add(ITEM);
@@ -105,6 +111,16 @@ describe("live events", () => {
     await library.remove("tmdb:tv:7");
     stop();
     expect(seen).toEqual(calls.map((c) => c.args.event));
+  });
+
+  it("stays quiet when the backend logged nothing: a re-add or removing a missing item", async () => {
+    mockIPC((cmd) => (cmd === "library_add" ? { created_at: "2026-01-01T00:00:00.000Z" } : false));
+    const seen: unknown[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    await library.add(ITEM);
+    await library.remove("tmdb:tv:7");
+    stop();
+    expect(seen).toEqual([]);
   });
 
   it("stays quiet when the save is rejected", async () => {
@@ -119,19 +135,21 @@ describe("live events", () => {
   });
 
   it("stops after unsubscribing", async () => {
-    record({});
+    record(true);
     const seen: unknown[] = [];
     library.onEvent((e) => seen.push(e))();
-    await library.add(ITEM);
+    await library.remove("tmdb:tv:7");
     expect(seen).toEqual([]);
   });
 
   it("does not let a failing listener break the save", async () => {
-    record({});
-    const stop = library.onEvent(() => {
+    record(true);
+    const listener = vi.fn(() => {
       throw new Error("listener bug");
     });
-    await expect(library.add(ITEM)).resolves.toEqual({});
+    const stop = library.onEvent(listener);
+    await expect(library.remove("tmdb:tv:7")).resolves.toBe(true);
+    expect(listener).toHaveBeenCalledOnce();
     stop();
   });
 });

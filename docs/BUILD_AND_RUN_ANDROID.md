@@ -1,6 +1,6 @@
 # Building and running Aevum on Android
 
-Android runs from the Arch desktop. Develop on a **physical phone over Wireless debugging**: frontend edits hot-reload on the phone in about a second, Rust edits rebuild and reinstall on their own. The emulator does not work on this host (see [Emulator](#emulator)).
+Android runs from the Arch desktop and from the Windows laptop (driven from WSL, see [Windows laptop](#windows-laptop)). Develop on a **physical phone over Wireless debugging**: frontend edits hot-reload on the phone in about a second, Rust edits rebuild and reinstall on their own. The emulator does not work on this host (see [Emulator](#emulator)).
 
 | Task | Command |
 | --- | --- |
@@ -25,6 +25,32 @@ JAVA_HOME=/usr/lib/jvm/java-17-openjdk
 ```
 
 Screen mirror: `sudo pacman -S scrcpy`, or without root the static release from github.com/Genymobile/scrcpy (check it against `SHA256SUMS.txt`) unpacked to `~/.local/opt` and linked into `~/.local/bin`.
+
+## Windows laptop
+
+The same phone loop runs on the Windows side of the laptop, started from WSL like the desktop app ([BUILD_AND_RUN.md](BUILD_AND_RUN.md)). No Android Studio.
+
+| Task | Command (WSL, repo root) |
+| --- | --- |
+| Run with hot reload | `./scripts/wdev.sh android dev` (one phone connected; it runs `adb reverse` itself) |
+| APK to sideload (arm64) | `./scripts/wdev.sh android build` |
+
+One-time setup, in Windows PowerShell:
+
+1. Android SDK command-line tools from the SDK index (`https://dl.google.com/android/repository/repository2-3.xml`, `cmdline-tools;latest`, check its SHA-1), unpacked to `%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest`.
+2. Packages: `%LOCALAPPDATA%\Android\Sdk\cmdline-tools\latest\bin\android.exe sdk install platform-tools platforms/android-35 build-tools/36.0.0 ndk/27.3.13750724` (cmdline-tools 23 replaced `sdkmanager` with `android`; it may exit non-zero after installing everything, so check `android sdk list`).
+3. `rustup target add aarch64-linux-android armv7-linux-androideabi`, and `winget install --id Genymobile.scrcpy --exact`.
+4. User environment: `ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk`, `NDK_HOME=%ANDROID_HOME%\ndk\27.3.13750724`, `ADB=%ANDROID_HOME%\platform-tools\adb.exe`, and `platform-tools` first on PATH. `JAVA_HOME` must be a JDK 17 (it may be set machine-wide; `scripts/android.ps1` reads both scopes).
+5. **Developer Mode** on (Settings → System → For developers): Tauri links the Rust library into the Android project with a symbolic link, which Windows only allows in Developer Mode.
+
+Pairing and the daily `adb connect` work as below with `adb` from `platform-tools`. Mirror with `scrcpy --max-size 1024 --max-fps 60 --stay-awake --no-audio`; it uses the SDK adb because `ADB=` is set. The first build compiles every Rust dependency for Android (about 4 minutes on the laptop), the APK step about 3 minutes; later builds only recompile what changed.
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `Creation symbolic link is not allowed` after the Rust build | Developer Mode is off | turn it on, run again (Rust is cached) |
+| Gradle `Unsupported class file major version 69` | Gradle ran on Java 25 from PATH | `JAVA_HOME` must be a JDK 17; use `scripts/android.ps1`, which loads it |
+| scrcpy shows an error and "press Enter" | its bundled adb fights the SDK adb that holds the phone | set `ADB=` to the SDK adb, as above |
+| Windows lists "Unknown USB Device (Device Descriptor Request Failed)" | charge-only or faulty cable/port | another data cable, or Wireless debugging |
 
 ## Pair the phone (once per phone)
 
@@ -83,4 +109,5 @@ Not usable on this host. The emulator's own qemu process (`qemu-system-x86_64`, 
 | Date | Device | Result |
 | --- | --- | --- |
 | 2026-09-23 | Samsung SM-A346M, Android 16, arm64 (Wireless debugging) | Dev build installs and runs; logcat `[tmdb] discover → 200`; home carousels render; a `.svelte` edit hot-reloads on the phone in ~1 s without reinstall; scrcpy 4.1 mirror and control work; sideloaded debug APK (arm64 + armv7) runs. |
+| 2026-09-27 | Samsung SM-A346M, Android 16, arm64, from the Windows laptop (Wireless debugging) | SDK tools 23 + NDK 27.3 without Android Studio; arm64 debug APK builds (Rust 3m42s cold, APK 3.3 min), installs and runs; logcat `[tmdb] → 200`; home carousels render; scrcpy 4.1 mirrors. |
 | 2026-09-23 | Emulator 37.1.11.0, API 35 / 37.1 x86_64 | Fails: qemu SIGSEGV when the WebView starts (see [Emulator](#emulator)). |

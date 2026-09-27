@@ -47,6 +47,20 @@ test("the Android dev loop is documented once, not duplicated in BUILD_AND_RUN.m
   );
 });
 
+test("the runbook covers the Windows laptop and its known traps", () => {
+  const doc = read(ANDROID);
+  for (const s of [
+    "## Windows laptop",
+    "wdev.sh android dev",
+    "wdev.sh android build",
+    "Developer Mode",
+    "class file major version",
+    "ADB=",
+  ]) {
+    assert.ok(doc.includes(s), `${ANDROID} lacks "${s}"`);
+  }
+});
+
 test("the workflow asks for a phone check on UI changes", () => {
   assert.match(read("AGENTS.md"), /physical Android phone/);
 });

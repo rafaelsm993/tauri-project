@@ -263,14 +263,51 @@ describe("level-up moment", () => {
     expect(seen.set).toHaveBeenCalledExactlyOnceWith(2);
   });
 
-  it("clears the toast and the burst separately", async () => {
+  it("ends the burst on its own, and closing the toast ends any burst still owed", async () => {
     const { store, emit } = live(NEAR_LEVEL_2);
     await store.load();
     emit(ev("3", { status: "completed" }));
-    store.dismiss();
-    expect(store.moment).toBeNull();
-    expect(store.burst).toBe(true);
     store.burstDone();
     expect(store.burst).toBe(false);
+    expect(store.moment).not.toBeNull();
+    emit(ev("4", { status: "completed" }));
+    emit(ev("5", { status: "completed" }));
+    expect(store.moment?.level).toBe(3);
+    store.dismiss();
+    expect(store.moment).toBeNull();
+    expect(store.burst).toBe(false);
+  });
+
+  it("does not celebrate again when saving the level failed", async () => {
+    const { store, seen, emit } = live(NEAR_LEVEL_2);
+    seen.set.mockRejectedValue(new Error("disk full"));
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    await Promise.resolve();
+    store.dismiss();
+    emit(ev("4", null));
+    expect(store.moment).toBeNull();
+  });
+
+  it("does not celebrate again when an older settings answer brings the level back", async () => {
+    const { store, seen, emit } = live(NEAR_LEVEL_2);
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    store.dismiss();
+    seen.value = 1;
+    emit(ev("4", null));
+    expect(store.moment).toBeNull();
+  });
+
+  it("never lowers the saved level outside an import, so a level is not celebrated twice", async () => {
+    const log = [...NEAR_LEVEL_2, ev("3", { status: "completed" })];
+    const { store, seen, emit } = live(log, 2);
+    log.pop();
+    await store.load();
+    expect(store.level.level).toBe(1);
+    expect(seen.set).not.toHaveBeenCalled();
+    emit(ev("4", { status: "completed" }));
+    expect(store.level.level).toBe(2);
+    expect(store.moment).toBeNull();
   });
 });

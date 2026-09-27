@@ -28,9 +28,14 @@ function onEvent(fn: EventListener): () => void {
   return () => listeners.delete(fn);
 }
 
-// A save succeeded: tell listeners, never letting one of them fail the save.
-async function saved<T>(event: LibraryEvent, call: Promise<T>): Promise<T> {
+// A save the backend logged: tell listeners, never letting one of them fail the save.
+async function saved<T>(
+  event: LibraryEvent,
+  call: Promise<T>,
+  logged: (result: T) => boolean = () => true,
+): Promise<T> {
   const result = await call;
+  if (!logged(result)) return result;
   for (const fn of listeners) {
     try {
       fn(event);
@@ -45,9 +50,14 @@ function load(): Promise<LibraryEntry[]> {
   return invoke<LibraryEntry[]>("library_load");
 }
 
+// A re-add returns the existing entry untouched and logs nothing.
 function add(item: MediaItem, user?: UserPatch): Promise<LibraryEntry> {
   const event = stamp("library_add", item.media_key, user ?? null);
-  return saved(event, invoke<LibraryEntry>("library_add", { item, user, at: event.at_utc, event }));
+  return saved(
+    event,
+    invoke<LibraryEntry>("library_add", { item, user, at: event.at_utc, event }),
+    (entry) => entry?.created_at === event.at_utc,
+  );
 }
 
 function update(key: MediaKey, patch: UserPatch): Promise<LibraryEntry> {
@@ -60,7 +70,7 @@ function update(key: MediaKey, patch: UserPatch): Promise<LibraryEntry> {
 
 function remove(key: MediaKey): Promise<boolean> {
   const event = stamp("library_remove", key);
-  return saved(event, invoke<boolean>("library_remove", { key, event }));
+  return saved(event, invoke<boolean>("library_remove", { key, event }), (gone) => gone === true);
 }
 
 function posterDir(): Promise<string> {

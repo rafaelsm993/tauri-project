@@ -5,6 +5,7 @@
 # Usage:  WSL$ ./scripts/wdev.sh                    (dev)
 #         WSL$ ./scripts/wdev.sh build              (release bundles)
 #         WSL$ ./scripts/wdev.sh gate [npm-script]  (npm run verify, or the given script, on Windows)
+#         WSL$ ./scripts/wdev.sh android [dev|build] (phone hot reload, or an arm64 debug APK)
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,6 +18,7 @@ win_root="$(wslpath -w "$repo_root")"
 case "${1:-dev}" in
   build) script="build.ps1" ;;
   gate) script="gate.ps1 ${2:-verify}" ;;
+  android) script="android.ps1 ${2:-dev}" ;;
   *) script="dev.ps1" ;;
 esac
 

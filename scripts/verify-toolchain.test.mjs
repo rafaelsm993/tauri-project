@@ -58,9 +58,36 @@ test("cargo dev profile is tuned for fast links and smooth runtime", () => {
 });
 
 test("the Windows launcher scripts exist", () => {
-  for (const f of ["scripts/dev.ps1", "scripts/build.ps1", "scripts/gate.ps1", "scripts/wdev.sh"]) {
+  for (const f of [
+    "scripts/dev.ps1",
+    "scripts/build.ps1",
+    "scripts/gate.ps1",
+    "scripts/android.ps1",
+    "scripts/wdev.sh",
+  ]) {
     assert.ok(has(f), `${f} is missing`);
   }
+});
+
+test("the Windows Android launcher finds JDK 17 and the SDK, and fails loudly", () => {
+  const ps = read("scripts/android.ps1");
+  assert.match(
+    ps,
+    /"Machine"/,
+    "android.ps1 reads env only from the User scope (JAVA_HOME is Machine-wide)",
+  );
+  for (const name of ["ANDROID_HOME", "NDK_HOME", "JAVA_HOME"]) {
+    assert.match(ps, new RegExp(name), `android.ps1 does not load ${name}`);
+  }
+  assert.match(ps, /vcvars64\.bat/, "android.ps1 does not load the MSVC environment");
+  assert.match(ps, /platform-tools/, "android.ps1 does not put the SDK adb on PATH");
+  assert.match(
+    ps,
+    /adb reverse tcp:1420 tcp:1420/,
+    "android.ps1 dev does not reverse the dev port",
+  );
+  assert.match(ps, /\$LASTEXITCODE -ne 0/, "android.ps1 hides a failed run");
+  assert.match(read("scripts/wdev.sh"), /android\)/, "wdev.sh has no android mode");
 });
 
 test("the Windows gate runs an npm script inside the MSVC env and fails loudly", () => {

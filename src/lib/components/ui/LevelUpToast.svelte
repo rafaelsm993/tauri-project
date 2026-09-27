@@ -28,9 +28,11 @@
 </div>
 
 <style lang="scss">
+  // Above the bottom band where the back-to-top button and the offline pill sit.
   .toast-region {
     position: fixed;
-    inset: auto $spacing-md calc(#{$spacing-md} + env(safe-area-inset-bottom)) auto;
+    inset: auto $spacing-md
+      calc(#{$spacing-lg + $touch-target + $spacing-sm} + env(safe-area-inset-bottom)) auto;
     z-index: var(--z-toast);
     display: flex;
     justify-content: flex-end;

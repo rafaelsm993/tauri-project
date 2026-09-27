@@ -36,13 +36,13 @@
       .catch(() => (problem = null));
   });
 
-  // The saved library and preferences are loaded once for the whole app; the level needs both.
+  // Loaded once for the whole app; the level needs both, and a failed library undercounts it.
   $effect(() => {
     if (problem !== null) return;
     untrack(() => {
-      void Promise.all([libraryStore.hydrate(), prefsStore.hydrate()]).then(() =>
-        gamificationStore.load(),
-      );
+      void Promise.all([libraryStore.hydrate(), prefsStore.hydrate()]).then(() => {
+        if (libraryStore.ready) void gamificationStore.load();
+      });
     });
   });
 

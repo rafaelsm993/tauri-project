@@ -1,8 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
 
-// Two other movies finished and one rated: 120 XP (level 1); finishing movie 1 adds 50 and
-// crosses level 2 (141).
+// 120 XP (level 1); finishing movie 1 adds 50 and crosses level 2 (141).
 const LOG = [
   { id: "e1", media_key: "tmdb:movie:11", day: "2026-09-19", rating: 9 },
   { id: "e2", media_key: "tmdb:movie:12", day: "2026-09-20", rating: null },
@@ -77,6 +76,9 @@ async function onMoviePage(page: Page) {
 const completed = (page: Page) =>
   page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" });
 
+// The polite live region the toast renders into; empty when no toast is showing.
+const toastRegion = (page: Page) => page.locator("[role=status][aria-live=polite]");
+
 test.describe("level-up moment", () => {
   test("finishing a movie that crosses a level shows the toast once", async ({ page }) => {
     await onMoviePage(page);
@@ -90,7 +92,32 @@ test.describe("level-up moment", () => {
     expect(box.x + box.width).toBeLessThanOrEqual(width);
 
     await toast.getByRole("button", { name: "Close" }).click();
-    await expect(page.locator(".toast-region")).toBeEmpty();
+    await expect(page.getByRole("button", { name: "Close" })).toHaveCount(0);
+
+    await page
+      .getByRole("group", { name: "Status" })
+      .getByRole("button", { name: "In progress" })
+      .click();
+    await completed(page).click();
+    await expect(toastRegion(page)).toBeEmpty();
+
+    await page.reload();
+    await expect(completed(page)).toBeVisible();
+    await expect(toastRegion(page)).toBeEmpty();
+  });
+
+  test("the toast stays clear of the offline pill", async ({ page }) => {
+    await onMoviePage(page);
+    await expect(completed(page)).toBeVisible();
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+    const pill = page.getByRole("status").filter({ hasText: "Offline" });
+    await expect(pill).toBeVisible();
+    await completed(page).click();
+    const toast = page.getByRole("status").filter({ hasText: "Level 2" });
+    await expect(toast).toBeVisible();
+    const a = (await toast.getByText("Level 2").locator("xpath=../..").boundingBox())!;
+    const b = (await pill.locator("p").boundingBox())!;
+    expect(a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true);
   });
 
   test("the toast's Close is touch-sized on coarse pointers", async ({ page, isMobile }) => {

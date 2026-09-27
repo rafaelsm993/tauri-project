@@ -41,6 +41,18 @@ describe("LevelUpToast", () => {
     expect(onclose).toHaveBeenCalledOnce();
   });
 
+  it("gives a newer level its own six seconds", async () => {
+    vi.useFakeTimers();
+    const onclose = vi.fn();
+    const { rerender } = render(LevelUpToast, { moment: { level: 2, newTitle: null }, onclose });
+    vi.advanceTimersByTime(4_000);
+    await rerender({ moment: { level: 3, newTitle: "Curious Mind" }, onclose });
+    vi.advanceTimersByTime(5_999);
+    expect(onclose).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(onclose).toHaveBeenCalledOnce();
+  });
+
   it("keeps an empty live region when there is nothing to say", () => {
     setup(null);
     expect(screen.getByRole("status")).toBeEmptyDOMElement();

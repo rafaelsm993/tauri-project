@@ -104,6 +104,8 @@ test("menu targets are touch-sized on coarse pointers", async ({ page, isMobile 
     .getByRole("link")
     .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
   for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
+  const level = page.getByRole("link", { name: /^Level \d+ · / });
+  expect((await level.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 
 test("opening the menu moves focus into it, Escape returns it to the button", async ({ page }) => {

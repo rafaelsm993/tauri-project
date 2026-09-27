@@ -86,4 +86,11 @@ describe("library client", () => {
     await library.retryPosters();
     expect(calls).toEqual([{ cmd: "library_retry_posters", args: {} }]);
   });
+
+  it("events sends one library_events call and returns the log", async () => {
+    const log = [{ id: "a", kind: "library_add", media_key: "tmdb:tv:7" }];
+    const calls = record(log);
+    expect(await library.events()).toEqual(log);
+    expect(calls).toEqual([{ cmd: "library_events", args: {} }]);
+  });
 });

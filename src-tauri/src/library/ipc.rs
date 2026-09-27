@@ -68,6 +68,12 @@ pub async fn library_remove(
     commands::remove(&state, &key, event).await
 }
 
+// Read-only; the frontend derives XP, levels and streaks from it.
+#[tauri::command]
+pub fn library_events(state: State<'_, LibraryState>) -> Result<Vec<Event>, String> {
+    commands::events(&state)
+}
+
 // Called on reconnect: every missing poster is tried again right away.
 #[tauri::command]
 pub async fn library_retry_posters(state: State<'_, LibraryState>) -> Result<(), String> {

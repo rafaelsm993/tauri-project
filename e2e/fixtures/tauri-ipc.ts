@@ -56,6 +56,25 @@ const FIXTURES: Record<string, unknown> = {
   },
   library_load: [],
   library_poster_dir: "/nonexistent/posters",
+  // Two finished movies (one rated) on consecutive days: 120 XP, level 1, a 2-day run.
+  library_events: [
+    {
+      id: "e1",
+      kind: "library_add",
+      media_key: "tmdb:movie:1",
+      at_utc: "2026-09-19T12:00:00.000Z",
+      local_date: "2026-09-19",
+      payload: { status: "completed", rating: 9 },
+    },
+    {
+      id: "e2",
+      kind: "library_add",
+      media_key: "tmdb:movie:2",
+      at_utc: "2026-09-20T12:00:00.000Z",
+      local_date: "2026-09-20",
+      payload: { status: "completed" },
+    },
+  ],
   // A long Windows path on purpose: the status line must wrap at 360 px.
   backup_export: {
     path: "C:\\Users\\someone-with-a-long-name\\Documents\\Backups\\aevum-backup-2026-09-26.zip",

@@ -1,4 +1,5 @@
 import { backup as defaultClient, type BackupClient } from "$lib/api/backup";
+import { gamificationStore } from "./gamification.svelte";
 import { libraryStore } from "./library.svelte";
 import { prefsStore } from "./prefs.svelte";
 import type { ImportMode, ImportPreview, ImportReport } from "$lib/types/backup";
@@ -20,6 +21,7 @@ type Reload = (mode: ImportMode) => Promise<void>;
 
 async function reloadStores(mode: ImportMode): Promise<void> {
   await libraryStore.reload();
+  await gamificationStore.load();
   if (mode === "replace") await prefsStore.reload();
 }
 

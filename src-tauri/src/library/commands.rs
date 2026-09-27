@@ -1,4 +1,4 @@
-use super::events::append_event;
+use super::events::{append_event, read_events};
 use super::posters;
 use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Status, UserData};
 use crate::api::types::{MediaItem, MediaType};
@@ -99,6 +99,11 @@ fn log_event(state: &LibraryState, event: Option<Event>) -> Result<(), String> {
         Some(e) => append_event(&state.events, &e),
         None => Ok(()),
     }
+}
+
+/// The activity log, oldest first, once per event id.
+pub fn events(state: &LibraryState) -> Result<Vec<Event>, String> {
+    read_events(&state.events)
 }
 
 /// All entries, most recently updated first.
@@ -362,6 +367,37 @@ mod tests {
 
     fn events_in(dir: &std::path::Path) -> Vec<Event> {
         crate::library::events::read_events(&dir.join("events.jsonl")).unwrap()
+    }
+
+    #[tokio::test]
+    async fn events_returns_the_log_oldest_first_and_once_per_id() {
+        let dir = scratch("d1-events");
+        let state = state_in(&dir);
+        assert!(
+            events(&state).unwrap().is_empty(),
+            "no log yet is an empty list"
+        );
+        let tv = item(MediaType::Tv);
+        add(
+            &state,
+            &tv,
+            UserData::default(),
+            "t1".into(),
+            Some(event("a")),
+        )
+        .await
+        .unwrap();
+        let patch = UserPatch {
+            progress: Some(3),
+            ..UserPatch::default()
+        };
+        update(&state, "tmdb:tv:7", patch, "t2".into(), Some(event("b")))
+            .await
+            .unwrap();
+        crate::library::events::append_event(&state.events, &event("a")).unwrap();
+        let ids: Vec<_> = events(&state).unwrap().into_iter().map(|e| e.id).collect();
+        assert_eq!(ids, ["a", "b"]);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

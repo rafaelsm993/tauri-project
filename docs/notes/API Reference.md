@@ -56,6 +56,14 @@ One keyless HEAD request (iTunes, 5 s timeout); any HTTP answer is online. It em
 
 The zip holds `manifest.json`, `library.json`, `events.jsonl`, `prefs.json` and `posters/`; API keys are never in it. The native file dialogs run in Rust, so the WebView has no dialog or fs permission. Import rejects zip-slip paths, oversized archives and files from a newer app before anything changes. Merge keeps every item and takes the newer `updated_at`; replace first writes `pre-import-backup.zip` next to `library.json` and returns its path as `safety_copy`. Android `content://` URIs are not supported yet. Client: `src/lib/api/backup.ts`; UI: `BackupSection.svelte` on `/settings`.
 
+### Activity log (`src-tauri/src/library/ipc.rs`)
+
+| Command | Args | Returns |
+| --- | --- | --- |
+| `library_events` | — | `LibraryEvent[]` (oldest first, once per id) |
+
+Read-only view of `events.jsonl`. The frontend derives everything the profile shows from it: XP, level, title, streak (`src/lib/domain/gamification.ts`) and the dashboard series (`src/lib/domain/dashboard.ts`), through `gamificationStore`. Each item pays once for its first add (5 XP), first rating (10) and first completion (50, +15/+40/+80 for a medium/long/epic length); progress clicks pay nothing and removing keeps XP. Level n needs `50 × n^1.5` XP. Values are placeholders until a playtest.
+
 ### Startup (`src-tauri/src/startup.rs`)
 
 | Command | Args | Returns |

@@ -27,7 +27,8 @@
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-log": "^2.9.2",
-    "@tauri-apps/plugin-opener": "^2"
+    "@tauri-apps/plugin-opener": "^2",
+    "layerchart": "^2.5.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

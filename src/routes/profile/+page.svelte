@@ -1,5 +1,7 @@
 <script lang="ts">
-  import RoutePlaceholder from "$lib/components/ui/RoutePlaceholder.svelte";
+  import ProfileView from "$lib/components/profile/ProfileView.svelte";
 </script>
 
-<RoutePlaceholder title="Profile" />
+<svelte:head><title>Profile · Aevum</title></svelte:head>
+
+<ProfileView />

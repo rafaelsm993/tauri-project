@@ -1,6 +1,6 @@
 use crate::backup::bundle::Bundle;
 use crate::library::commands::{LibraryFile, LibraryState};
-use crate::library::events::{read_events, write_events};
+use crate::library::events::{oldest_first, read_events, write_events};
 use crate::library::types::Event;
 use crate::prefs::ipc::PrefsState;
 use crate::store::file::write_atomic;
@@ -49,7 +49,9 @@ pub fn merge(current: &LibraryFile, incoming: &LibraryFile) -> (LibraryFile, Imp
 pub fn merge_events(current: &[Event], incoming: &[Event]) -> Vec<Event> {
     let seen: HashSet<&str> = current.iter().map(|e| e.id.as_str()).collect();
     let fresh = incoming.iter().filter(|e| !seen.contains(e.id.as_str()));
-    current.iter().chain(fresh).cloned().collect()
+    let mut out: Vec<Event> = current.iter().chain(fresh).cloned().collect();
+    oldest_first(&mut out);
+    out
 }
 
 pub fn replace_report(current: &LibraryFile, incoming: &LibraryFile) -> ImportReport {
@@ -201,6 +203,20 @@ mod tests {
         let merged = merge_events(&[event("a"), event("b")], &[event("b"), event("c")]);
         let ids: Vec<String> = merged.into_iter().map(|e| e.id).collect();
         assert_eq!(ids, ["a", "b", "c"]);
+    }
+
+    #[test]
+    fn merged_events_are_oldest_first_even_when_the_backup_is_older() {
+        let stamp = |id: &str, at: &str| Event {
+            at_utc: at.into(),
+            ..event(id)
+        };
+        let merged = merge_events(
+            &[stamp("mine", "2026-09-20T00:00:00Z")],
+            &[stamp("imported", "2026-08-01T00:00:00Z")],
+        );
+        let ids: Vec<String> = merged.into_iter().map(|e| e.id).collect();
+        assert_eq!(ids, ["imported", "mine"]);
     }
 
     #[test]

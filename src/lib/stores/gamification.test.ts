@@ -12,17 +12,50 @@ const ev = (id: string, payload: unknown, local_date = "2026-09-20"): LibraryEve
   payload,
 });
 
-function storeWith(events: LibraryEvent[] | Error, entries: LibraryEntry[] = []) {
+function storeWith(
+  events: LibraryEvent[] | Error,
+  entries: LibraryEntry[] = [],
+  today: () => string = () => "2026-09-20",
+) {
   const load = vi.fn(async () => {
     if (events instanceof Error) throw events;
     return events;
   });
-  const store = new GamificationStore(
-    { events: load },
-    () => entries,
-    () => "2026-09-20",
-  );
+  const store = new GamificationStore({ events: load }, () => entries, today);
   return { store, load };
+}
+
+function movie(id: string, runtime_minutes: number): LibraryEntry {
+  const key = `tmdb:movie:${id}`;
+  return {
+    key,
+    snapshot: {
+      media_key: key,
+      provider: "tmdb",
+      media_type: "movie",
+      title: key,
+      poster_path: null,
+      poster_file: null,
+      year: null,
+    },
+    user: {
+      status: "completed",
+      progress: 1,
+      rating: null,
+      review: null,
+      length: {
+        runtime_minutes,
+        episodes: null,
+        episode_minutes: null,
+        chapters: null,
+        chapter_minutes: null,
+        pages: null,
+        hours: null,
+      },
+    },
+    created_at: "",
+    updated_at: "",
+  };
 }
 
 describe("GamificationStore", () => {
@@ -81,5 +114,30 @@ describe("GamificationStore", () => {
     ]);
     expect(store.activity.get("2026-09-14")).toBe(1);
     expect(store.hours).toBe(0);
+  });
+
+  it("sizes a completion by the saved length when the log has none", async () => {
+    const { store } = storeWith([ev("1", { status: "completed" })], [movie("1", 180)]);
+    await store.load();
+    expect(store.xp).toBe(XP.add + XP.completion + 15);
+  });
+
+  it("moves to the new day when asked, without reading the log again", async () => {
+    let day = "2026-09-20";
+    const { store, load } = storeWith([ev("1", null, "2026-09-20")], [], () => day);
+    await store.load();
+    expect(store.streak.current).toBe(1);
+    day = "2026-09-22";
+    store.refreshDay();
+    expect(store.today).toBe("2026-09-22");
+    expect(store.streak.current).toBe(0);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("knows when the log has history but the library is empty", async () => {
+    const { store } = storeWith([ev("1", null)]);
+    await store.load();
+    expect(store.isEmpty).toBe(false);
+    expect(store.libraryEmpty).toBe(true);
   });
 });

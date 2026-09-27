@@ -43,7 +43,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 2px;
+    gap: $spacing-xs;
     min-width: 0;
     padding: $spacing-md;
     background: rgb(var(--clr-ink-rgb) / 0.04);

@@ -70,9 +70,10 @@ function entry(
   };
 }
 
+// Both movies stay under 2 h, so their completions earn no length bonus.
 const LIBRARY = [
-  entry("1", "movie", "completed", { runtime_minutes: 120 }, 1),
-  entry("2", "movie", "completed", { runtime_minutes: 90 }, 1),
+  entry("1", "movie", "completed", { runtime_minutes: 119 }, 1),
+  entry("2", "movie", "completed", { runtime_minutes: 100 }, 1),
   entry("3", "game", "in_progress", { hours: 40 }, 10),
   entry("4", "anime", "planning"),
 ];
@@ -122,13 +123,20 @@ describe("ProfileView", () => {
     const all = within(range).getByRole("button", { name: "All" });
     await fireEvent.click(all);
     expect(all).toHaveAttribute("aria-pressed", "true");
-    expect(within(card).getByRole("table")).toHaveTextContent("130");
+    const table = within(card).getByRole("table", { name: "Total XP at the end of each week" });
+    expect(table).toHaveTextContent("130");
   });
 
-  it("describes the streak heatmap", async () => {
+  it("describes the streak heatmap, with each active day readable without hover", async () => {
     render(ProfileView, { store: storeWith(LOG) });
     const card = await screen.findByRole("region", { name: "Activity" });
-    expect(within(card).getByRole("img", { name: /2 active days in the last 16 weeks/ }));
+    expect(
+      within(card).getByRole("img", { name: /2 active days in the last 16 weeks/ }),
+    ).toBeInTheDocument();
+    expect(within(card).getByText(/longest 2 days/)).toBeInTheDocument();
+    const days = within(card).getByRole("table", { name: "Active days" });
+    expect(days).toHaveTextContent("2026-09-191 action");
+    expect(days).toHaveTextContent("2026-09-201 action");
   });
 
   it("describes the library by status and by family", async () => {
@@ -148,6 +156,37 @@ describe("ProfileView", () => {
     expect(within(card).getByText(/left on 1 item/)).toBeInTheDocument();
     expect(within(card).getByText(/1 item has no length yet/)).toBeInTheDocument();
     expect(within(card).getByText(/Level 2 in about 3 days/)).toBeInTheDocument();
+    const table = within(card).getByRole("table", { name: "XP per week, then at this pace" });
+    expect(table).toHaveTextContent("Projected");
+  });
+
+  it("does not promise a date more than a year away", async () => {
+    const old = [{ ...ev("1", "2026-08-25"), payload: null }];
+    render(ProfileView, { store: storeWith(old) });
+    const card = await screen.findByRole("region", { name: "Forecast" });
+    expect(within(card).getByText(/Level 2 in more than a year/)).toBeInTheDocument();
+  });
+
+  it("keeps the level and history when every item was removed", async () => {
+    render(ProfileView, { store: storeWith(LOG, []) });
+    expect(await screen.findByRole("region", { name: "Progression" })).toBeInTheDocument();
+    const library = screen.getByRole("region", { name: "Library" });
+    expect(within(library).getByText(/Your library is empty/)).toBeInTheDocument();
+    expect(within(library).queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("moves to a new day when the window comes back", async () => {
+    let day = "2026-09-20";
+    const store = new GamificationStore(
+      { events: async () => LOG },
+      () => LIBRARY,
+      () => day,
+    );
+    render(ProfileView, { store });
+    await screen.findByRole("region", { name: "Stats" });
+    day = "2026-09-23";
+    await fireEvent.focus(window);
+    expect(store.today).toBe("2026-09-23");
   });
 
   it("invites a new user to start instead of empty charts", async () => {

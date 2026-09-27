@@ -17,8 +17,16 @@
     store.load();
   });
 
+  // The app may stay open past midnight; "today" moves when you come back to it.
+  function onReturn() {
+    if (document.visibilityState === "visible") store.refreshDay();
+  }
+
   const showCharts = $derived(store.ready && !store.isEmpty);
 </script>
+
+<svelte:window onfocus={onReturn} />
+<svelte:document onvisibilitychange={onReturn} />
 
 <main class="profile">
   <h1 class="profile-title">Profile</h1>

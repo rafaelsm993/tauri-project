@@ -13,7 +13,8 @@
   const WEEKS = 16;
 
   const grid = $derived(heatmapWeeks(activity, today, WEEKS));
-  const active = $derived(grid.flat().filter((d) => d.count > 0).length);
+  const activeDays = $derived(grid.flat().filter((d) => d.count > 0));
+  const active = $derived(activeDays.length);
 
   // Four steps of intensity; 0 is an empty day.
   const level = (count: number): number => (count === 0 ? 0 : Math.min(4, Math.ceil(count / 3)));
@@ -22,7 +23,7 @@
 <ChartCard
   id="activity"
   title="Activity"
-  hint="{plural(streak.current, 'day')} in a row · longest {streak.longest}"
+  hint="{plural(streak.current, 'day')} in a row · longest {plural(streak.longest, 'day')}"
   area="activity"
 >
   <div
@@ -40,6 +41,15 @@
       {/each}
     {/each}
   </div>
+  <table class="sr">
+    <caption>Active days</caption>
+    <thead><tr><th>Day</th><th>Actions</th></tr></thead>
+    <tbody>
+      {#each activeDays as day (day.date)}
+        <tr><td>{day.date}</td><td>{plural(day.count, "action")}</td></tr>
+      {/each}
+    </tbody>
+  </table>
   <p class="heat-legend" aria-hidden="true">
     Less
     {#each [0, 1, 2, 3, 4] as l (l)}<span class="cell l{l}"></span>{/each}
@@ -53,14 +63,14 @@
     grid-template-rows: repeat(7, auto);
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
-    gap: 3px;
+    gap: $spacing-xs;
     min-width: 0;
   }
 
   .cell {
     display: block;
     aspect-ratio: 1;
-    border-radius: 3px;
+    border-radius: $radius-sm;
     background: rgb(var(--clr-ink-rgb) / 0.06);
 
     &.l1 {
@@ -80,11 +90,15 @@
     }
   }
 
+  .sr {
+    @include sr-only;
+  }
+
   .heat-legend {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 3px;
+    gap: $spacing-xs;
     font-size: 0.75rem;
     color: var(--clr-text-3);
 

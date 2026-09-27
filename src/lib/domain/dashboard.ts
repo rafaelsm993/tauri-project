@@ -1,4 +1,4 @@
-import { ACTIVE_KINDS, dayNumber, hoursOf, mediaTypeOf, type Award } from "./gamification";
+import { counts, dayNumber, hoursOf, isDay, mediaTypeOf, type Award } from "./gamification";
 import type { LibraryEntry, LibraryEvent, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
 
@@ -61,14 +61,15 @@ const emptyWeek = (week: string): WeekPoint => ({
 
 // Every week from the first award up to today, empty weeks included, so the chart has no gaps.
 export function xpByWeek(list: Award[], today: string): WeekPoint[] {
-  if (list.length === 0) return [];
+  const dated = list.filter((a) => isDay(a.local_date));
+  if (dated.length === 0) return [];
   const byWeek = new Map<string, WeekPoint>();
   const first = dayNumber(
-    weekStart(list.reduce((m, a) => (a.local_date < m ? a.local_date : m), today)),
+    weekStart(dated.reduce((m, a) => (a.local_date < m ? a.local_date : m), today)),
   );
   for (let d = first; d <= dayNumber(weekStart(today)); d += 7)
     byWeek.set(dateOf(d), emptyWeek(dateOf(d)));
-  for (const a of list) {
+  for (const a of dated) {
     const point = byWeek.get(weekStart(a.local_date));
     const family = familyOfKey(a.media_key);
     if (!point || !family) continue;
@@ -98,7 +99,7 @@ export function activityByDay(events: LibraryEvent[]): Map<string, number> {
   const seen = new Set<string>();
   const out = new Map<string, number>();
   for (const e of events) {
-    if (seen.has(e.id) || !ACTIVE_KINDS.has(e.kind)) continue;
+    if (seen.has(e.id) || !counts(e)) continue;
     seen.add(e.id);
     out.set(e.local_date, (out.get(e.local_date) ?? 0) + 1);
   }
@@ -168,8 +169,12 @@ export function backlog(entries: LibraryEntry[]): Backlog {
 
 // Average XP per day over the last `PACE_DAYS` days, today included.
 export function pace(list: Award[], today: string): number {
-  const from = dayNumber(today) - PACE_DAYS;
-  const xp = list.filter((a) => dayNumber(a.local_date) > from).reduce((s, a) => s + a.xp, 0);
+  const now = dayNumber(today);
+  const inWindow = (a: Award) => {
+    const day = dayNumber(a.local_date);
+    return day > now - PACE_DAYS && day <= now;
+  };
+  const xp = list.filter(inWindow).reduce((s, a) => s + a.xp, 0);
   return xp / PACE_DAYS;
 }
 

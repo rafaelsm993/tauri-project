@@ -60,7 +60,7 @@ The zip holds `manifest.json`, `library.json`, `events.jsonl`, `prefs.json` and 
 
 | Command | Args | Returns |
 | --- | --- | --- |
-| `library_events` | — | `LibraryEvent[]` (oldest first, once per id) |
+| `library_events` | — | `LibraryEvent[]` (oldest first by `at_utc`, stable; once per id — a merge import is re-sorted too) |
 
 Read-only view of `events.jsonl`. The frontend derives everything the profile shows from it: XP, level, title, streak (`src/lib/domain/gamification.ts`) and the dashboard series (`src/lib/domain/dashboard.ts`), through `gamificationStore`. Each item pays once for its first add (5 XP), first rating (10) and first completion (50, +15/+40/+80 for a medium/long/epic length); progress clicks pay nothing and removing keeps XP. Level n needs `50 × n^1.5` XP. Values are placeholders until a playtest.
 

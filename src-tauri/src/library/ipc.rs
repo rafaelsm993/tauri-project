@@ -70,7 +70,7 @@ pub async fn library_remove(
 
 // Read-only; the frontend derives XP, levels and streaks from it.
 #[tauri::command]
-pub fn library_events(state: State<'_, LibraryState>) -> Result<Vec<Event>, String> {
+pub async fn library_events(state: State<'_, LibraryState>) -> Result<Vec<Event>, String> {
     commands::events(&state)
 }
 

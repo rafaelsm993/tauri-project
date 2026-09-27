@@ -1,4 +1,4 @@
-import type { Length, LibraryEvent } from "$lib/types/library";
+import type { Length, LibraryEntry, LibraryEvent } from "$lib/types/library";
 import type { MediaKey, MediaType } from "$lib/types/media";
 
 // Placeholders until the playtest (GOALS §11); retuning is a code change, never a migration.
@@ -65,6 +65,11 @@ export interface Streaks {
 // Events that show the user did something; removing does not count.
 export const ACTIVE_KINDS: ReadonlySet<string> = new Set(["library_add", "library_update"]);
 
+export const isDay = (date: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(date);
+
+// An action worth counting: add or update, on a real calendar day.
+export const counts = (e: LibraryEvent): boolean => ACTIVE_KINDS.has(e.kind) && isDay(e.local_date);
+
 interface ItemState {
   added: boolean;
   rated: boolean;
@@ -118,13 +123,21 @@ function completionXp(key: MediaKey, length: Length | null): number {
   return XP.completion + (bucket ? LENGTH_BONUS[bucket] : 0);
 }
 
+// The saved length of each item, for completions the log never sized.
+export const savedLengths = (entries: LibraryEntry[]): ReadonlyMap<MediaKey, Length> =>
+  new Map(entries.map((e) => [e.key, e.user.length]));
+
 // Replays the log once; each item pays for its first add, rating and completion only.
-export function awards(events: LibraryEvent[]): Award[] {
+// `lengths` (the saved entries) sizes a completion the log never carried a length for.
+export function awards(
+  events: LibraryEvent[],
+  lengths: ReadonlyMap<MediaKey, Length> = new Map(),
+): Award[] {
   const seen = new Set<string>();
   const items = new Map<MediaKey, ItemState>();
   const out: Award[] = [];
   for (const e of events) {
-    if (seen.has(e.id) || !ACTIVE_KINDS.has(e.kind)) continue;
+    if (seen.has(e.id) || !counts(e)) continue;
     seen.add(e.id);
     const item = items.get(e.media_key) ?? {
       added: false,
@@ -147,7 +160,7 @@ export function awards(events: LibraryEvent[]): Award[] {
     }
     if (patch.status === "completed" && !item.completed) {
       item.completed = true;
-      pay("completion", completionXp(e.media_key, item.length));
+      pay("completion", completionXp(e.media_key, item.length ?? lengths.get(e.media_key) ?? null));
     }
   }
   return out;
@@ -190,9 +203,7 @@ export function titleFor(level: number): Title {
 
 // Sorted, distinct `YYYY-MM-DD` days with activity.
 export function activeDays(events: LibraryEvent[]): string[] {
-  return [...new Set(events.filter((e) => ACTIVE_KINDS.has(e.kind)).map((e) => e.local_date))]
-    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-    .sort();
+  return [...new Set(events.filter(counts).map((e) => e.local_date))].sort();
 }
 
 const DAY_MS = 86_400_000;
@@ -200,16 +211,17 @@ const DAY_MS = 86_400_000;
 export const dayNumber = (date: string): number =>
   Math.round(Date.parse(`${date}T00:00:00Z`) / DAY_MS);
 
-// A streak survives until a full day passes with nothing done.
+// A streak survives until a full day passes with nothing done; days after today are ignored.
 export function streaks(days: string[], today: string): Streaks {
+  const now = dayNumber(today);
   let longest = 0;
   let run = 0;
   let prev: number | null = null;
-  for (const n of days.map(dayNumber)) {
+  for (const n of days.map(dayNumber).filter((n) => n <= now)) {
     run = prev !== null && n - prev === 1 ? run + 1 : 1;
     longest = Math.max(longest, run);
     prev = n;
   }
-  const alive = prev !== null && dayNumber(today) - prev <= 1;
+  const alive = prev !== null && now - prev <= 1;
   return { current: alive ? run : 0, longest };
 }

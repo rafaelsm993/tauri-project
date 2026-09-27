@@ -27,7 +27,7 @@ pub fn append_event(path: &Path, event: &Event) -> Result<(), String> {
         .map_err(|e| format!("fsync {}: {e}", path.display()))
 }
 
-// Reads the log in order, keeping the first event per id and skipping unreadable lines.
+// Reads the log oldest first, keeping the first event per id and skipping unreadable lines.
 pub fn read_events(path: &Path) -> Result<Vec<Event>, String> {
     match fs::read_to_string(path) {
         Ok(text) => Ok(parse_jsonl(&text, &path.display().to_string())),
@@ -50,7 +50,13 @@ pub fn parse_jsonl(text: &str, source: &str) -> Vec<Event> {
             Err(e) => log::warn!("[events] {source} line {}: {e}", n + 1),
         }
     }
+    oldest_first(&mut events);
     events
+}
+
+// Stable, so events stamped in the same instant keep their file order.
+pub fn oldest_first(events: &mut [Event]) {
+    events.sort_by(|a, b| a.at_utc.cmp(&b.at_utc));
 }
 
 pub fn to_jsonl(events: &[Event]) -> Result<Vec<u8>, String> {
@@ -125,6 +131,31 @@ mod tests {
         let text = String::from_utf8(bytes).unwrap();
         assert_eq!(text.lines().count(), 3);
         assert_eq!(ids(&parse_jsonl(&text, "test")), ["a", "b"]);
+    }
+
+    fn at(id: &str, at_utc: &str) -> Event {
+        Event {
+            at_utc: at_utc.into(),
+            ..event(id)
+        }
+    }
+
+    #[test]
+    fn the_log_reads_oldest_first_whatever_the_file_order() {
+        let text = String::from_utf8(
+            to_jsonl(&[
+                at("new", "2026-09-25T10:00:00Z"),
+                at("old", "2026-09-01T10:00:00Z"),
+                at("tie-a", "2026-09-10T10:00:00Z"),
+                at("tie-b", "2026-09-10T10:00:00Z"),
+            ])
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            ids(&parse_jsonl(&text, "test")),
+            ["old", "tie-a", "tie-b", "new"]
+        );
     }
 
     #[test]

@@ -1,5 +1,13 @@
 import { library as defaultLibrary } from "$lib/api/library";
-import { activeDays, awards, levelOf, streaks, titleFor, totalXp } from "$lib/domain/gamification";
+import {
+  activeDays,
+  awards,
+  levelOf,
+  savedLengths,
+  streaks,
+  titleFor,
+  totalXp,
+} from "$lib/domain/gamification";
 import {
   activityByDay,
   backlog,
@@ -32,18 +40,19 @@ export class GamificationStore {
   ready = $state(false);
   error = $state("");
 
-  awards = $derived(awards(this.events));
+  entries = $derived.by(() => this.entriesOf());
+  awards = $derived(awards(this.events, savedLengths(this.entries)));
   xp = $derived(totalXp(this.awards));
   level = $derived(levelOf(this.xp));
   title = $derived(titleFor(this.level.level));
   streak = $derived(streaks(activeDays(this.events), this.today));
-  entries = $derived.by(() => this.entriesOf());
   statuses = $derived(statusCounts(this.entries));
   families = $derived(familyBreakdown(this.entries));
   backlog = $derived(backlog(this.entries));
   pace = $derived(pace(this.awards, this.today));
   eta = $derived(nextLevelEta(this.level.needed - this.level.into, this.pace));
   isEmpty = $derived(this.events.length === 0 && this.entries.length === 0);
+  libraryEmpty = $derived(this.entries.length === 0);
   weeks = $derived(xpByWeek(this.awards, this.today));
   activity = $derived(activityByDay(this.events));
   hours = $derived(FAMILIES.reduce((sum, f) => sum + this.families[f].hours, 0));
@@ -57,6 +66,12 @@ export class GamificationStore {
     this.entriesOf = entries;
     this.todayOf = today;
     this.today = today();
+  }
+
+  // "Today" moves at midnight even with the app left open; the log itself is unchanged.
+  refreshDay(): void {
+    const day = this.todayOf();
+    if (day !== this.today) this.today = day;
   }
 
   // Read on every visit: cheap, and an import or a save elsewhere is always reflected.

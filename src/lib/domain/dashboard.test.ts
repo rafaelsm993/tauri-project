@@ -130,6 +130,30 @@ describe("activity", () => {
     ]);
     expect(got).toEqual(new Map([["2026-09-01", 2]]));
   });
+
+  it("skips days that are not dates", () => {
+    const e = (id: string, local_date: string): LibraryEvent => ({
+      id,
+      kind: "library_add",
+      media_key: "tmdb:movie:1",
+      at_utc: "",
+      local_date,
+      payload: null,
+    });
+    expect(activityByDay([e("a", ""), e("b", "junk"), e("c", "2026-09-01")])).toEqual(
+      new Map([["2026-09-01", 1]]),
+    );
+  });
+});
+
+describe("bad dates", () => {
+  it("builds weeks without throwing when an award has no valid day", () => {
+    const got = xpByWeek(
+      [award("", "tmdb:movie:1", 5), award("2026-09-14", "tmdb:movie:1", 5)],
+      "2026-09-20",
+    );
+    expect(got.map((w) => w.week)).toEqual(["2026-09-14"]);
+  });
 });
 
 describe("library breakdown", () => {
@@ -186,6 +210,10 @@ describe("forecast", () => {
       "2026-09-20",
     );
     expect(got).toBe(3);
+  });
+
+  it("does not count XP dated after today in the pace", () => {
+    expect(pace([award("2026-09-25", "tmdb:movie:1", 300)], "2026-09-20")).toBe(0);
   });
 
   it("estimates the days to the next level, null without a pace", () => {

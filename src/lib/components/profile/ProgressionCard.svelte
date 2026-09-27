@@ -55,7 +55,7 @@
     />
   </div>
   <table class="sr">
-    <caption>Total XP at the start of each week</caption>
+    <caption>Total XP at the end of each week</caption>
     <thead><tr><th>Week</th><th>XP</th></tr></thead>
     <tbody>
       {#each shown as w (w.week)}

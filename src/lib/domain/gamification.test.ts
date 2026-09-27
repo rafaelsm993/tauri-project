@@ -115,6 +115,32 @@ describe("awards", () => {
   });
 });
 
+describe("bad input", () => {
+  it("ignores events whose day is not a YYYY-MM-DD date", () => {
+    const got = awards([
+      add(MOVIE, null, ""),
+      add(ANIME, null, "2026-9-1"),
+      add("itunes:book:3", null, "2026-09-01"),
+    ]);
+    expect(got.map((a) => a.media_key)).toEqual(["itunes:book:3"]);
+  });
+
+  it("falls back to the saved length when the log never carried one", () => {
+    const lengths = new Map([[MOVIE, len({ runtime_minutes: 180 })]]);
+    const got = awards([add(MOVIE), upd(MOVIE, { status: "completed" })], lengths);
+    expect(totalXp(got)).toBe(XP.add + XP.completion + 15);
+  });
+
+  it("prefers the length the log carried at completion", () => {
+    const lengths = new Map([[MOVIE, len({ runtime_minutes: 30 })]]);
+    const got = awards(
+      [add(MOVIE, { length: len({ runtime_minutes: 180 }) }), upd(MOVIE, { status: "completed" })],
+      lengths,
+    );
+    expect(totalXp(got)).toBe(XP.add + XP.completion + 15);
+  });
+});
+
 describe("length", () => {
   it("turns each media type's length into hours", () => {
     expect(hoursOf("movie", len({ runtime_minutes: 120 }))).toBe(2);
@@ -226,6 +252,13 @@ describe("streaks", () => {
     const d = days("2026-09-01", "2026-09-02", "2026-09-03", "2026-09-10");
     expect(streaks(d, "2026-09-10")).toEqual({ current: 1, longest: 3 });
     expect(streaks(d, "2026-09-12")).toEqual({ current: 0, longest: 3 });
+  });
+
+  it("ignores days after today", () => {
+    expect(streaks(days("2026-09-19", "2026-09-20", "2026-09-21"), "2026-09-20")).toEqual({
+      current: 2,
+      longest: 2,
+    });
   });
 
   it("crosses month ends by calendar day", () => {

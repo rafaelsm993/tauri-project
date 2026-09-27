@@ -12,12 +12,15 @@ pub const SCHEMA_VERSION: u32 = current_version(MIGRATIONS);
 #[serde(default)]
 pub struct Prefs {
     pub background_animation: bool,
+    // The last level the user was congratulated on; 0 until the first check adopts the current one.
+    pub seen_level: u32,
 }
 
 impl Default for Prefs {
     fn default() -> Self {
         Self {
             background_animation: true,
+            seen_level: 0,
         }
     }
 }
@@ -27,11 +30,15 @@ impl Default for Prefs {
 #[serde(deny_unknown_fields)]
 pub struct PrefsPatch {
     pub background_animation: Option<bool>,
+    pub seen_level: Option<u32>,
 }
 
 pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     if let Some(on) = patch.background_animation {
         prefs.background_animation = on;
+    }
+    if let Some(level) = patch.seen_level {
+        prefs.seen_level = level;
     }
 }
 
@@ -60,6 +67,7 @@ mod tests {
             &mut p,
             PrefsPatch {
                 background_animation: Some(false),
+                ..PrefsPatch::default()
             },
         );
         assert!(!p.background_animation);
@@ -69,6 +77,22 @@ mod tests {
     fn a_patch_with_an_unknown_field_is_rejected() {
         let err = serde_json::from_value::<PrefsPatch>(json!({ "background_animatoin": false }));
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn a_file_from_before_level_ups_starts_with_no_level_seen() {
+        let p: Prefs = serde_json::from_value(json!({ "background_animation": false })).unwrap();
+        assert_eq!(p.seen_level, 0);
+        assert!(!p.background_animation);
+    }
+
+    #[test]
+    fn a_patch_records_the_last_celebrated_level_alone() {
+        let mut p = Prefs::default();
+        let patch: PrefsPatch = serde_json::from_value(json!({ "seen_level": 4 })).unwrap();
+        apply_patch(&mut p, patch);
+        assert_eq!(p.seen_level, 4);
+        assert!(p.background_animation);
     }
 
     const CONTRACT: &str = concat!(

@@ -64,6 +64,8 @@ The zip holds `manifest.json`, `library.json`, `events.jsonl`, `prefs.json` and 
 
 Read-only view of `events.jsonl`. The frontend derives everything the profile shows from it: XP, level, title, streak (`src/lib/domain/gamification.ts`) and the dashboard series (`src/lib/domain/dashboard.ts`), through `gamificationStore`. Each item pays once for its first add (5 XP), first rating (10) and first completion (50, +15/+40/+80 for a medium/long/epic length); progress clicks pay nothing and removing keeps XP. Level n needs `50 × n^1.5` XP. Values are placeholders until a playtest.
 
+Live updates: `library.onEvent(fn)` (in `src/lib/api/library.ts`) hands every event the backend accepted to listeners, after the save succeeds; `gamificationStore` appends it (once per id), so the level moves without re-reading the log. A level-up is decided by the pure `celebration(seen, level)` against `prefs.seen_level` (last level congratulated; `0` = adopt the current level silently), which `prefs_update` persists; an import adopts the new level without a toast.
+
 ### Startup (`src-tauri/src/startup.rs`)
 
 | Command | Args | Returns |

@@ -94,3 +94,44 @@ describe("library client", () => {
     expect(calls).toEqual([{ cmd: "library_events", args: {} }]);
   });
 });
+
+describe("live events", () => {
+  it("hands every saved event to listeners, the same one that was sent", async () => {
+    const calls = record({});
+    const seen: unknown[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    await library.add(ITEM);
+    await library.update("tmdb:tv:7", { status: "completed" });
+    await library.remove("tmdb:tv:7");
+    stop();
+    expect(seen).toEqual(calls.map((c) => c.args.event));
+  });
+
+  it("stays quiet when the save is rejected", async () => {
+    mockIPC(() => {
+      throw new Error("disk full");
+    });
+    const seen: unknown[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    await expect(library.update("tmdb:tv:7", { progress: 1 })).rejects.toThrow("disk full");
+    stop();
+    expect(seen).toEqual([]);
+  });
+
+  it("stops after unsubscribing", async () => {
+    record({});
+    const seen: unknown[] = [];
+    library.onEvent((e) => seen.push(e))();
+    await library.add(ITEM);
+    expect(seen).toEqual([]);
+  });
+
+  it("does not let a failing listener break the save", async () => {
+    record({});
+    const stop = library.onEvent(() => {
+      throw new Error("listener bug");
+    });
+    await expect(library.add(ITEM)).resolves.toEqual({});
+    stop();
+  });
+});

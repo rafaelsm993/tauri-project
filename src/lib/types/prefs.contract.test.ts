@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import fixture from "./prefs.contract.fixture.json";
 import { DEFAULT_PREFS, type Prefs } from "./prefs";
 
-const PREFS_KEYS = { background_animation: 0 } satisfies Record<keyof Prefs, 0>;
+const PREFS_KEYS = { background_animation: 0, seen_level: 0 } satisfies Record<keyof Prefs, 0>;
 
 const keys = (o: object) => Object.keys(o).sort();
 

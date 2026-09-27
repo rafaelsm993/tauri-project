@@ -1,9 +1,12 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { followTrigger } from "./popover";
+  import LevelProgress from "./LevelProgress.svelte";
+  import type { LevelInfo } from "$lib/domain/gamification";
 
-  // `current` is the path you are on; the layout passes it so this stays testable.
-  let { current }: { current: string } = $props();
+  // `current` is the path you are on; `progress` is absent until the activity log has loaded.
+  let { current, progress }: { current: string; progress?: { level: LevelInfo; title: string } } =
+    $props();
 
   const id = $props.id();
   const panelId = `${id}-panel`;
@@ -61,6 +64,20 @@
 </button>
 
 <div bind:this={panel} id={panelId} class="pm-panel" popover="auto" ontoggle={onToggle}>
+  {#if progress}
+    <a
+      class="pm-level"
+      href={resolve("/profile")}
+      aria-label="Level {progress.level.level} · {progress.title}"
+      onclick={close}
+    >
+      <span class="pm-level-text">
+        <span class="pm-level-number">Level {progress.level.level}</span>
+        <span class="pm-level-title">{progress.title}</span>
+      </span>
+      <LevelProgress level={progress.level} />
+    </a>
+  {/if}
   <nav aria-label="Profile" class="pm-nav">
     {#each LINKS as link (link.href)}
       <a
@@ -133,6 +150,49 @@
     border: 1px solid var(--clr-border-2);
     border-radius: $radius-md;
     box-shadow: 0 12px 32px rgb(var(--clr-shade-rgb) / 0.5);
+  }
+
+  .pm-level {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-xs;
+    padding: $spacing-sm;
+    border-bottom: 1px solid var(--clr-border-2);
+    border-radius: $radius-sm $radius-sm 0 0;
+    color: var(--clr-text);
+    text-decoration: none;
+
+    @include hover-capable {
+      &:hover {
+        background: rgb(var(--clr-ink-rgb) / 0.05);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-primary);
+      outline-offset: -2px;
+    }
+  }
+
+  .pm-level-text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 $spacing-sm;
+    min-width: 0;
+  }
+
+  .pm-level-number {
+    font-family: $font-display;
+    font-size: 1.2rem;
+    letter-spacing: 0.03em;
+    color: rgb(var(--clr-highlight-rgb));
+  }
+
+  .pm-level-title {
+    font-size: 0.85rem;
+    color: var(--clr-text-2);
   }
 
   .pm-nav {

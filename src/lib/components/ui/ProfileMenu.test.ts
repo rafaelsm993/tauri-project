@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/svelte";
 import ProfileMenu from "./ProfileMenu.svelte";
 
-function setup(current = "/") {
-  render(ProfileMenu, { current });
+const LEVEL_3 = { level: 3, xp: 305, into: 45, needed: 141, fraction: 0.32 };
+
+function setup(current = "/", progress?: { level: typeof LEVEL_3; title: string }) {
+  render(ProfileMenu, { current, progress });
   const trigger = screen.getByRole("button", { name: "Profile menu" });
   const panel = document.getElementById(trigger.getAttribute("popovertarget")!)!;
   return { trigger, panel };
@@ -40,5 +42,22 @@ describe("ProfileMenu", () => {
     const { panel } = setup("/");
     const home = within(panel).getByRole("link", { name: "Home", hidden: true });
     expect(home).toHaveAttribute("aria-current", "page");
+  });
+
+  it("shows the level, title and progress above the links, linking to the profile", () => {
+    const { panel } = setup("/library", { level: LEVEL_3, title: "Curious Mind" });
+    const row = within(panel).getByRole("link", {
+      name: "Level 3 · Curious Mind",
+      hidden: true,
+    });
+    expect(row).toHaveAttribute("href", "/profile");
+    const bar = within(row).getByRole("progressbar", { hidden: true });
+    expect(bar).toHaveAttribute("aria-valuetext", "45 of 141 XP to level 4");
+    expect(panel.firstElementChild).toBe(row);
+  });
+
+  it("shows no level before the log has loaded", () => {
+    const { panel } = setup("/");
+    expect(within(panel).queryByText(/Level \d/)).not.toBeInTheDocument();
   });
 });

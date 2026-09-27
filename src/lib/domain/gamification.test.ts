@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   awards,
+  celebration,
   hoursOf,
   lengthBucket,
   levelOf,
@@ -220,6 +221,32 @@ describe("titles", () => {
   it("has a ladder that starts at level 1 and only goes up", () => {
     expect(TITLES[0].level).toBe(1);
     TITLES.slice(1).forEach((t, i) => expect(t.level).toBeGreaterThan(TITLES[i].level));
+  });
+});
+
+describe("celebration", () => {
+  it("adopts the current level silently the first time", () => {
+    expect(celebration(0, 7)).toEqual({ show: null, seen: 7 });
+  });
+
+  it("says nothing while the level stays put", () => {
+    expect(celebration(4, 4)).toEqual({ show: null, seen: 4 });
+  });
+
+  it("congratulates a new level, naming the title only when it changes", () => {
+    expect(celebration(3, 4)).toEqual({ show: { level: 4, newTitle: null }, seen: 4 });
+    expect(celebration(2, 3)).toEqual({
+      show: { level: 3, newTitle: "Curious Mind" },
+      seen: 3,
+    });
+  });
+
+  it("shows one moment for the highest level when several are crossed at once", () => {
+    expect(celebration(1, 6)).toEqual({ show: { level: 6, newTitle: "Regular" }, seen: 6 });
+  });
+
+  it("follows the level down without a moment after a smaller backup replaces the data", () => {
+    expect(celebration(9, 2)).toEqual({ show: null, seen: 2 });
   });
 });
 

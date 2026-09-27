@@ -3,6 +3,7 @@ import { render } from "@testing-library/svelte";
 import { tick } from "svelte";
 import AppBackground from "./AppBackground.svelte";
 import { PrefsStore } from "$lib/stores/prefs.svelte";
+import { DEFAULT_PREFS } from "$lib/types/prefs";
 
 function setHidden(hidden: boolean) {
   Object.defineProperty(document, "hidden", { value: hidden, configurable: true });
@@ -15,7 +16,7 @@ function isPaused(container: HTMLElement) {
 
 function readyPrefs(on = true) {
   const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
-  prefs.prefs = { background_animation: on };
+  prefs.prefs = { ...DEFAULT_PREFS, background_animation: on };
   prefs.ready = true;
   return prefs;
 }
@@ -51,7 +52,7 @@ describe("AppBackground", () => {
     const prefs = readyPrefs(false);
     const { container } = render(AppBackground, { prefs });
     expect(isPaused(container)).toBe(true);
-    prefs.prefs = { background_animation: true };
+    prefs.prefs = { ...DEFAULT_PREFS, background_animation: true };
     await tick();
     expect(isPaused(container)).toBe(false);
   });

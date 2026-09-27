@@ -1,22 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { PrefsStore } from "./prefs.svelte";
 import type { PrefsClient } from "$lib/api/prefs";
-import type { PrefsPatch } from "$lib/types/prefs";
+import { DEFAULT_PREFS, type PrefsPatch } from "$lib/types/prefs";
 
 function fakeClient(over: Partial<PrefsClient> = {}): PrefsClient {
   return {
-    load: vi.fn(async () => ({ background_animation: false })),
-    update: vi.fn(async (patch: PrefsPatch) => ({ background_animation: true, ...patch })),
+    load: vi.fn(async () => ({ ...DEFAULT_PREFS, background_animation: false })),
+    update: vi.fn(async (patch: PrefsPatch) => ({ ...DEFAULT_PREFS, ...patch })),
     ...over,
   };
 }
 
 describe("PrefsStore", () => {
   it("reload re-reads the backend after an import", async () => {
-    const load = vi.fn(async () => ({ background_animation: true }));
+    const load = vi.fn(async () => ({ ...DEFAULT_PREFS }));
     const store = new PrefsStore(fakeClient({ load }));
     await store.hydrate();
-    load.mockResolvedValue({ background_animation: false });
+    load.mockResolvedValue({ ...DEFAULT_PREFS, background_animation: false });
     await store.reload();
     expect(store.prefs.background_animation).toBe(false);
   });
@@ -49,7 +49,17 @@ describe("PrefsStore", () => {
       fakeClient({ load: vi.fn(async () => ({ page: 1, background_animation: "no" }) as never) }),
     );
     await store.hydrate();
-    expect(store.prefs).toEqual({ background_animation: true });
+    expect(store.prefs).toEqual({ background_animation: true, seen_level: 0 });
+  });
+
+  it("keeps a saved level and drops one that is not a whole number", async () => {
+    const load = vi.fn(async () => ({ background_animation: true, seen_level: 4 }));
+    const store = new PrefsStore(fakeClient({ load }));
+    await store.hydrate();
+    expect(store.prefs.seen_level).toBe(4);
+    load.mockResolvedValue({ background_animation: true, seen_level: -2.5 });
+    await store.reload();
+    expect(store.prefs.seen_level).toBe(0);
   });
 
   it("applies an update at once and keeps the backend's answer", async () => {

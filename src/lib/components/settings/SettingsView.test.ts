@@ -3,16 +3,16 @@ import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import SettingsView from "./SettingsView.svelte";
 import { PrefsStore } from "$lib/stores/prefs.svelte";
-import type { Prefs, PrefsPatch } from "$lib/types/prefs";
+import { DEFAULT_PREFS, type Prefs, type PrefsPatch } from "$lib/types/prefs";
 
 function storeWith(
   update: (patch: PrefsPatch) => Promise<Prefs> = vi.fn(async (patch: PrefsPatch) => ({
-    background_animation: true,
+    ...DEFAULT_PREFS,
     ...patch,
   })),
 ) {
   const store = new PrefsStore({
-    load: vi.fn(async () => ({ background_animation: true })),
+    load: vi.fn(async () => ({ ...DEFAULT_PREFS })),
     update,
   });
   store.ready = true;

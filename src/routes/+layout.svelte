@@ -8,14 +8,16 @@
   import AppBackground from "$lib/components/ui/AppBackground.svelte";
   import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
   import ProfileMenu from "$lib/components/ui/ProfileMenu.svelte";
+  import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
   import StartupProblem from "$lib/components/ui/StartupProblem.svelte";
   import { startupStatus } from "$lib/api/startup";
   import type { StartupProblem as Problem } from "$lib/types/startup";
   import { page } from "$app/state";
-  import type { Snippet } from "svelte";
+  import { untrack, type Snippet } from "svelte";
   import { forwardConsole, reportCspViolations } from "$lib/logging/console";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
+  import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
   import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
   import { afterNavigate } from "$app/navigation";
@@ -34,12 +36,21 @@
       .catch(() => (problem = null));
   });
 
-  // The saved library and preferences are loaded once for the whole app.
+  // The saved library and preferences are loaded once for the whole app; the level needs both.
   $effect(() => {
     if (problem !== null) return;
-    libraryStore.hydrate();
-    prefsStore.hydrate();
+    untrack(() => {
+      void Promise.all([libraryStore.hydrate(), prefsStore.hydrate()]).then(() =>
+        gamificationStore.load(),
+      );
+    });
   });
+
+  const progress = $derived(
+    gamificationStore.ready
+      ? { level: gamificationStore.level, title: gamificationStore.title.name }
+      : undefined,
+  );
 
   // The backend knows when a cached answer hid a failed request; the pill follows it.
   $effect(() => {
@@ -65,11 +76,12 @@
 {:else}
   <div class="app-content">
     <header class="app-bar">
-      <ProfileMenu current={page.url.pathname} />
+      <ProfileMenu current={page.url.pathname} {progress} />
     </header>
     {@render children()}
   </div>
   <OfflineBanner />
+  <LevelUpToast moment={gamificationStore.moment} onclose={() => gamificationStore.dismiss()} />
 {/if}
 
 <style lang="scss">

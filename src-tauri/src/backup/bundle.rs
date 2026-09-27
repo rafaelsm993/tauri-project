@@ -320,6 +320,7 @@ pub(crate) mod tests {
             events: vec![event("a"), event("b")],
             prefs: Prefs {
                 background_animation: false,
+                seen_level: 3,
             },
             posters: vec![("tmdb_movie_1.png".into(), PNG.to_vec())],
         }

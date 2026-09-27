@@ -4,7 +4,19 @@
   import { XP_COLOR } from "./chartTheme";
   import type { LevelInfo, Title } from "$lib/domain/gamification";
 
-  let { level, title, xp }: { level: LevelInfo; title: Title; xp: number } = $props();
+  let {
+    level,
+    title,
+    xp,
+    burst = false,
+    onburstend,
+  }: {
+    level: LevelInfo;
+    title: Title;
+    xp: number;
+    burst?: boolean;
+    onburstend?: () => void;
+  } = $props();
 
   const series = $derived([
     { key: "xp", color: XP_COLOR, data: [{ key: "xp", value: level.into }] },
@@ -18,6 +30,8 @@
       class="ring"
       role="img"
       aria-label="Level {level.level}, {level.into} of {level.needed} XP"
+      data-burst={burst || undefined}
+      onanimationend={onburstend}
     >
       <ArcChart
         label="key"
@@ -72,6 +86,25 @@
   .ring {
     width: clamp(9rem, 40vw, 11rem);
     aspect-ratio: 1;
+    border-radius: $radius-full;
+
+    &[data-burst] {
+      animation: ring-burst 900ms ease-out;
+    }
+  }
+
+  @keyframes ring-burst {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgb(var(--clr-highlight-rgb) / 0.6);
+    }
+    35% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 28px rgb(var(--clr-highlight-rgb) / 0);
+    }
   }
 
   .ring :global(.ring-number) {

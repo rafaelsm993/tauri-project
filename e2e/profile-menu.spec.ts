@@ -61,6 +61,19 @@ for (const path of ["/library", "/settings", "/profile"]) {
   });
 }
 
+for (const path of ["/", "/library", "/media/movie/1"]) {
+  test(`the menu shows the level and progress on ${path}`, async ({ page }) => {
+    await page.goto(path);
+    await page.getByRole("button", { name: "Profile menu" }).click();
+    const row = page.getByRole("link", { name: "Level 1 · Newcomer" });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuetext",
+      "120 of 141 XP to level 2",
+    );
+  });
+}
+
 test("Escape closes the menu", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Profile menu" }).click();

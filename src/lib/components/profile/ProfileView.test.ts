@@ -94,6 +94,14 @@ function storeWith(events: LibraryEvent[] | Error, entries: LibraryEntry[] = LIB
 
 const LOG = [ev("1", "2026-09-19"), ev("2", "2026-09-20")];
 
+// A store that just crossed a level live, so its ring owes a burst.
+async function burstingStore() {
+  const store = storeWith(LOG);
+  await store.load();
+  store.burst = true;
+  return store;
+}
+
 describe("ProfileView", () => {
   it("shows the level, title and XP in the level card", async () => {
     render(ProfileView, { store: storeWith(LOG) });
@@ -173,6 +181,24 @@ describe("ProfileView", () => {
     const library = screen.getByRole("region", { name: "Library" });
     expect(within(library).getByText(/Your library is empty/)).toBeInTheDocument();
     expect(within(library).queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("bursts the ring once after a level-up, then settles", async () => {
+    const store = await burstingStore();
+    render(ProfileView, { store, motion: true });
+    const ring = await screen.findByRole("img", { name: /^Level 1,/ });
+    expect(ring).toHaveAttribute("data-burst");
+    await fireEvent.animationEnd(ring);
+    expect(store.burst).toBe(false);
+    expect(ring).not.toHaveAttribute("data-burst");
+  });
+
+  it("skips the burst when motion is off", async () => {
+    const store = await burstingStore();
+    render(ProfileView, { store, motion: false });
+    const ring = await screen.findByRole("img", { name: /^Level 1,/ });
+    expect(ring).not.toHaveAttribute("data-burst");
+    expect(store.burst).toBe(false);
   });
 
   it("moves to a new day when the window comes back", async () => {

@@ -2,11 +2,13 @@ import { library as defaultLibrary } from "$lib/api/library";
 import {
   activeDays,
   awards,
+  celebration,
   levelOf,
   savedLengths,
   streaks,
   titleFor,
   totalXp,
+  type Moment,
 } from "$lib/domain/gamification";
 import {
   activityByDay,
@@ -19,10 +21,28 @@ import {
   xpByWeek,
 } from "$lib/domain/dashboard";
 import { libraryStore } from "$lib/stores/library.svelte";
+import { prefsStore } from "$lib/stores/prefs.svelte";
 import { errorMessage } from "$lib/utils/errors";
 import type { LibraryEntry, LibraryEvent } from "$lib/types/library";
 
-export type EventsClient = { events: () => Promise<LibraryEvent[]> };
+export type EventsClient = {
+  events: () => Promise<LibraryEvent[]>;
+  onEvent?: (fn: (event: LibraryEvent) => void) => () => void;
+};
+
+// The last level congratulated; `null` until it is known.
+export type SeenLevel = { get: () => number | null; set: (level: number) => Promise<void> };
+
+const seenInPrefs: SeenLevel = {
+  get: () => (prefsStore.ready ? prefsStore.prefs.seen_level : null),
+  set: (level) => prefsStore.update({ seen_level: level }),
+};
+
+// The loaded log first, then saves heard meanwhile that it does not have yet.
+function mergeById(log: LibraryEvent[], extra: LibraryEvent[]): LibraryEvent[] {
+  const ids = new Set(log.map((e) => e.id));
+  return [...log, ...extra.filter((e) => !ids.has(e.id))];
+}
 
 const localToday = (): string => new Date().toLocaleDateString("en-CA");
 
@@ -34,8 +54,14 @@ export class GamificationStore {
   private client: EventsClient;
   private entriesOf: () => LibraryEntry[];
   private todayOf: () => string;
+  private seen: SeenLevel;
+  // One queue per load in flight; only the newest load's answer is kept.
+  private queues: LibraryEvent[][] = [];
+  private loads = 0;
 
   events = $state<LibraryEvent[]>([]);
+  moment = $state<Moment | null>(null);
+  burst = $state(false);
   today = $state("");
   ready = $state(false);
   error = $state("");
@@ -61,11 +87,42 @@ export class GamificationStore {
     client: EventsClient = defaultLibrary,
     entries: () => LibraryEntry[] = () => libraryStore.entries,
     today: () => string = localToday,
+    seen: SeenLevel = seenInPrefs,
   ) {
     this.client = client;
     this.entriesOf = entries;
     this.todayOf = today;
+    this.seen = seen;
     this.today = today();
+    client.onEvent?.((e) => this.record(e));
+  }
+
+  // A save elsewhere in the app; while the log loads it waits to be merged.
+  record(event: LibraryEvent): void {
+    for (const queue of this.queues) queue.push(event);
+    if (this.events.some((e) => e.id === event.id)) return;
+    this.events = [...this.events, event];
+    this.check();
+  }
+
+  dismiss(): void {
+    this.moment = null;
+  }
+
+  burstDone(): void {
+    this.burst = false;
+  }
+
+  // Compares the level with the last one congratulated; `quiet` adopts it (imports, first run).
+  check(quiet = false): void {
+    const seen = this.seen.get();
+    if (!this.ready || seen === null) return;
+    const level = this.level.level;
+    const next = quiet ? { show: null, seen: level } : celebration(seen, level);
+    if (next.seen !== seen) void this.seen.set(next.seen);
+    if (!next.show) return;
+    this.moment = next.show;
+    this.burst = true;
   }
 
   // "Today" moves at midnight even with the app left open; the log itself is unchanged.
@@ -75,15 +132,24 @@ export class GamificationStore {
   }
 
   // Read on every visit: cheap, and an import or a save elsewhere is always reflected.
-  async load(): Promise<void> {
+  async load({ quiet = false }: { quiet?: boolean } = {}): Promise<void> {
     this.error = "";
     this.today = this.todayOf();
+    const id = ++this.loads;
+    const heard: LibraryEvent[] = [];
+    this.queues.push(heard);
     try {
-      this.events = asLog(await this.client.events());
+      const log = asLog(await this.client.events());
+      if (id !== this.loads) return;
+      this.events = mergeById(log, heard);
       this.ready = true;
     } catch (e) {
+      if (id !== this.loads) return;
       this.error = errorMessage(e, "Failed to read your activity.");
+    } finally {
+      this.queues = this.queues.filter((q) => q !== heard);
     }
+    this.check(quiet);
   }
 }
 

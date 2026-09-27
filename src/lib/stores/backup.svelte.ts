@@ -21,8 +21,8 @@ type Reload = (mode: ImportMode) => Promise<void>;
 
 async function reloadStores(mode: ImportMode): Promise<void> {
   await libraryStore.reload();
-  await gamificationStore.load();
   if (mode === "replace") await prefsStore.reload();
+  await gamificationStore.load({ quiet: true });
 }
 
 // Export, and import in two steps: pick a file, then merge or replace.

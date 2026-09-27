@@ -201,6 +201,16 @@ export function titleFor(level: number): Title {
   return { name: current.name, next: next ? { name: next.name, level: next.level } : null };
 }
 
+export type Moment = { level: number; newTitle: string | null };
+
+// What to congratulate, given the last level seen (0 = never) and the level now.
+export function celebration(seen: number, level: number): { show: Moment | null; seen: number } {
+  if (seen === 0 || level <= seen) return { show: null, seen: level };
+  const title = titleFor(level).name;
+  const newTitle = title === titleFor(seen).name ? null : title;
+  return { show: { level, newTitle }, seen: level };
+}
+
 // Sorted, distinct `YYYY-MM-DD` days with activity.
 export function activeDays(events: LibraryEvent[]): string[] {
   return [...new Set(events.filter(counts).map((e) => e.local_date))].sort();

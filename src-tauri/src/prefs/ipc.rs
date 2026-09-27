@@ -85,6 +85,7 @@ mod tests {
             &first,
             PrefsPatch {
                 background_animation: Some(false),
+                ..PrefsPatch::default()
             },
         )
         .await
@@ -105,6 +106,7 @@ mod tests {
             &state,
             PrefsPatch {
                 background_animation: Some(false),
+                ..PrefsPatch::default()
             },
         )
         .await;

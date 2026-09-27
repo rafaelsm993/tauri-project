@@ -10,6 +10,10 @@ function normalize(raw: unknown): Prefs {
       typeof r.background_animation === "boolean"
         ? r.background_animation
         : DEFAULT_PREFS.background_animation,
+    seen_level:
+      Number.isInteger(r.seen_level) && (r.seen_level as number) >= 0
+        ? (r.seen_level as number)
+        : DEFAULT_PREFS.seen_level,
   };
 }
 

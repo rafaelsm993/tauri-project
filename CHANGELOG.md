@@ -13,6 +13,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Backup: export the library, activity, posters and settings to one zip from Settings, and import it back by merging or replacing (a safety copy is saved before a replace). API keys are never exported.
 - Profile: level, title, XP and streak, derived from the activity log (titles by level; values are placeholders until a playtest).
 - Profile dashboard: level ring, stat tiles, XP progression by family (30 days / 90 days / all), activity heatmap, library donut, taste radar and a forecast (backlog hours, next-level ETA, projected XP), built on LayerChart with the app's color tokens; every chart has a text summary and a table for screen readers.
+- Level-up moment: crossing a level shows a toast anywhere in the app ("Level 3 · New title: Curious Mind", hides after 6 s) and a one-off burst on the profile ring (skipped when motion is off); each level is celebrated once (`seen_level` in the settings file), and existing progress or an import is adopted silently.
+- The profile menu shows your level, title and a progress bar to the next level on every page.
 - A readable screen when saved data cannot be opened (a file from a newer version, or an unreadable one) instead of the app not starting; the file is left untouched.
 - Six media categories: movies/TV (TMDB), anime/manga (AniList GraphQL), games (RAWG), and books (iTunes)
 - Shared `MediaItem`/`MediaDetail` mappings across providers

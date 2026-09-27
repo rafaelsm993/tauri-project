@@ -25,6 +25,49 @@ function storeWith(
   return { store, load };
 }
 
+// A client whose saves can be replayed into the store, and a saved level held in memory.
+function live(log: LibraryEvent[], seenAt: number | null = 1) {
+  let listener: ((e: LibraryEvent) => void) | null = null;
+  let release: (() => void) | null = null;
+  const gate = { hold: false };
+  const client = {
+    events: vi.fn(async () => {
+      if (gate.hold) await new Promise<void>((r) => (release = r));
+      return log;
+    }),
+    onEvent: (fn: (e: LibraryEvent) => void) => {
+      listener = fn;
+      return () => (listener = null);
+    },
+  };
+  const seen = {
+    value: seenAt,
+    get: () => seen.value,
+    set: vi.fn(async (level: number) => {
+      seen.value = level;
+    }),
+  };
+  const store = new GamificationStore(
+    client,
+    () => [],
+    () => "2026-09-20",
+    seen,
+  );
+  return {
+    store,
+    seen,
+    gate,
+    emit: (e: LibraryEvent) => listener?.(e),
+    release: () => release?.(),
+  };
+}
+
+// Two completions and a rating: 120 XP, 21 short of level 2.
+const NEAR_LEVEL_2 = [
+  ev("1", { status: "completed" }, "2026-09-19"),
+  ev("2", { status: "completed", rating: 8 }, "2026-09-20"),
+];
+
 function movie(id: string, runtime_minutes: number): LibraryEntry {
   const key = `tmdb:movie:${id}`;
   return {
@@ -134,10 +177,100 @@ describe("GamificationStore", () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
+  it("moves the level the moment an event is saved", async () => {
+    const { store, emit } = live(NEAR_LEVEL_2);
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    expect(store.xp).toBe(175);
+    expect(store.level.level).toBe(2);
+  });
+
+  it("counts an event it hears twice only once", async () => {
+    const { store, emit } = live(NEAR_LEVEL_2);
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    emit(ev("3", { status: "completed" }));
+    expect(store.events).toHaveLength(3);
+  });
+
+  it("keeps an event saved while the log is still loading", async () => {
+    const { store, emit, gate, release } = live(NEAR_LEVEL_2);
+    gate.hold = true;
+    const loading = store.load();
+    await Promise.resolve();
+    emit(ev("3", { status: "completed" }));
+    release();
+    await loading;
+    expect(store.events.map((e) => e.id)).toEqual(["1", "2", "3"]);
+  });
+
+  it("keeps a live event when two loads overlap", async () => {
+    const { store, emit, gate, release } = live(NEAR_LEVEL_2);
+    gate.hold = true;
+    const first = store.load();
+    await Promise.resolve();
+    gate.hold = false;
+    const second = store.load();
+    emit(ev("3", { status: "completed" }));
+    await second;
+    release();
+    await first;
+    expect(store.events.map((e) => e.id)).toEqual(["1", "2", "3"]);
+    expect(store.error).toBe("");
+  });
+
   it("knows when the log has history but the library is empty", async () => {
     const { store } = storeWith([ev("1", null)]);
     await store.load();
     expect(store.isEmpty).toBe(false);
     expect(store.libraryEmpty).toBe(true);
+  });
+});
+
+describe("level-up moment", () => {
+  it("celebrates a level crossed live, once, and remembers it", async () => {
+    const { store, seen, emit } = live(NEAR_LEVEL_2);
+    await store.load();
+    expect(store.moment).toBeNull();
+    emit(ev("3", { status: "completed" }));
+    expect(store.moment).toEqual({ level: 2, newTitle: null });
+    expect(store.burst).toBe(true);
+    expect(seen.set).toHaveBeenCalledExactlyOnceWith(2);
+    emit(ev("4", null));
+    expect(seen.set).toHaveBeenCalledTimes(1);
+  });
+
+  it("adopts the level silently on the first run", async () => {
+    const { store, seen } = live(NEAR_LEVEL_2, 0);
+    await store.load();
+    expect(store.moment).toBeNull();
+    expect(seen.set).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("waits for the saved level before deciding anything", async () => {
+    const { store, seen, emit } = live(NEAR_LEVEL_2, null);
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    expect(store.moment).toBeNull();
+    expect(seen.set).not.toHaveBeenCalled();
+  });
+
+  it("adopts an imported level without a moment", async () => {
+    const { store, seen } = live([...NEAR_LEVEL_2, ev("3", { status: "completed" })]);
+    await store.load({ quiet: true });
+    expect(store.moment).toBeNull();
+    expect(store.burst).toBe(false);
+    expect(seen.set).toHaveBeenCalledExactlyOnceWith(2);
+  });
+
+  it("clears the toast and the burst separately", async () => {
+    const { store, emit } = live(NEAR_LEVEL_2);
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    store.dismiss();
+    expect(store.moment).toBeNull();
+    expect(store.burst).toBe(true);
+    store.burstDone();
+    expect(store.burst).toBe(false);
   });
 });

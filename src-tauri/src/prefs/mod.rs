@@ -14,6 +14,8 @@ pub struct Prefs {
     pub background_animation: bool,
     // The last level the user was congratulated on; 0 until the first check adopts the current one.
     pub seen_level: u32,
+    // Asked the first time a book is planned; None until then.
+    pub reading_pages_per_hour: Option<u32>,
 }
 
 impl Default for Prefs {
@@ -21,16 +23,28 @@ impl Default for Prefs {
         Self {
             background_animation: true,
             seen_level: 0,
+            reading_pages_per_hour: None,
         }
     }
 }
 
-// Fields a caller may change; absent = leave alone.
+// Fields a caller may change; absent = leave alone, `null` = clear.
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PrefsPatch {
     pub background_animation: Option<bool>,
     pub seen_level: Option<u32>,
+    #[serde(default, deserialize_with = "crate::store::present")]
+    pub reading_pages_per_hour: Option<Option<u32>>,
+}
+
+pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
+    match patch.reading_pages_per_hour {
+        Some(Some(n)) if !(5..=300).contains(&n) => {
+            Err(format!("{n} pages an hour is outside 5–300"))
+        }
+        _ => Ok(()),
+    }
 }
 
 pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
@@ -39,6 +53,9 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(level) = patch.seen_level {
         prefs.seen_level = level;
+    }
+    if let Some(pace) = patch.reading_pages_per_hour {
+        prefs.reading_pages_per_hour = pace;
     }
 }
 
@@ -93,6 +110,40 @@ mod tests {
         apply_patch(&mut p, patch);
         assert_eq!(p.seen_level, 4);
         assert!(p.background_animation);
+    }
+
+    #[test]
+    fn an_older_prefs_file_has_no_reading_pace() {
+        let p: Prefs = serde_json::from_value(json!({ "seen_level": 2 })).unwrap();
+        assert_eq!(p.reading_pages_per_hour, None);
+    }
+
+    #[test]
+    fn a_patch_sets_and_clears_the_reading_pace() {
+        let mut p = Prefs::default();
+        let set: PrefsPatch =
+            serde_json::from_value(json!({ "reading_pages_per_hour": 45 })).unwrap();
+        apply_patch(&mut p, set);
+        assert_eq!(p.reading_pages_per_hour, Some(45));
+        apply_patch(&mut p, PrefsPatch::default());
+        assert_eq!(p.reading_pages_per_hour, Some(45));
+        let clear: PrefsPatch =
+            serde_json::from_value(json!({ "reading_pages_per_hour": null })).unwrap();
+        apply_patch(&mut p, clear);
+        assert_eq!(p.reading_pages_per_hour, None);
+    }
+
+    #[test]
+    fn a_reading_pace_outside_5_to_300_is_rejected() {
+        let pace = |n| PrefsPatch {
+            reading_pages_per_hour: Some(Some(n)),
+            ..PrefsPatch::default()
+        };
+        assert!(validate_patch(&pace(4)).is_err());
+        assert!(validate_patch(&pace(301)).is_err());
+        assert!(validate_patch(&pace(5)).is_ok());
+        assert!(validate_patch(&pace(300)).is_ok());
+        assert!(validate_patch(&PrefsPatch::default()).is_ok());
     }
 
     const CONTRACT: &str = concat!(

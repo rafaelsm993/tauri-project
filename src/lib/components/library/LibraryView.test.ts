@@ -21,7 +21,7 @@ function entry(id: number, type: MediaType, status: LibraryStatus): LibraryEntry
       year: null,
       poster_file: null,
     },
-    user: { status, progress: 0, rating: null, review: null, length: emptyLength() },
+    user: { status, progress: 0, rating: null, review: null, length: emptyLength(), plan: null },
     created_at: "t",
     updated_at: `2026-09-2${id}T00:00:00Z`,
   };
@@ -32,6 +32,7 @@ async function storeWith(list: LibraryEntry[]) {
     load: vi.fn(async () => list),
     add: vi.fn(),
     update: vi.fn(),
+    plan: vi.fn(),
     remove: vi.fn(),
     posterDir: vi.fn(async () => "/data/posters"),
     retryPosters: vi.fn(async () => {}),
@@ -49,6 +50,16 @@ describe("LibraryView", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Library" })).toBeInTheDocument();
     expect(screen.getByText(/nothing saved yet/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /browse/i })).toHaveAttribute("href", "/");
+  });
+
+  it("opens the plan sheet for a card and closes it on cancel", async () => {
+    const store = await storeWith([entry(1, "tv", "in_progress"), entry(2, "movie", "dropped")]);
+    render(LibraryPage, { store, filters: new LibraryFilters() });
+    expect(screen.queryByRole("button", { name: "Plan T2" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Plan T1" }));
+    const dialog = screen.getByRole("dialog", { name: "Plan T1" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("filters the grid by status and type", async () => {

@@ -18,7 +18,7 @@ describe("ProfileMenu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("lists Home, Profile, Library and Settings in that order", () => {
+  it("lists Home, Profile, Library, Planner and Settings in that order", () => {
     const { panel } = setup();
     const nav = within(panel).getByRole("navigation", { name: "Profile", hidden: true });
     const links = within(nav).getAllByRole("link", { hidden: true });
@@ -26,6 +26,7 @@ describe("ProfileMenu", () => {
       ["Home", "/"],
       ["Profile", "/profile"],
       ["Library", "/library"],
+      ["Planner", "/planner"],
       ["Settings", "/settings"],
     ]);
   });

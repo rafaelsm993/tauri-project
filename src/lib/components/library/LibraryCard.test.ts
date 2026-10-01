@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { clearMocks, mockConvertFileSrc } from "@tauri-apps/api/mocks";
 import LibraryCard from "./LibraryCard.svelte";
@@ -23,6 +23,7 @@ function entry(over: Partial<LibraryEntry["user"]> = {}): LibraryEntry {
       rating: null,
       review: null,
       length: emptyLength(),
+      plan: null,
       ...over,
     },
     created_at: "t",
@@ -34,6 +35,34 @@ describe("LibraryCard", () => {
   it("is a link to the detail page named after the title", () => {
     render(LibraryCard, { entry: entry() });
     expect(screen.getByRole("link", { name: /arcane/i })).toHaveAttribute("href", "/media/tv/7");
+  });
+
+  it("offers a Plan button beside the link that calls onplan", async () => {
+    const onplan = vi.fn();
+    render(LibraryCard, { entry: entry(), onplan });
+    const button = screen.getByRole("button", { name: "Plan Arcane" });
+    expect(screen.getByRole("link", { name: /arcane/i })).not.toContainElement(button);
+    await fireEvent.click(button);
+    expect(onplan).toHaveBeenCalled();
+  });
+
+  it("says Edit plan once the item has one", () => {
+    const plan = { days: [0], max_session_minutes: 60, since: "2026-10-01" };
+    render(LibraryCard, { entry: entry({ plan }), onplan: vi.fn() });
+    expect(screen.getByRole("button", { name: "Edit plan for Arcane" })).toHaveTextContent(
+      "Edit plan",
+    );
+  });
+
+  it("has no Plan button for a dropped item or without onplan", () => {
+    const { unmount } = render(LibraryCard, {
+      entry: entry({ status: "dropped" }),
+      onplan: vi.fn(),
+    });
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    unmount();
+    render(LibraryCard, { entry: entry() });
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("shows status and progress without a bar when the total is unknown", () => {

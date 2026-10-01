@@ -8,7 +8,12 @@
   import { MEDIA_LABELS } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
 
-  let { entry, posterDir = null }: { entry: LibraryEntry; posterDir?: string | null } = $props();
+  // `onplan` adds a Plan button below the card; absent, the card is only a link.
+  let {
+    entry,
+    posterDir = null,
+    onplan,
+  }: { entry: LibraryEntry; posterDir?: string | null; onplan?: () => void } = $props();
 
   let failed = $state(0);
 
@@ -24,38 +29,88 @@
   );
 </script>
 
-<a class="lib-card" {href}>
-  <div class="lib-card__poster">
-    {#if src}
-      <img {src} alt="" loading="lazy" class="lib-card__img" onerror={() => failed++} />
-    {:else}
-      <div class="lib-card__no-poster" aria-hidden="true">No poster</div>
-    {/if}
-    <span class="lib-card__type">{MEDIA_LABELS[type]}</span>
-  </div>
+<div class="lib-card-wrap">
+  <a class="lib-card" {href}>
+    <div class="lib-card__poster">
+      {#if src}
+        <img {src} alt="" loading="lazy" class="lib-card__img" onerror={() => failed++} />
+      {:else}
+        <div class="lib-card__no-poster" aria-hidden="true">No poster</div>
+      {/if}
+      <span class="lib-card__type">{MEDIA_LABELS[type]}</span>
+    </div>
 
-  <div class="lib-card__body">
-    <span class="lib-card__title">{entry.snapshot.title}</span>
-    <span class="lib-card__status">{STATUS_LABELS[entry.user.status]}</span>
-    {#if !isBinary(type)}
-      <span class="lib-card__progress">{label}</span>
-    {/if}
-    {#if pct !== null}
-      <div
-        class="lib-card__bar"
-        role="progressbar"
-        aria-label="Progress"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow={pct}
-      >
-        <div class="lib-card__fill" style:width="{pct}%"></div>
-      </div>
-    {/if}
-  </div>
-</a>
+    <div class="lib-card__body">
+      <span class="lib-card__title">{entry.snapshot.title}</span>
+      <span class="lib-card__status">{STATUS_LABELS[entry.user.status]}</span>
+      {#if !isBinary(type)}
+        <span class="lib-card__progress">{label}</span>
+      {/if}
+      {#if pct !== null}
+        <div
+          class="lib-card__bar"
+          role="progressbar"
+          aria-label="Progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow={pct}
+        >
+          <div class="lib-card__fill" style:width="{pct}%"></div>
+        </div>
+      {/if}
+    </div>
+  </a>
+  {#if onplan && entry.user.status !== "dropped"}
+    <button
+      type="button"
+      class="lib-card__plan"
+      aria-label={entry.user.plan
+        ? `Edit plan for ${entry.snapshot.title}`
+        : `Plan ${entry.snapshot.title}`}
+      onclick={onplan}
+    >
+      {entry.user.plan ? "Edit plan" : "Plan"}
+    </button>
+  {/if}
+</div>
 
 <style lang="scss">
+  .lib-card-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
+  .lib-card__plan {
+    align-self: flex-start;
+    background: none;
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
+    color: var(--clr-text-2);
+    padding: 2px $spacing-sm;
+    border-radius: $radius-full;
+    font-size: 0.72rem;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 2px;
+    }
+
+    @include hover-capable {
+      &:hover {
+        border-color: var(--clr-accent);
+        color: var(--clr-text);
+      }
+    }
+
+    @include touch {
+      min-height: $touch-target;
+      min-width: $touch-target;
+      padding-inline: $spacing-md;
+    }
+  }
+
   .lib-card {
     display: flex;
     flex-direction: column;

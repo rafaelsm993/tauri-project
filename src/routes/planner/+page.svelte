@@ -1,5 +1,8 @@
 <script lang="ts">
-  import RoutePlaceholder from "$lib/components/ui/RoutePlaceholder.svelte";
+  import PlannerView from "$lib/components/planner/PlannerView.svelte";
+  import { localDay } from "$lib/domain/calendar";
 </script>
 
-<RoutePlaceholder title="Planner" />
+<svelte:head><title>Planner · Aevum</title></svelte:head>
+
+<PlannerView today={localDay()} />

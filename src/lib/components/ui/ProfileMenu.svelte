@@ -15,6 +15,7 @@
     { href: resolve("/"), label: "Home" },
     { href: resolve("/profile"), label: "Profile" },
     { href: resolve("/library"), label: "Library" },
+    { href: resolve("/planner"), label: "Planner" },
     { href: resolve("/settings"), label: "Settings" },
   ];
 

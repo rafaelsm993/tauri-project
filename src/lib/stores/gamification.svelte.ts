@@ -1,4 +1,5 @@
 import { library as defaultLibrary } from "$lib/api/library";
+import { localDay } from "$lib/domain/calendar";
 import {
   activeDays,
   awards,
@@ -44,8 +45,6 @@ function mergeById(log: LibraryEvent[], extra: LibraryEvent[]): LibraryEvent[] {
   return [...log, ...extra.filter((e) => !ids.has(e.id))];
 }
 
-const localToday = (): string => new Date().toLocaleDateString("en-CA");
-
 // e2e fakes answer unknown commands with junk; only a list is a log.
 const asLog = (raw: unknown): LibraryEvent[] => (Array.isArray(raw) ? raw : []);
 
@@ -88,7 +87,7 @@ export class GamificationStore {
   constructor(
     client: EventsClient = defaultLibrary,
     entries: () => LibraryEntry[] = () => libraryStore.entries,
-    today: () => string = localToday,
+    today: () => string = localDay,
     seen: SeenLevel = seenInPrefs,
   ) {
     this.client = client;

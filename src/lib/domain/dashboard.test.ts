@@ -45,7 +45,7 @@ function entry(
       poster_file: null,
       year: null,
     },
-    user: { status, progress, rating: null, review: null, length: len(length) },
+    user: { status, progress, rating: null, review: null, length: len(length), plan: null },
     created_at: "",
     updated_at: "",
   };

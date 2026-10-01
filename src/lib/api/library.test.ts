@@ -62,6 +62,20 @@ describe("library client", () => {
     expect(calls[0].args.patch).toEqual({ progress: 5 });
   });
 
+  it("plan sends the plan as a library_update patch with a library_plan event", async () => {
+    const calls = record({});
+    const plan = { days: [0, 2, 4], max_session_minutes: 60, since: "2026-10-01" };
+    await library.plan("tmdb:tv:7", plan);
+    await library.plan("tmdb:tv:7", null);
+    expect(calls.map((c) => c.cmd)).toEqual(["library_update", "library_update"]);
+    expect(calls[0].args.patch).toEqual({ plan });
+    expect(calls[1].args.patch).toEqual({ plan: null });
+    const event = calls[0].args.event as { kind: string; payload: unknown };
+    expect(event.kind).toBe("library_plan");
+    expect(event.payload).toEqual(plan);
+    expect((calls[1].args.event as { payload: unknown }).payload).toBeNull();
+  });
+
   it("remove sends the key and an event", async () => {
     const calls = record(true);
     await expect(library.remove("tmdb:tv:7")).resolves.toBe(true);
@@ -108,6 +122,7 @@ describe("live events", () => {
     const stop = library.onEvent((e) => seen.push(e));
     await library.add(ITEM);
     await library.update("tmdb:tv:7", { status: "completed" });
+    await library.plan("tmdb:tv:7", null);
     await library.remove("tmdb:tv:7");
     stop();
     expect(seen).toEqual(calls.map((c) => c.args.event));

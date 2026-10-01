@@ -253,6 +253,17 @@ describe("celebration", () => {
 describe("streaks", () => {
   const days = (...d: string[]) => activeDays(d.map((date) => add(`x:${date}`, null, date)));
 
+  it("a plan change earns no XP and is not an active day", () => {
+    const plan = { days: [0, 2], max_session_minutes: 60, since: "2026-09-02" };
+    const events = [
+      add(MOVIE, null, "2026-09-01"),
+      ev("library_plan", MOVIE, plan, "2026-09-02"),
+      ev("library_plan", MOVIE, null, "2026-09-03"),
+    ];
+    expect(xpOf(events)).toBe(xpOf([events[0]]));
+    expect(activeDays(events)).toEqual(["2026-09-01"]);
+  });
+
   it("counts add and update days once each, not removes", () => {
     const events = [
       add(MOVIE, null, "2026-09-01"),

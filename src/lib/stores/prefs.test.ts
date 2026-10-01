@@ -49,15 +49,29 @@ describe("PrefsStore", () => {
       fakeClient({ load: vi.fn(async () => ({ page: 1, background_animation: "no" }) as never) }),
     );
     await store.hydrate();
-    expect(store.prefs).toEqual({ background_animation: true, seen_level: 0 });
+    expect(store.prefs).toEqual({
+      background_animation: true,
+      seen_level: 0,
+      reading_pages_per_hour: null,
+    });
+  });
+
+  it("keeps a saved reading pace and drops one that is not a whole number", async () => {
+    const load = vi.fn(async () => ({ reading_pages_per_hour: 45 }) as never);
+    const store = new PrefsStore(fakeClient({ load }));
+    await store.hydrate();
+    expect(store.prefs.reading_pages_per_hour).toBe(45);
+    load.mockResolvedValue({ reading_pages_per_hour: "fast" } as never);
+    await store.reload();
+    expect(store.prefs.reading_pages_per_hour).toBeNull();
   });
 
   it("keeps a saved level and drops one that is not a whole number", async () => {
-    const load = vi.fn(async () => ({ background_animation: true, seen_level: 4 }));
+    const load = vi.fn(async () => ({ ...DEFAULT_PREFS, seen_level: 4 }));
     const store = new PrefsStore(fakeClient({ load }));
     await store.hydrate();
     expect(store.prefs.seen_level).toBe(4);
-    load.mockResolvedValue({ background_animation: true, seen_level: -2.5 });
+    load.mockResolvedValue({ ...DEFAULT_PREFS, seen_level: -2.5 });
     await store.reload();
     expect(store.prefs.seen_level).toBe(0);
   });

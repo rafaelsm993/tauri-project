@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { LibraryEntry, LibraryEvent, UserData } from "$lib/types/library";
+import type { LibraryEntry, LibraryEvent, Plan, UserData } from "$lib/types/library";
 
 import type { MediaItem, MediaKey } from "$lib/types/media";
 
@@ -68,6 +68,20 @@ function update(key: MediaKey, patch: UserPatch): Promise<LibraryEntry> {
   );
 }
 
+// Sets or clears (null) an item's plan; logged as `library_plan`, which earns no XP.
+function plan(key: MediaKey, value: Plan | null): Promise<LibraryEntry> {
+  const event = stamp("library_plan", key, value);
+  return saved(
+    event,
+    invoke<LibraryEntry>("library_update", {
+      key,
+      patch: { plan: value },
+      at: event.at_utc,
+      event,
+    }),
+  );
+}
+
 function remove(key: MediaKey): Promise<boolean> {
   const event = stamp("library_remove", key);
   return saved(event, invoke<boolean>("library_remove", { key, event }), (gone) => gone === true);
@@ -86,5 +100,15 @@ function events(): Promise<LibraryEvent[]> {
   return invoke<LibraryEvent[]>("library_events");
 }
 
-export const library = { load, add, update, remove, posterDir, retryPosters, events, onEvent };
+export const library = {
+  load,
+  add,
+  update,
+  plan,
+  remove,
+  posterDir,
+  retryPosters,
+  events,
+  onEvent,
+};
 export type Library = typeof library;

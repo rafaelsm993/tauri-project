@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LibraryStore, type LibraryClient } from "./library.svelte";
 import { emptyLength } from "$lib/domain/length";
-import type { LibraryEntry, UserData } from "$lib/types/library";
+import type { LibraryEntry, Plan, UserData } from "$lib/types/library";
 import type { MediaItem } from "$lib/types/media";
 
 const ITEM = {
@@ -23,6 +23,7 @@ const USER: UserData = {
   rating: null,
   review: null,
   length: emptyLength(),
+  plan: null,
 };
 
 function entry(over: Partial<LibraryEntry> = {}): LibraryEntry {
@@ -52,6 +53,9 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
       entry({ user: { ...USER, ...patch }, updated_at: "2026-09-25T13:00:00Z" }),
     ),
     remove: vi.fn(async () => true),
+    plan: vi.fn(async (_key: string, plan: Plan | null) =>
+      entry({ user: { ...USER, plan }, updated_at: "2026-09-25T13:00:00Z" }),
+    ),
     posterDir: vi.fn(async () => "/data/posters"),
     retryPosters: vi.fn(async () => {}),
     ...over,
@@ -187,6 +191,35 @@ describe("optimistic update", () => {
     expect(user?.progress).toBe(3);
     expect(user?.status).toBe("in_progress");
     expect(store.error).toContain("outside 1-10");
+  });
+
+  it("sets and clears a plan through the plan call, not a plain update", async () => {
+    const client = fakeClient({ load: vi.fn(async () => [entry()]) });
+    const store = new LibraryStore(client);
+    await store.hydrate();
+    const plan = { days: [0, 2], max_session_minutes: 45, since: "2026-10-01" };
+    await store.plan("tmdb:tv:7", plan);
+    expect(client.plan).toHaveBeenCalledWith("tmdb:tv:7", plan);
+    expect(client.update).not.toHaveBeenCalled();
+    expect(store.get("tmdb:tv:7")?.user.plan).toEqual(plan);
+    await store.plan("tmdb:tv:7", null);
+    expect(store.get("tmdb:tv:7")?.user.plan).toBeNull();
+  });
+
+  it("keeps the old plan and shows why when saving a plan fails", async () => {
+    const old = { days: [1], max_session_minutes: 30, since: "2026-09-30" };
+    const store = new LibraryStore(
+      fakeClient({
+        load: vi.fn(async () => [entry({ user: { ...USER, plan: old } })]),
+        plan: vi.fn(async () => {
+          throw new Error("a plan needs at least one day");
+        }),
+      }),
+    );
+    await store.hydrate();
+    await store.plan("tmdb:tv:7", { days: [], max_session_minutes: 30, since: "2026-10-01" });
+    expect(store.get("tmdb:tv:7")?.user.plan).toEqual(old);
+    expect(store.error).toContain("at least one day");
   });
 
   it("does nothing for a key it does not hold", async () => {

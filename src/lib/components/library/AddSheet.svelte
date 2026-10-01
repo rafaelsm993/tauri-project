@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { LENGTH_LABELS, REQUIRED_LENGTH_FIELDS, type LengthField } from "$lib/domain/length";
+  import LengthFields from "./LengthFields.svelte";
+  import { REQUIRED_LENGTH_FIELDS } from "$lib/domain/length";
   import type { Length } from "$lib/types/library";
   import type { MediaType } from "$lib/types/media";
 
@@ -29,12 +30,6 @@
   let draft = $state<Length>(untrack(() => ({ ...length })));
   let note = $state(untrack(() => review ?? ""));
 
-  function changeField(field: LengthField, event: Event) {
-    const raw = (event.currentTarget as HTMLInputElement).value;
-    const value = Number(raw);
-    draft[field] = raw === "" || !Number.isFinite(value) || value < 0 ? null : Math.floor(value);
-  }
-
   function save() {
     const text = note.trim();
     onsave({ length: { ...draft }, review: text === "" ? null : text });
@@ -50,22 +45,7 @@
   <p class="sheet-hint">Optional — used to plan how long this will take. You can add it later.</p>
 
   <div class="sheet-fields">
-    {#each fields as field (field)}
-      <div class="sheet-field">
-        <label class="field-label" for="{id}-{field}">{LENGTH_LABELS[field]}</label>
-        <input
-          id="{id}-{field}"
-          class="field-input"
-          type="number"
-          min="0"
-          step="1"
-          inputmode="numeric"
-          value={draft[field] ?? ""}
-          disabled={busy}
-          oninput={(event) => changeField(field, event)}
-        />
-      </div>
-    {/each}
+    <LengthFields {fields} bind:length={draft} disabled={busy} />
 
     <div class="sheet-field">
       <label class="field-label" for="{id}-review">Review</label>

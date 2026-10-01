@@ -10,10 +10,18 @@ for (const path of ["/", "/library", "/media/movie/1"]) {
   });
 }
 
-test("the menu lists Home, Profile, Library and Settings and navigates", async ({ page }) => {
+test("the menu lists Home, Profile, Library, Planner and Settings and navigates", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Profile menu" }).click();
-  await expect(menu(page).getByRole("link")).toHaveText(["Home", "Profile", "Library", "Settings"]);
+  await expect(menu(page).getByRole("link")).toHaveText([
+    "Home",
+    "Profile",
+    "Library",
+    "Planner",
+    "Settings",
+  ]);
   await menu(page).getByRole("link", { name: "Settings" }).click();
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
@@ -115,7 +123,7 @@ test("opening the menu moves focus into it, Escape returns it to the button", as
   await page.keyboard.press("Enter");
   await expect(menu(page).getByRole("link", { name: "Library" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(menu(page).getByRole("link", { name: "Settings" })).toBeFocused();
+  await expect(menu(page).getByRole("link", { name: "Planner" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu(page)).toBeHidden();
   await expect(trigger).toBeFocused();

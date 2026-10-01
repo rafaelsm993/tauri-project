@@ -1,6 +1,6 @@
 use super::events::{append_event, read_events};
 use super::posters;
-use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Status, UserData};
+use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Plan, Status, UserData};
 use crate::api::types::{MediaItem, MediaType};
 use crate::store::writer::StoreHandle;
 use crate::store::{current_version, Migration};
@@ -43,14 +43,56 @@ impl LibraryState {
     }
 }
 
-// Fields a caller may patch; absent = leave alone.
+// Fields a caller may patch; absent = leave alone, `null` = clear.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct UserPatch {
     pub status: Option<Status>,
     pub progress: Option<u32>,
+    #[serde(default, deserialize_with = "crate::store::present")]
     pub rating: Option<Option<u8>>,
+    #[serde(default, deserialize_with = "crate::store::present")]
     pub review: Option<Option<String>>,
     pub length: Option<Length>,
+    #[serde(default, deserialize_with = "crate::store::present")]
+    pub plan: Option<Option<Plan>>,
+}
+
+// Days 0–6 once each, 5–720 minutes a session, set on a real `YYYY-MM-DD`.
+pub fn validate_plan(plan: &Plan) -> Result<(), String> {
+    let mut seen = [false; 7];
+    if plan.days.is_empty() {
+        return Err("a plan needs at least one day".into());
+    }
+    for &d in &plan.days {
+        let slot = seen
+            .get_mut(d as usize)
+            .ok_or_else(|| format!("day {d} is not 0–6"))?;
+        if std::mem::replace(slot, true) {
+            return Err(format!("day {d} is listed twice"));
+        }
+    }
+    if !(5..=720).contains(&plan.max_session_minutes) {
+        return Err(format!(
+            "{} minutes a session is outside 5–720",
+            plan.max_session_minutes
+        ));
+    }
+    if !is_local_date(&plan.since) {
+        return Err(format!("{} is not a YYYY-MM-DD date", plan.since));
+    }
+    Ok(())
+}
+
+fn is_local_date(s: &str) -> bool {
+    let b = s.as_bytes();
+    b.len() == 10
+        && b.iter().enumerate().all(|(i, c)| {
+            if i == 4 || i == 7 {
+                *c == b'-'
+            } else {
+                c.is_ascii_digit()
+            }
+        })
 }
 
 // Ratings are 1–10 whole numbers (GOALS-QA J2); None means unrated.
@@ -73,7 +115,8 @@ pub fn validate_progress(media_type: MediaType, progress: u32) -> Result<(), Str
 
 pub fn validate_user_data(media_type: MediaType, user: &UserData) -> Result<(), String> {
     validate_rating(user.rating)?;
-    validate_progress(media_type, user.progress)
+    validate_progress(media_type, user.progress)?;
+    user.plan.as_ref().map_or(Ok(()), validate_plan)
 }
 
 pub fn apply_patch(user: &mut UserData, patch: UserPatch) {
@@ -91,6 +134,9 @@ pub fn apply_patch(user: &mut UserData, patch: UserPatch) {
     }
     if let Some(l) = patch.length {
         user.length = l;
+    }
+    if let Some(p) = patch.plan {
+        user.plan = p;
     }
 }
 
@@ -416,6 +462,108 @@ mod tests {
         assert!(validate_progress(MediaType::Tv, 12).is_ok());
         assert!(validate_progress(MediaType::Book, 350).is_ok());
         assert!(validate_progress(MediaType::Game, 74).is_ok());
+    }
+
+    fn plan(days: &[u8], minutes: u32, since: &str) -> Plan {
+        Plan {
+            days: days.to_vec(),
+            max_session_minutes: minutes,
+            since: since.into(),
+        }
+    }
+
+    #[test]
+    fn a_plan_needs_real_days_a_sane_length_and_a_date() {
+        assert!(validate_plan(&plan(&[0, 2, 4], 60, "2026-10-01")).is_ok());
+        assert!(validate_plan(&plan(&[6], 5, "2026-10-01")).is_ok());
+        assert!(validate_plan(&plan(&[0], 720, "2026-10-01")).is_ok());
+        for bad in [
+            plan(&[], 60, "2026-10-01"),
+            plan(&[7], 60, "2026-10-01"),
+            plan(&[1, 1], 60, "2026-10-01"),
+            plan(&[0], 4, "2026-10-01"),
+            plan(&[0], 721, "2026-10-01"),
+            plan(&[0], 60, "tomorrow"),
+            plan(&[0], 60, "2026-10-01T00:00"),
+        ] {
+            assert!(validate_plan(&bad).is_err(), "{bad:?} should be rejected");
+        }
+    }
+
+    #[test]
+    fn a_patch_sets_and_clears_the_plan() {
+        let mut user = UserData {
+            progress: 4,
+            ..UserData::default()
+        };
+        let p = plan(&[0, 2], 45, "2026-10-01");
+        apply_patch(
+            &mut user,
+            UserPatch {
+                plan: Some(Some(p.clone())),
+                ..UserPatch::default()
+            },
+        );
+        assert_eq!(user.plan, Some(p));
+        assert_eq!(user.progress, 4);
+        apply_patch(&mut user, UserPatch::default());
+        assert!(user.plan.is_some(), "an absent field leaves the plan alone");
+        apply_patch(
+            &mut user,
+            UserPatch {
+                plan: Some(None),
+                ..UserPatch::default()
+            },
+        );
+        assert_eq!(user.plan, None);
+    }
+
+    #[test]
+    fn a_null_plan_in_json_clears_it_and_a_missing_one_is_left_alone() {
+        let clear: UserPatch = serde_json::from_value(serde_json::json!({ "plan": null })).unwrap();
+        assert_eq!(clear.plan, Some(None));
+        let absent: UserPatch = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(absent.plan, None);
+    }
+
+    #[test]
+    fn a_null_rating_or_review_in_json_clears_it() {
+        let clear: UserPatch =
+            serde_json::from_value(serde_json::json!({ "rating": null, "review": null })).unwrap();
+        assert_eq!(clear.rating, Some(None));
+        assert_eq!(clear.review, Some(None));
+        let set: UserPatch = serde_json::from_value(serde_json::json!({ "rating": 7 })).unwrap();
+        assert_eq!(set.rating, Some(Some(7)));
+        assert_eq!(set.review, None);
+    }
+
+    #[tokio::test]
+    async fn update_with_an_invalid_plan_changes_nothing() {
+        let dir = scratch("e3-bad-plan");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            "t1".into(),
+            None,
+        )
+        .await
+        .unwrap();
+        let patch = UserPatch {
+            plan: Some(Some(plan(&[], 60, "2026-10-01"))),
+            ..UserPatch::default()
+        };
+        assert!(
+            update(&state, "tmdb:tv:7", patch, "t2".into(), Some(event("p")))
+                .await
+                .is_err()
+        );
+        let entry = &saved(&dir).entries["tmdb:tv:7"];
+        assert_eq!(entry.user.plan, None);
+        assert_eq!(entry.updated_at, "t1");
+        assert!(events_in(&dir).is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[tokio::test]

@@ -1,4 +1,4 @@
-use super::{apply_patch, Prefs, PrefsPatch, MIGRATIONS, SCHEMA_VERSION};
+use super::{apply_patch, validate_patch, Prefs, PrefsPatch, MIGRATIONS, SCHEMA_VERSION};
 use crate::store::{self, writer::StoreHandle};
 use std::path::Path;
 use std::sync::Arc;
@@ -34,6 +34,7 @@ pub async fn load(state: &PrefsState) -> Prefs {
 }
 
 pub async fn update(state: &PrefsState, patch: PrefsPatch) -> Result<Prefs, String> {
+    validate_patch(&patch)?;
     state
         .store
         .commit(|p| {
@@ -113,6 +114,24 @@ mod tests {
         assert!(saved.is_err());
         assert!(load(&state).await.background_animation);
         assert!(dir.join("prefs.json").is_dir());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_invalid_reading_pace_changes_nothing() {
+        let dir = scratch("prefs-bad-pace");
+        let state = init(&dir).unwrap();
+        let saved = update(
+            &state,
+            PrefsPatch {
+                reading_pages_per_hour: Some(Some(0)),
+                ..PrefsPatch::default()
+            },
+        )
+        .await;
+        assert!(saved.is_err());
+        assert_eq!(load(&state).await, Prefs::default());
+        assert!(!dir.join("prefs.json").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

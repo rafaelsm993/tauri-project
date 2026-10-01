@@ -16,3 +16,6 @@ export const weekday = (date: string): number =>
 
 // Monday of the week the date falls in.
 export const weekStart = (date: string): string => addDays(date, -weekday(date));
+
+// The local calendar day of a moment, as `YYYY-MM-DD`.
+export const localDay = (at: Date = new Date()): string => at.toLocaleDateString("en-CA");

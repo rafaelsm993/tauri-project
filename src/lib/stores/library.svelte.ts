@@ -2,13 +2,14 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { library as defaultClient } from "$lib/api/library";
 import { emptyLength } from "$lib/domain/length";
 import { errorMessage } from "$lib/utils/errors";
-import type { LibraryEntry, LibraryStatus, UserData } from "$lib/types/library";
+import type { LibraryEntry, LibraryStatus, Plan, UserData } from "$lib/types/library";
 import type { MediaItem, MediaKey } from "$lib/types/media";
 
 export type LibraryClient = {
   load: () => Promise<LibraryEntry[]>;
   add: (item: MediaItem, user?: Partial<UserData>) => Promise<LibraryEntry>;
   update: (key: MediaKey, patch: Partial<UserData>) => Promise<LibraryEntry>;
+  plan: (key: MediaKey, plan: Plan | null) => Promise<LibraryEntry>;
   remove: (key: MediaKey) => Promise<boolean>;
   posterDir: () => Promise<string>;
   retryPosters: () => Promise<void>;
@@ -44,6 +45,7 @@ function optimisticEntry(item: MediaItem, user: Partial<UserData>): LibraryEntry
       rating: null,
       review: null,
       length: emptyLength(),
+      plan: null,
       ...user,
     },
     created_at: now,
@@ -138,14 +140,27 @@ export class LibraryStore {
     }
   }
 
-  async update(key: MediaKey, patch: Partial<UserData>): Promise<void> {
+  update(key: MediaKey, patch: Partial<UserData>): Promise<void> {
+    return this.patch(key, patch, () => this.client.update(key, patch));
+  }
+
+  plan(key: MediaKey, plan: Plan | null): Promise<void> {
+    return this.patch(key, { plan }, () => this.client.plan(key, plan));
+  }
+
+  // Shows the change at once, keeps the backend's answer, or puts the old entry back.
+  private async patch(
+    key: MediaKey,
+    patch: Partial<UserData>,
+    save: () => Promise<LibraryEntry>,
+  ): Promise<void> {
     const before = this.map.get(key);
     if (!before) return;
     this.error = "";
     this.write(key, { ...before, user: { ...before.user, ...patch } });
     this.mark(key, true);
     try {
-      this.write(key, await this.client.update(key, patch));
+      this.write(key, await save());
     } catch (e) {
       this.write(key, before);
       this.error = errorMessage(e, "Failed to save the change.");

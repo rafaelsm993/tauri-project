@@ -14,6 +14,10 @@ function normalize(raw: unknown): Prefs {
       Number.isInteger(r.seen_level) && (r.seen_level as number) >= 0
         ? (r.seen_level as number)
         : DEFAULT_PREFS.seen_level,
+    reading_pages_per_hour:
+      Number.isInteger(r.reading_pages_per_hour) && (r.reading_pages_per_hour as number) > 0
+        ? (r.reading_pages_per_hour as number)
+        : DEFAULT_PREFS.reading_pages_per_hour,
   };
 }
 

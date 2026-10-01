@@ -18,8 +18,11 @@
   import CastRow from "$lib/components/detail/CastRow.svelte";
   import SaveToLibrary from "$lib/components/library/SaveToLibrary.svelte";
   import ProgressEditor from "$lib/components/library/ProgressEditor.svelte";
+  import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
+  import { localDay } from "$lib/domain/calendar";
 
   let detail = $state<MediaDetail | null>(null);
+  let planning = $state(false);
   let loading = $state(true);
   let error = $state("");
   let editingLength = $state(false);
@@ -104,6 +107,15 @@
           onrating={(rating) => libraryStore.update(savedEntry.key, { rating })}
           onaddlength={() => (editingLength = true)}
         />
+        {#if savedEntry.user.status !== "dropped"}
+          {#if planning}
+            <PlanDialog entry={savedEntry} today={localDay()} onclose={() => (planning = false)} />
+          {:else}
+            <button type="button" class="plan-btn" onclick={() => (planning = true)}>
+              {savedEntry.user.plan ? "Edit plan" : "Plan"}
+            </button>
+          {/if}
+        {/if}
       {/if}
 
       {#if detail.overview}
@@ -147,6 +159,33 @@
   .detail-info {
     min-width: 0;
     padding-top: $spacing-md;
+  }
+
+  .plan-btn {
+    margin-bottom: $spacing-md;
+    background: none;
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
+    color: var(--clr-text);
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-full;
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 2px;
+    }
+
+    @include hover-capable {
+      &:hover {
+        border-color: var(--clr-accent);
+      }
+    }
+
+    @include touch {
+      min-height: $touch-target;
+      padding-inline: $spacing-lg;
+    }
   }
 
   .poster-img {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatRuntime, initials, plural } from "./format";
+import { formatDate, formatDay, formatMinutes, formatRuntime, initials, plural } from "./format";
 
 describe("plural", () => {
   it("adds an s except for one", () => {
@@ -45,5 +45,28 @@ describe("formatRuntime", () => {
   it("is empty when unknown", () => {
     expect(formatRuntime(null, "movie")).toBe("");
     expect(formatRuntime(0, "game")).toBe("");
+  });
+});
+
+describe("formatDay", () => {
+  it("shows a local YYYY-MM-DD as a short weekday and date, in any time zone", () => {
+    expect(formatDay("2026-10-16")).toBe("Fri, Oct 16");
+    expect(formatDay("2027-01-01")).toBe("Fri, Jan 1");
+  });
+
+  it("shows anything else unchanged", () => {
+    expect(formatDay("soon")).toBe("soon");
+  });
+});
+
+describe("formatMinutes", () => {
+  it.each([
+    [45, "45 min"],
+    [60, "1 h"],
+    [90, "1 h 30 min"],
+    [600, "10 h"],
+    [0, "0 min"],
+  ])("%i minutes is %s", (minutes, text) => {
+    expect(formatMinutes(minutes)).toBe(text);
   });
 });

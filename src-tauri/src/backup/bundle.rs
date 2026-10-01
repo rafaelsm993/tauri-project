@@ -321,6 +321,7 @@ pub(crate) mod tests {
             prefs: Prefs {
                 background_animation: false,
                 seen_level: 3,
+                reading_pages_per_hour: Some(40),
             },
             posters: vec![("tmdb_movie_1.png".into(), PNG.to_vec())],
         }

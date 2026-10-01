@@ -61,6 +61,16 @@ pub struct Length {
     pub hours: Option<u32>,
 }
 
+// The user's conditions for one item; sessions are derived from it, never stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Plan {
+    // 0 = Monday … 6 = Sunday.
+    pub days: Vec<u8>,
+    pub max_session_minutes: u32,
+    // Local `YYYY-MM-DD` the plan was set.
+    pub since: String,
+}
+
 // The user's own data for one entry; units are per media type (undecided).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -70,6 +80,7 @@ pub struct UserData {
     pub rating: Option<u8>,
     pub review: Option<String>,
     pub length: Length,
+    pub plan: Option<Plan>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -147,6 +158,11 @@ pub(crate) mod tests {
                     episode_minutes: Some(40),
                     ..Length::default()
                 },
+                plan: Some(Plan {
+                    days: vec![0, 2, 4],
+                    max_session_minutes: 60,
+                    since: "2026-10-01".into(),
+                }),
             },
             created_at: "2026-09-24T02:00:00Z".into(),
             updated_at: "2026-09-24T02:00:00Z".into(),
@@ -223,6 +239,28 @@ pub(crate) mod tests {
 
     fn contract() -> Value {
         json!({ "entry": entry(), "event": event("e1") })
+    }
+
+    #[test]
+    fn an_entry_without_a_plan_still_loads() {
+        let json = r#"{"status":"in_progress","progress":3,"rating":null,"review":null}"#;
+        let user: UserData = serde_json::from_str(json).expect("UserData without plan must load");
+        assert_eq!(user.plan, None);
+    }
+
+    #[test]
+    fn a_plan_round_trips_through_json() {
+        let user = UserData {
+            plan: Some(Plan {
+                days: vec![0, 2, 4],
+                max_session_minutes: 60,
+                since: "2026-10-01".into(),
+            }),
+            ..UserData::default()
+        };
+        let text = serde_json::to_string(&user).unwrap();
+        let back: UserData = serde_json::from_str(&text).unwrap();
+        assert_eq!(back.plan, user.plan);
     }
 
     #[test]

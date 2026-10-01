@@ -22,6 +22,11 @@
         "pages": null,
         "runtime_minutes": null
       },
+      "plan": {
+        "days": [0, 2, 4],
+        "max_session_minutes": 60,
+        "since": "2026-10-01"
+      },
       "progress": 3,
       "rating": 9,
       "review": "Great",

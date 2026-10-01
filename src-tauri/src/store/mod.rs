@@ -22,6 +22,15 @@ pub fn migrate(value: Value, from: u32, steps: &[Migration]) -> Result<Value, St
     steps[from..].iter().try_fold(value, |v, step| step(v))
 }
 
+// Patch field reader: a field that is in the JSON is `Some`, even when its value is `null` (= clear).
+pub fn present<'de, D, T>(d: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    <Option<T> as serde::Deserialize>::deserialize(d).map(Some)
+}
+
 // Schema version a file has after all `steps`; files start at v1.
 pub const fn current_version(steps: &[Migration]) -> u32 {
     steps.len() as u32 + 1

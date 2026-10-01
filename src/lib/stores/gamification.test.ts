@@ -95,6 +95,7 @@ function movie(id: string, runtime_minutes: number): LibraryEntry {
         pages: null,
         hours: null,
       },
+      plan: null,
     },
     created_at: "",
     updated_at: "",

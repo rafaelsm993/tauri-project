@@ -1,10 +1,13 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import LibraryCard from "$lib/components/library/LibraryCard.svelte";
+  import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
+  import { localDay } from "$lib/domain/calendar";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
   import { libraryFilters, LibraryFilters } from "$lib/stores/ui.svelte";
+  import type { LibraryEntry } from "$lib/types/library";
   import {
     filterEntries,
     searchEntries,
@@ -17,6 +20,8 @@
     store = libraryStore,
     filters = libraryFilters,
   }: { store?: LibraryStore; filters?: LibraryFilters } = $props();
+
+  let planning = $state<LibraryEntry | null>(null);
 
   const matching = $derived(searchEntries(store.entries, filters.query));
   const types = $derived(typeOptions(matching, store.entries));
@@ -76,9 +81,19 @@
   {:else if visible.length === 0}
     <p class="library-note">{emptyFilterText}</p>
   {:else}
+    {#if planning}
+      <PlanDialog
+        entry={planning}
+        today={localDay()}
+        library={store}
+        onclose={() => (planning = null)}
+      />
+    {/if}
     <ul class="library-grid">
       {#each visible as entry (entry.key)}
-        <li><LibraryCard {entry} posterDir={store.posterDir} /></li>
+        <li>
+          <LibraryCard {entry} posterDir={store.posterDir} onplan={() => (planning = entry)} />
+        </li>
       {/each}
     </ul>
   {/if}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayNumber, isDay, weekday, weekStart } from "./calendar";
+import { addDays, dayNumber, isDay, localDay, weekday, weekStart } from "./calendar";
 
 describe("calendar", () => {
   it.each([
@@ -35,5 +35,11 @@ describe("calendar", () => {
     expect(isDay("2026-10-01")).toBe(true);
     expect(isDay("2026-10-01T00:00")).toBe(false);
     expect(isDay("")).toBe(false);
+  });
+
+  it("reads a moment as the local calendar day, not the UTC one", () => {
+    const lateEvening = new Date(2026, 9, 1, 23, 30);
+    expect(localDay(lateEvening)).toBe("2026-10-01");
+    expect(localDay(new Date(2027, 0, 1, 0, 5))).toBe("2027-01-01");
   });
 });

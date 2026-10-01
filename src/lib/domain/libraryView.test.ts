@@ -23,7 +23,7 @@ function entry(key: string, type: MediaType, status: LibraryStatus): LibraryEntr
       year: null,
       poster_file: null,
     },
-    user: { status, progress: 0, rating: null, review: null, length: emptyLength() },
+    user: { status, progress: 0, rating: null, review: null, length: emptyLength(), plan: null },
     created_at: "t",
     updated_at: "t",
   };

@@ -26,12 +26,22 @@ export interface Length {
   hours: number | null;
 }
 
+// The user's conditions for one item; sessions are derived from it, never stored.
+export interface Plan {
+  // 0 = Monday … 6 = Sunday.
+  days: number[];
+  max_session_minutes: number;
+  // Local `YYYY-MM-DD` the plan was set.
+  since: string;
+}
+
 export interface UserData {
   status: LibraryStatus;
   progress: number;
   rating: number | null;
   review: string | null;
   length: Length;
+  plan: Plan | null;
 }
 
 export interface LibraryEntry {

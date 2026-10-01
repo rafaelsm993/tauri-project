@@ -68,6 +68,8 @@ Live updates: `library.onEvent(fn)` (in `src/lib/api/library.ts`) hands every ev
 
 Plans: `library.plan(key, plan | null)` sends `library_update` with `{ plan }` and logs a `library_plan` event, which earns no XP and does not count as an active day. In a `library_update` patch an absent field is left alone and `null` clears it (`rating`, `review`, `plan`). A plan is `{ days (0 = Monday … 6 = Sunday, distinct), max_session_minutes (5–720), since (YYYY-MM-DD) }`; sessions are never stored. `prefs.reading_pages_per_hour` (5–300, `null` until a book is first planned) sets the reading pace.
 
+Reminders (`src/lib/domain/reminders.ts`, `src/lib/stores/reminders.svelte.ts`) add no command and no storage. A plan starts on `max(today, since)`. Today's session is due unless that day logged progress or a status change for the item, or a `library_plan` moving `since` past today. Done and Next session both save the plan with `since = tomorrow`. Later hides the toast for 3 h in memory only. Earlier plan days in the last 7 with nothing logged are counted as re-planned. Checks run on launch, window `focus` and `visibilitychange` to visible, never on a timer; shown / snoozed / done / next session go to the app log at info level, not to `events.jsonl`.
+
 ### Startup (`src-tauri/src/startup.rs`)
 
 | Command | Args | Returns |

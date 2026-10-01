@@ -2,6 +2,8 @@
   import { resolve } from "$app/paths";
   import LibraryCard from "$lib/components/library/LibraryCard.svelte";
   import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
+  import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
+  import { reminderStore } from "$lib/stores/reminders.svelte";
   import { localDay } from "$lib/domain/calendar";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
@@ -15,11 +17,14 @@
     typeOptions,
   } from "$lib/domain/libraryView";
 
-  // The store and filters props exist for tests; the app uses the singletons.
+  type Reminders = Pick<typeof reminderStore, "data" | "busy" | "done" | "nextSession">;
+
+  // The store, filters and reminders props exist for tests; the app uses the singletons.
   let {
     store = libraryStore,
     filters = libraryFilters,
-  }: { store?: LibraryStore; filters?: LibraryFilters } = $props();
+    reminders = reminderStore,
+  }: { store?: LibraryStore; filters?: LibraryFilters; reminders?: Reminders } = $props();
 
   let planning = $state<LibraryEntry | null>(null);
 
@@ -65,6 +70,12 @@
         {/if}
       </div>
     {/if}
+    <TodayStrip
+      today={reminders.data}
+      busy={(key) => reminders.busy(key)}
+      ondone={(key) => void reminders.done(key)}
+      onnext={(key) => void reminders.nextSession(key)}
+    />
   </header>
 
   {#if store.error}

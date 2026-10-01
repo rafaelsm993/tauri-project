@@ -9,6 +9,7 @@
   import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
   import ProfileMenu from "$lib/components/ui/ProfileMenu.svelte";
   import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
+  import ReminderToast from "$lib/components/planner/ReminderToast.svelte";
   import StartupProblem from "$lib/components/ui/StartupProblem.svelte";
   import { startupStatus } from "$lib/api/startup";
   import type { StartupProblem as Problem } from "$lib/types/startup";
@@ -20,7 +21,12 @@
   import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
   import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
-  import { afterNavigate } from "$app/navigation";
+  import { afterNavigate, goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
+  import { MediaQuery } from "svelte/reactivity";
+  import { reminderStore } from "$lib/stores/reminders.svelte";
+  import { detailPath } from "$lib/domain/libraryView";
+  import type { DueSession } from "$lib/domain/reminders";
 
   let { children }: { children: Snippet } = $props();
 
@@ -41,7 +47,7 @@
     if (problem !== null) return;
     untrack(() => {
       void Promise.all([libraryStore.hydrate(), prefsStore.hydrate()]).then(() => {
-        if (libraryStore.ready) void gamificationStore.load();
+        if (libraryStore.ready) void gamificationStore.load().then(() => reminderStore.check());
       });
     });
   });
@@ -61,6 +67,28 @@
   // Screens without provider calls (library, settings) still learn when the network drops.
   afterNavigate(() => void checkNetwork());
   $effect(() => watchConnectivity(() => void checkNetwork()));
+
+  // Reminders are checked only when the app is in front: on launch, focus and return.
+  $effect(() => {
+    const check = () => {
+      if (document.visibilityState === "visible") reminderStore.check();
+    };
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  });
+
+  const reduced = new MediaQuery("prefers-reduced-motion: reduce");
+  const motion = $derived(prefsStore.prefs.background_animation && !reduced.current);
+
+  function start(session: DueSession) {
+    reminderStore.dismiss();
+    const path = detailPath(session.entry);
+    void goto(resolve("/media/[type]/[id]", { type: path.type, id: encodeURIComponent(path.id) }));
+  }
 
   // Posters that failed while offline download again as soon as the network returns.
   onReconnect(() => {
@@ -82,6 +110,13 @@
   </div>
   <OfflineBanner />
   <LevelUpToast moment={gamificationStore.moment} onclose={() => gamificationStore.dismiss()} />
+  <ReminderToast
+    session={reminderStore.visibleToast}
+    {motion}
+    onstart={start}
+    onlater={() => reminderStore.later()}
+    onclose={() => reminderStore.dismiss()}
+  />
 {/if}
 
 <style lang="scss">

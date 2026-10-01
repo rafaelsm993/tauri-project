@@ -76,8 +76,8 @@ async function onMoviePage(page: Page) {
 const completed = (page: Page) =>
   page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Completed" });
 
-// The polite live region the toast renders into; empty when no toast is showing.
-const toastRegion = (page: Page) => page.locator("[role=status][aria-live=polite]");
+// The level-up live region; empty when no toast is showing.
+const toastRegion = (page: Page) => page.getByRole("status", { name: "Level up" });
 
 test.describe("level-up moment", () => {
   test("finishing a movie that crosses a level shows the toast once", async ({ page }) => {

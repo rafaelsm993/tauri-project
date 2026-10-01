@@ -1,40 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-
-const LENGTH = {
-  runtime_minutes: null,
-  episodes: null,
-  episode_minutes: null,
-  chapters: null,
-  chapter_minutes: null,
-  pages: null,
-  hours: null,
-};
-
-function item(id: number, type: string, title: string, length: object, plan: object | null) {
-  const key = `tmdb:${type}:${id}`;
-  return {
-    key,
-    snapshot: {
-      media_key: key,
-      provider: "tmdb",
-      media_type: type,
-      title,
-      poster_path: null,
-      year: "2024",
-      poster_file: null,
-    },
-    user: {
-      status: "in_progress",
-      progress: 0,
-      rating: null,
-      review: null,
-      length: { ...LENGTH, ...length },
-      plan,
-    },
-    created_at: "2026-09-25T00:00:00Z",
-    updated_at: "2026-09-25T00:00:00Z",
-  };
-}
+import { item, mockLibrary } from "./fixtures/library";
 
 const MWF = { days: [0, 2, 4], max_session_minutes: 60, since: "2026-09-28" };
 const LIBRARY = [
@@ -56,36 +21,7 @@ const LIBRARY = [
   item(4, "tv", "Arcane", { episodes: 9, episode_minutes: 40 }, null),
 ];
 
-// A stateful fake: library_update merges its patch, so a saved plan shows up on the page.
-async function mockPlanner(page: Page, entries: object[] = LIBRARY) {
-  await page.clock.setFixedTime(new Date("2026-10-01T10:00:00"));
-  await page.addInitScript((list) => {
-    const library = structuredClone(list) as { key: string; user: Record<string, unknown> }[];
-    const prefs = { background_animation: true, seen_level: 0, reading_pages_per_hour: null };
-    const calls: { cmd: string; args: unknown }[] = [];
-    Object.assign(window, { __ipcCalls: calls });
-    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
-      invoke: async (cmd: string, args?: { key?: string; patch?: Record<string, unknown> }) => {
-        calls.push({ cmd, args });
-        if (cmd === "library_load") return structuredClone(library);
-        if (cmd === "library_update") {
-          const entry = library.find((e) => e.key === args?.key)!;
-          Object.assign(entry.user, args?.patch);
-          return structuredClone(entry);
-        }
-        if (cmd === "library_events") return [];
-        if (cmd === "startup_status") return null;
-        if (cmd === "library_poster_dir") return "/nonexistent/posters";
-        if (cmd === "prefs_load") return { ...prefs };
-        if (cmd === "prefs_update") return Object.assign(prefs, args?.patch);
-        return { page: 1, total_pages: 1, total_results: 0, results: [], genres: [] };
-      },
-      transformCallback: () => 0,
-      convertFileSrc: (path: string) => `/missing-asset/${encodeURIComponent(path)}`,
-      metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
-    };
-  }, entries);
-}
+const mockPlanner = (page: Page, entries: object[] = LIBRARY) => mockLibrary(page, entries);
 
 const noOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

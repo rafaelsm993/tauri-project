@@ -228,7 +228,6 @@
   }
 
   .plan-row {
-    --hue: var(--clr-ink-rgb);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
@@ -242,26 +241,6 @@
       grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas: "title btn" "finish btn";
     }
-  }
-
-  .hue-screen {
-    --hue: var(--clr-hue-screen-rgb);
-  }
-
-  .hue-anime {
-    --hue: var(--clr-hue-anime-rgb);
-  }
-
-  .hue-manga {
-    --hue: var(--clr-hue-manga-rgb);
-  }
-
-  .hue-book {
-    --hue: var(--clr-hue-book-rgb);
-  }
-
-  .hue-game {
-    --hue: var(--clr-hue-game-rgb);
   }
 
   .plan-title {

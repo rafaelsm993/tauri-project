@@ -52,6 +52,25 @@ describe("LibraryView", () => {
     expect(screen.getByRole("link", { name: /browse/i })).toHaveAttribute("href", "/");
   });
 
+  it("shows today's sessions under the header", async () => {
+    const store = await storeWith([entry(1, "tv", "in_progress")]);
+    const tv = store.entries[0];
+    const reminders = {
+      data: {
+        due: [{ entry: tv, family: "screen" as const, minutes: 45, finish: "2026-10-03" }],
+        replanned: null,
+      },
+      busy: () => false,
+      done: vi.fn(async () => {}),
+      nextSession: vi.fn(async () => {}),
+    };
+    render(LibraryPage, { store, filters: new LibraryFilters(), reminders });
+    const today = screen.getByRole("region", { name: "Today" });
+    expect(today).toHaveTextContent("T1");
+    await userEvent.click(within(today).getByRole("button", { name: "Done: T1" }));
+    expect(reminders.done).toHaveBeenCalledWith(tv.key);
+  });
+
   it("opens the plan sheet for a card and closes it on cancel", async () => {
     const store = await storeWith([entry(1, "tv", "in_progress"), entry(2, "movie", "dropped")]);
     render(LibraryPage, { store, filters: new LibraryFilters() });

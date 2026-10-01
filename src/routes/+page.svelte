@@ -7,6 +7,8 @@
   import { onReconnect } from "$lib/stores/online.svelte";
   import SearchBar from "$lib/components/ui/SearchBar.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
+  import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
+  import { reminderStore } from "$lib/stores/reminders.svelte";
   import GenreCarousel from "$lib/components/ui/GenreCarousel.svelte";
   import BackToTop from "$lib/components/ui/BackToTop.svelte";
   import MultiSelect from "$lib/components/ui/MultiSelect.svelte";
@@ -63,6 +65,12 @@
         {/if}
       {/snippet}
     </CategoryTabs>
+    <TodayStrip
+      today={reminderStore.data}
+      busy={(key) => reminderStore.busy(key)}
+      ondone={(key) => void reminderStore.done(key)}
+      onnext={(key) => void reminderStore.nextSession(key)}
+    />
   </header>
 
   <div class="page-body">

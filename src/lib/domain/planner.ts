@@ -43,7 +43,7 @@ export interface FinishShift {
   days: number;
 }
 
-// What is left of an item under a plan, re-planned from `today`.
+// What is left of an item under a plan, re-planned from `today` or the plan's later start.
 export function planFor(
   entry: LibraryEntry,
   plan: Plan,
@@ -53,7 +53,7 @@ export function planFor(
   const e = estimate(entry, pagesPerHour);
   if (e.kind !== "plannable") return e;
   const conditions = { days: plan.days as Weekday[], maxSessionMinutes: plan.max_session_minutes };
-  return schedule(e.remainingMinutes, conditions, today);
+  return schedule(e.remainingMinutes, conditions, plan.since > today ? plan.since : today);
 }
 
 // Every planned item that is still in play, soonest finish first; items missing length apart.

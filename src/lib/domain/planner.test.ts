@@ -45,6 +45,29 @@ function entry(
 const TODAY = "2026-10-01";
 
 describe("planFor", () => {
+  it("starts a plan on its own start date when that is after today", () => {
+    const daily: Plan = {
+      days: [0, 1, 2, 3, 4, 5, 6],
+      max_session_minutes: 60,
+      since: "2026-10-03",
+    };
+    const tv = entry(1, "tv", { episodes: 2, episode_minutes: 30 }, daily);
+    expect(planFor(tv, daily, TODAY)).toMatchObject({
+      kind: "planned",
+      sessions: [{ date: "2026-10-03", minutes: 60 }],
+    });
+  });
+
+  it("plans from today when the start date is in the past", () => {
+    const daily: Plan = {
+      days: [0, 1, 2, 3, 4, 5, 6],
+      max_session_minutes: 60,
+      since: "2026-09-01",
+    };
+    const tv = entry(1, "tv", { episodes: 2, episode_minutes: 30 }, daily);
+    expect(planFor(tv, daily, TODAY)).toMatchObject({ sessions: [{ date: TODAY }] });
+  });
+
   it("plans the remaining time from today on the plan's days", () => {
     const tv = entry(1, "tv", { episodes: 10, episode_minutes: 45 }, MWF, "in_progress", 4);
     expect(planFor(tv, MWF, TODAY)).toMatchObject({

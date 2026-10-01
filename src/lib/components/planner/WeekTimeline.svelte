@@ -122,7 +122,6 @@
   }
 
   .block {
-    --hue: var(--clr-primary-rgb);
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -137,26 +136,6 @@
       min-height: $touch-target;
       justify-content: center;
     }
-  }
-
-  .hue-screen {
-    --hue: var(--clr-hue-screen-rgb);
-  }
-
-  .hue-anime {
-    --hue: var(--clr-hue-anime-rgb);
-  }
-
-  .hue-manga {
-    --hue: var(--clr-hue-manga-rgb);
-  }
-
-  .hue-book {
-    --hue: var(--clr-hue-book-rgb);
-  }
-
-  .hue-game {
-    --hue: var(--clr-hue-game-rgb);
   }
 
   .block-title {

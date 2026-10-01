@@ -48,6 +48,38 @@ fn readable_name(u: &tauri::Url) -> Option<String> {
     looks_like_a_file.then(|| name.to_string())
 }
 
+const SHARED_STORAGE: [&str; 3] = ["/storage/", "/data/media/", "/mnt/user/"];
+
+// `/storage/emulated/0/Download/a.zip` → `Download/a.zip`; private or unnamed links give `None`.
+fn name_from_link(link: &Path) -> Option<String> {
+    let full = link.to_str()?;
+    if !SHARED_STORAGE.iter().any(|root| full.starts_with(root)) || full.ends_with(" (deleted)") {
+        return None;
+    }
+    let name = link.file_name()?.to_str()?;
+    if !name.contains('.') {
+        return None;
+    }
+    let folder = link.parent()?.file_name()?.to_str()?;
+    if folder.chars().all(|c| c.is_ascii_digit()) {
+        return Some(name.to_string());
+    }
+    Some(format!("{folder}/{name}"))
+}
+
+// Where an open document really lives, for providers whose URI hides the name (Downloads).
+#[cfg(unix)]
+fn name_of_open(file: &File) -> Option<String> {
+    use std::os::fd::AsRawFd;
+    let link = std::fs::read_link(format!("/proc/self/fd/{}", file.as_raw_fd())).ok()?;
+    name_from_link(&link)
+}
+
+#[cfg(not(unix))]
+fn name_of_open(_file: &File) -> Option<String> {
+    None
+}
+
 // Reads at most `limit` bytes; one byte more means the file cannot be a backup.
 pub fn read_capped(reader: impl Read, limit: u64) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
@@ -74,8 +106,9 @@ pub fn read_from(
     read_capped(file, limits.total_bytes)
 }
 
-// Copies the verified bytes into the chosen document and reads them back to prove the copy.
-pub fn copy_into(files: &impl Files, target: &FilePath, bytes: &[u8]) -> Result<(), String> {
+// Copies the verified bytes into the chosen document, reads them back to prove the copy, and
+// returns the name the status line shows.
+pub fn copy_into(files: &impl Files, target: &FilePath, bytes: &[u8]) -> Result<String, String> {
     let failed = |e: String| {
         format!(
             "The backup could not be written to {}: {e}",
@@ -87,6 +120,7 @@ pub fn copy_into(files: &impl Files, target: &FilePath, bytes: &[u8]) -> Result<
         .map_err(|e| failed(e.to_string()))?;
     file.write_all(bytes).map_err(|e| failed(e.to_string()))?;
     file.sync_all().map_err(|e| failed(e.to_string()))?;
+    let found = name_of_open(&file);
     drop(file);
     let limit = Limits {
         total_bytes: bytes.len() as u64,
@@ -96,7 +130,12 @@ pub fn copy_into(files: &impl Files, target: &FilePath, bytes: &[u8]) -> Result<
     if back != bytes {
         return Err(failed("the copy does not match the backup".into()));
     }
-    Ok(())
+    let shown = display(target);
+    Ok(if shown == UNNAMED {
+        found.unwrap_or(shown)
+    } else {
+        shown
+    })
 }
 
 // The staging copy and the `.bak` a previous run may have left beside it.
@@ -189,11 +228,57 @@ pub mod tests {
     }
 
     #[test]
+    fn a_shared_storage_link_shows_its_place() {
+        for (link, shown) in [
+            (
+                "/storage/emulated/0/Download/aevum-backup-2026-10-01.zip",
+                "Download/aevum-backup-2026-10-01.zip",
+            ),
+            ("/data/media/0/Download/a.zip", "Download/a.zip"),
+            ("/storage/1234-ABCD/Backups/a.zip", "Backups/a.zip"),
+        ] {
+            assert_eq!(
+                name_from_link(Path::new(link)).as_deref(),
+                Some(shown),
+                "{link}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_private_or_odd_link_shows_nothing() {
+        for link in [
+            "pipe:[1234]",
+            "anon_inode:[memfd]",
+            "/data/user/0/com.google.android.apps.docs/cache/x.zip",
+            "/storage/emulated/0/Download/a.zip (deleted)",
+            "/storage/emulated/0/Download/noext",
+            "/storage/emulated/0",
+            "/home/me/aevum-backup.zip",
+        ] {
+            assert_eq!(name_from_link(Path::new(link)), None, "{link}");
+        }
+    }
+
+    #[test]
     fn a_copy_that_reads_back_the_same_is_accepted() {
         let dir = crate::store::file::tests::scratch("copy-ok");
         let files = FakeFiles::new(dir.clone());
-        copy_into(&files, &uri("content://x/document/a.zip"), b"backup bytes").unwrap();
+        let shown = copy_into(&files, &uri("content://x/document/a.zip"), b"backup bytes").unwrap();
+        assert_eq!(shown, "a.zip");
         assert_eq!(std::fs::read(files.doc()).unwrap(), b"backup bytes");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_opaque_document_outside_shared_storage_stays_unnamed() {
+        let dir = crate::store::file::tests::scratch("copy-opaque");
+        let files = FakeFiles::new(dir.clone());
+        let target = uri("content://com.android.providers.downloads.documents/document/msf%3A1");
+        assert_eq!(
+            copy_into(&files, &target, b"backup bytes").unwrap(),
+            UNNAMED
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -140,11 +140,8 @@ pub async fn export_into(
     let staged = export_to(staging, library, prefs, created_at).await;
     let copied = staged.and_then(|report| {
         let bytes = std::fs::read(staging).map_err(|e| format!("read the staged backup: {e}"))?;
-        target::copy_into(files, url, &bytes)?;
-        Ok(ExportReport {
-            path: target::display(url),
-            ..report
-        })
+        let path = target::copy_into(files, url, &bytes)?;
+        Ok(ExportReport { path, ..report })
     });
     target::clean_staging(staging);
     copied

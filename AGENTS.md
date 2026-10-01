@@ -12,7 +12,7 @@ RAWG (games), iTunes (books). No persistence yet (S2 adds local JSON storage); n
 | Shared DTOs | `src-tauri/src/api/types.rs` |
 | Shared HTTP client | `src-tauri/src/api/http.rs` (`use super::http::client as http;`) |
 | Backup zip (export, merge/replace import, safety copy) | `src-tauri/src/backup/` → `src/lib/api/backup.ts`, `BackupSection.svelte` |
-| Gamification (XP, level, title, streak, dashboard series) — pure fns over `library_events` | `src/lib/domain/{gamification,dashboard}.ts` → `gamification.svelte.ts` → `components/profile/` |
+| Gamification (XP, level, title, streak, dashboard series) — pure fns over `library_events` | `src/lib/domain/{gamification,dashboard}.ts` → `gamification.svelte.ts` → `components/profile/`; live via `library.onEvent`, level-up via `celebration()` + `prefs.seen_level`; UI `ui/{LevelUpToast,LevelProgress}.svelte` |
 | Startup check (a refused save file → explanation screen) | `src-tauri/src/startup.rs` → `StartupProblem.svelte` in `+layout.svelte` |
 | Command registration | `src-tauri/src/lib.rs` → `generate_handler![]` |
 | Permissions / capabilities | `src-tauri/capabilities/*.json` |

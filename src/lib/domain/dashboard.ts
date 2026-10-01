@@ -1,4 +1,5 @@
-import { counts, dayNumber, hoursOf, isDay, mediaTypeOf, type Award } from "./gamification";
+import { dateOf, dayNumber, isDay, weekStart } from "./calendar";
+import { counts, hoursOf, mediaTypeOf, type Award } from "./gamification";
 import type { LibraryEntry, LibraryEvent, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
 
@@ -30,8 +31,6 @@ export interface Backlog {
 
 export const PACE_DAYS = 30;
 
-const DAY_MS = 86_400_000;
-
 export const familyOf = (type: MediaType): Family =>
   type === "movie" || type === "tv" ? "screen" : type;
 
@@ -40,14 +39,7 @@ const familyOfKey = (key: string): Family | null => {
   return type ? familyOf(type) : null;
 };
 
-const dateOf = (day: number): string => new Date(day * DAY_MS).toISOString().slice(0, 10);
-
-// Monday of the week the date falls in.
-export function weekStart(date: string): string {
-  const day = dayNumber(date);
-  const weekday = (new Date(day * DAY_MS).getUTCDay() + 6) % 7;
-  return dateOf(day - weekday);
-}
+export { weekStart };
 
 const emptyWeek = (week: string): WeekPoint => ({
   week,

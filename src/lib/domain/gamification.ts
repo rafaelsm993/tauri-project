@@ -1,3 +1,4 @@
+import { dayNumber, isDay } from "./calendar";
 import type { Length, LibraryEntry, LibraryEvent } from "$lib/types/library";
 import type { MediaKey, MediaType } from "$lib/types/media";
 
@@ -64,8 +65,6 @@ export interface Streaks {
 
 // Events that show the user did something; removing does not count.
 export const ACTIVE_KINDS: ReadonlySet<string> = new Set(["library_add", "library_update"]);
-
-export const isDay = (date: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(date);
 
 // An action worth counting: add or update, on a real calendar day.
 export const counts = (e: LibraryEvent): boolean => ACTIVE_KINDS.has(e.kind) && isDay(e.local_date);
@@ -216,10 +215,7 @@ export function activeDays(events: LibraryEvent[]): string[] {
   return [...new Set(events.filter(counts).map((e) => e.local_date))].sort();
 }
 
-const DAY_MS = 86_400_000;
-
-export const dayNumber = (date: string): number =>
-  Math.round(Date.parse(`${date}T00:00:00Z`) / DAY_MS);
+export { dayNumber, isDay };
 
 // A streak survives until a full day passes with nothing done; days after today are ignored.
 export function streaks(days: string[], today: string): Streaks {

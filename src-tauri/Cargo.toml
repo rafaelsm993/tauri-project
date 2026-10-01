@@ -25,6 +25,8 @@ tauri-plugin-log = "2"
 log = "0.4"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 tauri-plugin-dialog = "2.7"
+tauri-plugin-fs = "2.5"
+percent-encoding = "2.3"
 
 # ── Build profiles ────────────────────────────────────────
 # Rationale (see docs/BUILD_AND_RUN.md):

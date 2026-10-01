@@ -1,7 +1,7 @@
 // Guards the build-and-run docs: Android has its own runbook, every entry point links it, and the verified dev loop stays documented.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -63,4 +63,15 @@ test("the runbook covers the Windows laptop and its known traps", () => {
 
 test("the workflow asks for a phone check on UI changes", () => {
   assert.match(read("AGENTS.md"), /physical Android phone/);
+});
+
+// Backup files go through tauri-plugin-fs from Rust only; the WebView must not get fs access.
+test("no capability grants the WebView file-system access", () => {
+  const dir = join(root, "src-tauri/capabilities");
+  for (const f of readdirSync(dir).filter((n) => n.endsWith(".json"))) {
+    assert.ok(
+      !read(`src-tauri/capabilities/${f}`).includes('"fs:'),
+      `${f} grants an fs: permission`,
+    );
+  }
 });

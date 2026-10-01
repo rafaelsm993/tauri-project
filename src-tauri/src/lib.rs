@@ -46,6 +46,7 @@ pub fn run() {
         .plugin(log_plugin())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|_app| {
             let dir = _app
                 .path()

@@ -1,12 +1,12 @@
 use super::apply::{import, ImportMode, ImportReport};
 use super::bundle::{Bundle, Limits};
-use super::{default_name, export_to, load_bundle, with_zip_ext, ExportReport, ImportPreview};
+use super::{default_name, export_into, load_from, with_zip_ext, ExportReport, ImportPreview};
 use crate::library::commands::LibraryState;
 use crate::library::posters;
 use crate::prefs::ipc::PrefsState;
-use std::path::PathBuf;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
+use tauri_plugin_fs::FsExt;
 
 const FILTER_NAME: &str = "Aevum backup";
 const FILTER_EXT: &[&str] = &["zip"];
@@ -18,16 +18,15 @@ pub struct BackupState {
     pending: tokio::sync::Mutex<Option<Bundle>>,
 }
 
-fn to_path(picked: Option<FilePath>) -> Result<Option<PathBuf>, String> {
-    picked
-        .map(|p| {
-            p.into_path()
-                .map_err(|e| format!("this file location is not supported yet: {e}"))
-        })
-        .transpose()
+// A document's name belongs to its provider; only a plain path gets the `.zip` added.
+fn with_zip(picked: FilePath) -> FilePath {
+    match picked {
+        FilePath::Path(p) => FilePath::Path(with_zip_ext(p)),
+        url => url,
+    }
 }
 
-async fn save_path(app: &AppHandle, name: String) -> Result<Option<PathBuf>, String> {
+async fn save_target(app: &AppHandle, name: String) -> Result<Option<FilePath>, String> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
@@ -38,10 +37,10 @@ async fn save_path(app: &AppHandle, name: String) -> Result<Option<PathBuf>, Str
             let _ = tx.send(p);
         });
     let picked = rx.await.map_err(|_| DIALOG_GONE.to_string())?;
-    Ok(to_path(picked)?.map(with_zip_ext))
+    Ok(picked.map(with_zip))
 }
 
-async fn open_path(app: &AppHandle) -> Result<Option<PathBuf>, String> {
+async fn open_target(app: &AppHandle) -> Result<Option<FilePath>, String> {
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
@@ -50,7 +49,7 @@ async fn open_path(app: &AppHandle) -> Result<Option<PathBuf>, String> {
         .pick_file(move |p| {
             let _ = tx.send(p);
         });
-    to_path(rx.await.map_err(|_| DIALOG_GONE.to_string())?)
+    rx.await.map_err(|_| DIALOG_GONE.to_string())
 }
 
 #[tauri::command]
@@ -60,10 +59,15 @@ pub async fn backup_export(
     prefs: State<'_, PrefsState>,
     at: String,
 ) -> Result<Option<ExportReport>, String> {
-    let Some(path) = save_path(&app, default_name(&at)).await? else {
+    let Some(to) = save_target(&app, default_name(&at)).await? else {
         return Ok(None);
     };
-    export_to(&path, &library, &prefs, &at).await.map(Some)
+    let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&cache).map_err(|e| format!("create {}: {e}", cache.display()))?;
+    let staging = cache.join("export-staging.zip");
+    export_into(app.fs(), &to, &staging, &library, &prefs, &at)
+        .await
+        .map(Some)
 }
 
 #[tauri::command]
@@ -71,10 +75,10 @@ pub async fn backup_pick_import(
     app: AppHandle,
     backup: State<'_, BackupState>,
 ) -> Result<Option<ImportPreview>, String> {
-    let Some(path) = open_path(&app).await? else {
+    let Some(from) = open_target(&app).await? else {
         return Ok(None);
     };
-    let bundle = load_bundle(&path, &Limits::DEFAULT)?;
+    let bundle = load_from(app.fs(), &from, &Limits::DEFAULT)?;
     let preview = ImportPreview::of(&bundle);
     *backup.pending.lock().await = Some(bundle);
     Ok(Some(preview))

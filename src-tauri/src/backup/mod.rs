@@ -1,6 +1,7 @@
 pub mod apply;
 pub mod bundle;
 pub mod ipc;
+pub mod target;
 
 use crate::library::commands::{LibraryFile, LibraryState};
 use crate::library::events::read_events;
@@ -122,11 +123,51 @@ pub fn load_bundle(path: &Path, limits: &Limits) -> Result<Bundle, String> {
     read(&bytes, limits)
 }
 
+// A path is written in place as on desktop; a document gets a copy verified in `staging` first.
+pub async fn export_into(
+    files: &impl target::Files,
+    to: &tauri_plugin_fs::FilePath,
+    staging: &Path,
+    library: &LibraryState,
+    prefs: &PrefsState,
+    created_at: &str,
+) -> Result<ExportReport, String> {
+    use tauri_plugin_fs::FilePath;
+    let url = match to {
+        FilePath::Path(path) => return export_to(path, library, prefs, created_at).await,
+        FilePath::Url(_) => to,
+    };
+    let staged = export_to(staging, library, prefs, created_at).await;
+    let copied = staged.and_then(|report| {
+        let bytes = std::fs::read(staging).map_err(|e| format!("read the staged backup: {e}"))?;
+        target::copy_into(files, url, &bytes)?;
+        Ok(ExportReport {
+            path: target::display(url),
+            ..report
+        })
+    });
+    target::clean_staging(staging);
+    copied
+}
+
+pub fn load_from(
+    files: &impl target::Files,
+    from: &tauri_plugin_fs::FilePath,
+    limits: &Limits,
+) -> Result<Bundle, String> {
+    match from {
+        tauri_plugin_fs::FilePath::Path(path) => load_bundle(path, limits),
+        url => read(&target::read_from(files, url, limits)?, limits),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::store::file::tests::scratch;
     use serde_json::{json, Value};
+    use target::tests::{uri, FakeFiles};
+    use tauri_plugin_fs::FilePath;
 
     #[test]
     fn the_default_name_carries_the_date() {
@@ -190,6 +231,128 @@ mod tests {
             ..Limits::DEFAULT
         };
         assert!(load_bundle(&path, &tiny).unwrap_err().contains("too large"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    const DOC: &str = "content://x/document/primary%3ADownload%2Faevum-backup.zip";
+
+    async fn fixture(name: &str) -> (PathBuf, LibraryState, crate::prefs::ipc::PrefsState) {
+        let dir = scratch(name);
+        let lib = LibraryState::new(&dir, LibraryFile::default());
+        let prefs = crate::prefs::ipc::init(&dir).unwrap();
+        (dir, lib, prefs)
+    }
+
+    #[tokio::test]
+    async fn a_document_gets_a_verified_copy_and_the_staging_file_is_removed() {
+        let (dir, lib, prefs) = fixture("export-doc").await;
+        let files = FakeFiles::new(dir.clone());
+        let staging = dir.join("export-staging.zip");
+        let report = export_into(
+            &files,
+            &uri(DOC),
+            &staging,
+            &lib,
+            &prefs,
+            "2026-09-27T00:00:00.000Z",
+        )
+        .await
+        .unwrap();
+        assert_eq!(report.path, "Download/aevum-backup.zip");
+        let copied = std::fs::read(files.doc()).unwrap();
+        assert_eq!(copied.len(), report.bytes);
+        read(&copied, &Limits::DEFAULT).unwrap();
+        assert!(!staging.exists(), "staging file left behind");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_bad_copy_is_reported_and_the_staging_file_is_still_removed() {
+        let (dir, lib, prefs) = fixture("export-doc-bad").await;
+        let mut files = FakeFiles::new(dir.clone());
+        files.corrupt = true;
+        let staging = dir.join("export-staging.zip");
+        let err = export_into(
+            &files,
+            &uri(DOC),
+            &staging,
+            &lib,
+            &prefs,
+            "2026-09-27T00:00:00.000Z",
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            err.contains("could not be written to Download/aevum-backup.zip"),
+            "{err}"
+        );
+        assert!(!staging.exists(), "staging file left behind");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn the_chosen_document_is_untouched_when_staging_fails() {
+        let (dir, lib, prefs) = fixture("export-doc-staging").await;
+        let files = FakeFiles::new(dir.clone());
+        let staging = dir.join("missing-folder").join("export-staging.zip");
+        let err = export_into(
+            &files,
+            &uri(DOC),
+            &staging,
+            &lib,
+            &prefs,
+            "2026-09-27T00:00:00.000Z",
+        )
+        .await
+        .unwrap_err();
+        assert!(!err.is_empty());
+        assert_eq!(files.opened.get(), 0, "the document was opened");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_path_is_written_in_place_as_before() {
+        let (dir, lib, prefs) = fixture("export-path").await;
+        let files = FakeFiles::new(dir.clone());
+        let out = dir.join("out.zip");
+        let report = export_into(
+            &files,
+            &FilePath::Path(out.clone()),
+            &dir.join("unused.zip"),
+            &lib,
+            &prefs,
+            "2026-09-27T00:00:00.000Z",
+        )
+        .await
+        .unwrap();
+        assert_eq!(report.path, out.display().to_string());
+        load_bundle(&out, &Limits::DEFAULT).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_document_is_imported_through_the_same_size_cap() {
+        let (dir, lib, prefs) = fixture("import-doc").await;
+        let files = FakeFiles::new(dir.clone());
+        let staging = dir.join("export-staging.zip");
+        export_into(
+            &files,
+            &uri(DOC),
+            &staging,
+            &lib,
+            &prefs,
+            "2026-09-27T00:00:00.000Z",
+        )
+        .await
+        .unwrap();
+        let bundle = load_from(&files, &uri(DOC), &Limits::DEFAULT).unwrap();
+        assert_eq!(bundle.manifest.entries, 0);
+        let tiny = Limits {
+            total_bytes: 5,
+            ..Limits::DEFAULT
+        };
+        let err = load_from(&files, &uri(DOC), &tiny).unwrap_err();
+        assert!(err.contains("too large"), "{err}");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

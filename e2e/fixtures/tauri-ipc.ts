@@ -110,8 +110,21 @@ export const test = base.extend({
       const prefs = { background_animation: true, seen_level: 0, reading_pages_per_hour: null };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
-        invoke: async (cmd: string, args?: { patch?: object; mode?: string }) => {
+        invoke: async (cmd: string, args?: { patch?: object; mode?: string; id?: string }) => {
           calls.push(cmd);
+          // Tests set window.__detailDelays ({ id: ms }) to answer each detail by id, late.
+          const delays = (window as { __detailDelays?: Record<string, number> }).__detailDelays;
+          if (cmd === "catalog_detail" && delays) {
+            const id = String(args?.id);
+            await new Promise((done) => setTimeout(done, delays[id] ?? 0));
+            const detail = structuredClone(fixtures[cmd]) as object;
+            return {
+              ...detail,
+              id: Number(id),
+              media_key: `tmdb:movie:${id}`,
+              title: `Movie ${id}`,
+            };
+          }
           // Tests set window.__offline to simulate a dropped network for provider calls.
           if ((window as { __offline?: boolean }).__offline && cmd.startsWith("catalog_")) {
             throw "offline: network unreachable";

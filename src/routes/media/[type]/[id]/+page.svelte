@@ -9,6 +9,7 @@
   import { libraryStore } from "$lib/stores/library.svelte";
   import { ui } from "$lib/stores/ui.svelte";
   import { errorMessage } from "$lib/utils/errors";
+  import { latest } from "$lib/utils/latest";
   import DetailSkeleton from "$lib/components/detail/DetailSkeleton.svelte";
   import DetailHero from "$lib/components/detail/DetailHero.svelte";
   import DetailMeta from "$lib/components/detail/DetailMeta.svelte";
@@ -42,16 +43,21 @@
   const savedTotal = $derived(detail ? resolveTotal(detail.media_type, detail, savedLength) : null);
   const savedPlannable = $derived(detail ? isPlannable(detail.media_type, savedLength) : true);
 
+  const begin = latest();
+
+  // Only the newest request may fill the page; one for a page already left is dropped.
   async function fetchDetail(type: string, id: string) {
+    const isCurrent = begin();
     loading = true;
     error = "";
     detail = null;
     try {
-      detail = await catalog.fetchDetail(type, id);
+      const found = await catalog.fetchDetail(type, id);
+      if (isCurrent()) detail = found;
     } catch (e) {
-      error = errorMessage(e, "Failed to load details.");
+      if (isCurrent()) error = errorMessage(e, "Failed to load details.");
     } finally {
-      loading = false;
+      if (isCurrent()) loading = false;
     }
   }
 

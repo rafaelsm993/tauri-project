@@ -76,7 +76,7 @@ test.describe("touch devices", () => {
       page.viewportSize()!.width,
     );
 
-    await page.getByRole("textbox").fill("teste");
+    await page.getByRole("searchbox", { name: "Search the catalog" }).fill("test");
     await page.keyboard.press("Enter");
     await expect(page.getByText("Results for", { exact: false })).toBeVisible();
     await expect(trigger).toHaveCount(0);

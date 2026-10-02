@@ -1,35 +1,32 @@
 <script lang="ts">
-  import { fade, scale } from "svelte/transition";
-  import { cubicOut } from "svelte/easing";
-
+  // `loading` comes from the real request; `onclear` drops the current results.
   let {
-    placeholder = "Search movies, TV shows, anime...",
+    placeholder = "Search movies, TV, anime, manga, books, games…",
+    loading = false,
+    query = $bindable(""),
     onSearch,
+    onclear,
   }: {
     placeholder?: string;
+    loading?: boolean;
+    query?: string;
     onSearch?: (query: string) => void;
+    onclear?: () => void;
   } = $props();
 
-  let query = $state("");
+  let input: HTMLInputElement | undefined = $state();
   let isFocused = $state(false);
-  let loading = $state(false);
-  let submitted = $state(false);
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
-    if (!query.trim()) return;
-    loading = true;
-    submitted = false;
-    onSearch?.(query.trim());
-    setTimeout(() => {
-      loading = false;
-      submitted = true;
-      setTimeout(() => (submitted = false), 2000);
-    }, 1500);
+    const text = query.trim();
+    if (text) onSearch?.(text);
   }
 
   function handleClear() {
     query = "";
+    onclear?.();
+    input?.focus();
   }
 </script>
 
@@ -37,12 +34,13 @@
   class="search-bar"
   class:focused={isFocused}
   class:loading
-  class:submitted
+  role="search"
+  aria-busy={loading}
   onsubmit={handleSubmit}
 >
   <div class="icon-wrap">
     {#if loading}
-      <div class="spinner" transition:scale></div>
+      <span class="spinner" role="status" aria-label="Searching"></span>
     {:else}
       <svg
         class="search-icon"
@@ -50,6 +48,7 @@
         fill="none"
         stroke="currentColor"
         stroke-width="2.5"
+        aria-hidden="true"
       >
         <circle cx="11" cy="11" r="8"></circle>
         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -58,24 +57,25 @@
   </div>
 
   <input
-    type="text"
+    bind:this={input}
+    type="search"
     bind:value={query}
     {placeholder}
+    autocomplete="off"
     onfocus={() => (isFocused = true)}
     onblur={() => (isFocused = false)}
-    aria-label="Search field"
+    aria-label="Search the catalog"
   />
 
-  {#if query.length > 0 && !loading}
-    <button
-      type="button"
-      class="clear-btn"
-      onclick={handleClear}
-      in:scale={{ duration: 200, easing: cubicOut }}
-      out:fade={{ duration: 150 }}
-      aria-label="Clear search"
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+  {#if query.length > 0}
+    <button type="button" class="clear-btn" onclick={handleClear} aria-label="Clear search">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="3"
+        aria-hidden="true"
+      >
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
@@ -111,10 +111,6 @@
     &.loading {
       border-color: var(--clr-teal);
     }
-
-    &.submitted {
-      animation: pulse-success 0.5s ease-out;
-    }
   }
 
   /* ── Icon ─────────────────────────────────────────────── */
@@ -141,6 +137,7 @@
   /* ── Input ────────────────────────────────────────────── */
   input {
     flex: 1;
+    min-width: 0;
     height: 100%;
     background: transparent;
     border: none;
@@ -158,10 +155,15 @@
     .focused &::placeholder {
       color: rgb(var(--clr-ink-rgb) / 0.2);
     }
+
+    &::-webkit-search-cancel-button {
+      appearance: none;
+    }
   }
 
   /* ── Spinner ──────────────────────────────────────────── */
   .spinner {
+    display: block;
     width: 20px;
     height: 20px;
     border: 2.5px solid rgb(var(--clr-primary-rgb) / 0.2);
@@ -188,9 +190,21 @@
       background $dur-fast ease,
       color $dur-fast ease;
 
-    &:hover {
-      background: rgb(var(--clr-ink-rgb) / 0.16);
-      color: var(--clr-primary);
+    @include hover-capable {
+      &:hover {
+        background: rgb(var(--clr-ink-rgb) / 0.16);
+        color: var(--clr-primary);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-primary);
+      outline-offset: 2px;
+    }
+
+    @include touch {
+      width: $touch-target;
+      height: $touch-target;
     }
 
     svg {
@@ -199,22 +213,9 @@
     }
   }
 
-  /* ── Animations ───────────────────────────────────────── */
   @keyframes spin {
     to {
       transform: rotate(360deg);
-    }
-  }
-
-  @keyframes pulse-success {
-    0% {
-      box-shadow: 0 0 0 0 rgb(var(--clr-primary-rgb) / 0.6);
-    }
-    70% {
-      box-shadow: 0 0 0 12px rgb(var(--clr-primary-rgb) / 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgb(var(--clr-primary-rgb) / 0);
     }
   }
 </style>

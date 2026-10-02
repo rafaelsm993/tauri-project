@@ -27,6 +27,14 @@
       : (browse.genres.find((g) => g.id === browse.activeGenre)?.name ?? "genre"),
   );
 
+  let typed = $state("");
+
+  // Both clear paths empty the field; only a submitted search has results to drop.
+  function clearSearch() {
+    typed = "";
+    if (browse.isSearch) void browse.clearSearch();
+  }
+
   function openDetail(item: MediaItem) {
     goto(
       resolve("/media/[type]/[id]", {
@@ -48,8 +56,10 @@
   <header class="page-header">
     <div class="search-slot">
       <SearchBar
+        bind:query={typed}
+        loading={browse.loading && browse.isSearch}
         onSearch={(q) => browse.search(q)}
-        placeholder="Search movies, TV shows, anime, manga, books…"
+        onclear={clearSearch}
       />
     </div>
 
@@ -79,7 +89,7 @@
         isSearch={browse.isSearch}
         query={browse.query}
         {genreName}
-        onClearSearch={() => browse.clearSearch()}
+        onClearSearch={clearSearch}
         onAllGenres={() => browse.switchGenre(null)}
       />
 

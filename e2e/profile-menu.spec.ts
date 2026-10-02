@@ -33,7 +33,7 @@ test("Home in the menu brings you back from another screen", async ({ page }) =>
   await page.getByRole("button", { name: "Profile menu" }).click();
   await menu(page).getByRole("link", { name: "Home" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("textbox", { name: "Search field" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search the catalog" })).toBeVisible();
 });
 
 test("on home the avatar sits on the search bar's line and the carousels' right edge", async ({

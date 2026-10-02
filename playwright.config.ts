@@ -1,5 +1,24 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// The Linux app runs on WebKitGTK; CI sets PW_WEBKIT=1 so that engine is tested at two sizes.
+const webkit = process.env.PW_WEBKIT
+  ? [
+      {
+        name: "webkit-laptop",
+        use: { ...devices["Desktop Safari"], viewport: { width: 1280, height: 800 } },
+      },
+      {
+        name: "webkit-phone",
+        use: {
+          browserName: "webkit" as const,
+          viewport: { width: 360, height: 740 },
+          hasTouch: true,
+          isMobile: true,
+        },
+      },
+    ]
+  : [];
+
 // The widths every screen must survive. Keep in sync with AGENTS.md → "Responsive".
 export default defineConfig({
   testDir: "e2e",
@@ -24,5 +43,6 @@ export default defineConfig({
     },
     { name: "laptop", use: { viewport: { width: 1280, height: 800 } } },
     { name: "wide", use: { viewport: { width: 1920, height: 1080 } } },
+    ...webkit,
   ],
 });

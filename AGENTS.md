@@ -28,6 +28,7 @@ RAWG (games), iTunes (books). No persistence yet (S2 adds local JSON storage); n
 npm run verify   # prettier + eslint + breakpoint/english/colors lint + docs guards + svelte-check + vitest + playwright (5 viewports) + cargo fmt/clippy(-D warnings)/test
 ```
 Fast loops: `npm run test:watch`, `npx playwright test --project=phone-small`, `cd src-tauri && cargo test <name>`, `npm run check`.
+CI also runs Playwright on WebKit (the Linux engine) at 1280 and 360 (`PW_WEBKIT=1`); locally that needs `npx playwright install webkit`.
 
 ## Workflow for every feature / fix
 1. **Intake** — restate the goal in one sentence; list files you'll touch (read them first).

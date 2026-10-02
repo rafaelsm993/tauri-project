@@ -79,18 +79,46 @@ describe("checkNetwork", () => {
 describe("watchConnectivity", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("checks on an interval and when the window regains focus, until stopped", () => {
+  const offline = () => new OnlineStore(new EventTarget(), false);
+  const online = () => new OnlineStore(new EventTarget(), true);
+
+  it("polls only while offline, so a working network is never probed on a timer", () => {
     vi.useFakeTimers();
-    const target = new EventTarget();
     const check = vi.fn();
-    const stop = watchConnectivity(check, target);
-    vi.advanceTimersByTime(CONNECTIVITY_INTERVAL_MS);
-    expect(check).toHaveBeenCalledTimes(1);
-    target.dispatchEvent(new Event("focus"));
-    expect(check).toHaveBeenCalledTimes(2);
+    const stop = watchConnectivity(check, online(), new EventTarget(), { hidden: false });
+    vi.advanceTimersByTime(CONNECTIVITY_INTERVAL_MS * 3);
+    expect(check).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it("polls while offline to notice the network coming back, until stopped", () => {
+    vi.useFakeTimers();
+    const check = vi.fn();
+    const stop = watchConnectivity(check, offline(), new EventTarget(), { hidden: false });
+    vi.advanceTimersByTime(CONNECTIVITY_INTERVAL_MS * 3);
+    expect(check).toHaveBeenCalledTimes(3);
     stop();
     vi.advanceTimersByTime(CONNECTIVITY_INTERVAL_MS * 3);
+    expect(check).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not poll while the app is hidden", () => {
+    vi.useFakeTimers();
+    const check = vi.fn();
+    const stop = watchConnectivity(check, offline(), new EventTarget(), { hidden: true });
+    vi.advanceTimersByTime(CONNECTIVITY_INTERVAL_MS * 3);
+    expect(check).not.toHaveBeenCalled();
+    stop();
+  });
+
+  it("checks when the window regains focus, online or not, until stopped", () => {
+    const target = new EventTarget();
+    const check = vi.fn();
+    const stop = watchConnectivity(check, online(), target, { hidden: false });
     target.dispatchEvent(new Event("focus"));
-    expect(check).toHaveBeenCalledTimes(2);
+    expect(check).toHaveBeenCalledTimes(1);
+    stop();
+    target.dispatchEvent(new Event("focus"));
+    expect(check).toHaveBeenCalledTimes(1);
   });
 });

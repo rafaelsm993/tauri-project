@@ -41,13 +41,17 @@ export async function checkNetwork(store: OnlineStore = onlineStore): Promise<vo
   }
 }
 
-// Runs `check` on an interval and on window focus; returns the stop function.
+// Runs `check` on focus, and every interval only while offline and visible; returns the stop.
 export function watchConnectivity(
   check: () => void,
+  store: OnlineStore = onlineStore,
   target: EventTarget = window,
+  page: { hidden: boolean } = document,
   intervalMs = CONNECTIVITY_INTERVAL_MS,
 ): () => void {
-  const timer = setInterval(check, intervalMs);
+  const timer = setInterval(() => {
+    if (!store.online && !page.hidden) check();
+  }, intervalMs);
   target.addEventListener("focus", check);
   return () => {
     clearInterval(timer);

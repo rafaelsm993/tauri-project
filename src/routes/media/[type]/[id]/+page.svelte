@@ -10,6 +10,7 @@
   import { ui } from "$lib/stores/ui.svelte";
   import { errorMessage } from "$lib/utils/errors";
   import { latest } from "$lib/utils/latest";
+  import { goBack } from "$lib/utils/history";
   import DetailSkeleton from "$lib/components/detail/DetailSkeleton.svelte";
   import DetailHero from "$lib/components/detail/DetailHero.svelte";
   import DetailMeta from "$lib/components/detail/DetailMeta.svelte";
@@ -61,7 +62,7 @@
     }
   }
 
-  const goHome = () => goto(resolve("/"));
+  const back = () => goBack(() => goto(resolve("/")));
   const retry = () => fetchDetail($page.params.type ?? "", $page.params.id ?? "");
 
   // IPC side effect on route param change.
@@ -76,15 +77,15 @@
 {:else if error}
   <div class="detail-error">
     <span>⚠ {error}</span>
-    <button onclick={retry}>Try again</button>
-    <button onclick={goHome}>← Back</button>
+    <button type="button" onclick={retry}>Try again</button>
+    <button type="button" onclick={back}><span aria-hidden="true">←</span> Back</button>
   </div>
 {:else if detail}
   <DetailHero
     title={detail.title}
     tagline={detail.tagline}
     backdropUrl={detail.backdrop_path ?? null}
-    onBack={goHome}
+    onBack={back}
   />
 
   <div class="detail-body">

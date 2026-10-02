@@ -26,6 +26,7 @@
   import { MediaQuery } from "svelte/reactivity";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import { detailPath } from "$lib/domain/libraryView";
+  import { inAppHistory } from "$lib/utils/history";
   import type { DueSession } from "$lib/domain/reminders";
 
   let { children }: { children: Snippet } = $props();
@@ -64,8 +65,12 @@
     return () => void stop.then((unlisten) => unlisten());
   });
 
-  // Screens without provider calls (library, settings) still learn when the network drops.
-  afterNavigate(() => void checkNetwork());
+  // Back needs to know whether an in-app page is behind; screens without provider calls
+  // (library, settings) still learn when the network drops.
+  afterNavigate((navigation) => {
+    inAppHistory.note(navigation);
+    void checkNetwork();
+  });
   $effect(() => watchConnectivity(() => void checkNetwork()));
 
   // Reminders are checked only when the app is in front: on launch, focus and return.

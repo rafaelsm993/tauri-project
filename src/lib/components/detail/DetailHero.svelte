@@ -19,7 +19,9 @@
   {/if}
   <div class="hero-fade"></div>
   <div class="hero-content">
-    <button class="back-btn" onclick={onBack}>← Back</button>
+    <button type="button" class="back-btn" onclick={onBack}>
+      <span aria-hidden="true">←</span> Back
+    </button>
     <h1 class="hero-title">{title}</h1>
     {#if tagline}
       <p class="hero-tagline">{tagline}</p>

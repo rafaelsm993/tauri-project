@@ -145,9 +145,51 @@ The routes themselves are described in [SvelteKit Special Pages](Front-end/Svelt
 
 ```svelte
 <AppBackground />          <!-- fixed, z-index 0 -->
-<div class="app-content">  <!-- z-index 1 -->
-  {@render children()}
+<div class="app-shell">    <!-- padded by --nav-left / --nav-bottom -->
+  <AppNav {section} {progress} />
+  <div class="app-content">  <!-- z-index 1 -->
+    <LevelChip />            <!-- desktop only -->
+    {@render children()}
+  </div>
 </div>
 ```
 
-The layout imports `$lib/styles/global.css`. It has no nav bar and no route guard.
+The layout imports `$lib/styles/global.css`. It has no route guard; the startup-problem screen has no
+navigation.
+
+## Switch
+
+- File: `src/lib/components/ui/Switch.svelte`
+- Props: `label`, `hint?`, `checked`, `disabled?`, `motion?`, `onchange(checked)`
+
+A `<button role="switch" aria-checked>` with its label and hint wired by `aria-labelledby` /
+`aria-describedby`, so Space and Enter work natively. The track is 48×28; under touch an invisible
+`::before` grows the hit area to 44 px. The thumb stops sliding when motion is off. Use it for
+on/off settings; a choice between named options stays a `SegmentedControl`.
+
+## Themes
+
+`prefs.theme` is `system`, `dark` or `light`. `applyTheme` (`src/lib/theme.ts`) sets
+`data-theme` and `color-scheme` on `<html>` and remembers the choice; `static/theme-boot.js`
+paints it before the app loads. `global.css` holds the dark palette on `:root` and the light one
+under `[data-theme="light"]` and, for `system`, under `prefers-color-scheme: light`.
+`scripts/contrast.test.mjs` (in `lint:guards`) checks every text/surface pair in both palettes (4.5:1 for text,
+3:1 for hints and accents). Text on a red fill uses `--clr-on-primary`; text over a poster scrim
+uses `--clr-on-scrim-rgb`, which stays white in both themes. On Android, `applyTheme` also calls the
+`AevumSystemBars` bridge from `MainActivity.kt` so the status and navigation bar icons turn dark on
+the light theme.
+
+## AppNav, LevelChip and LevelRing
+
+- `ui/AppNav.svelte` — props `section` (from `sectionOf` in `domain/navigation.ts`) and optional
+  `progress`. One `<nav aria-label="Main">` of links: a left rail (`$nav-rail-width`) with Settings
+  pinned to its bottom on desktop; a bottom tab bar (`$nav-bar-height` + safe area) without
+  Settings at `md` and below. The current tab has a filled pill and `aria-current="page"`.
+- A detail page keeps the tab it was opened from (the layout remembers the last section); opened
+  cold it belongs to Home. `/welcome` has no tab.
+- `ui/LevelChip.svelte` — the level number in a progress ring, top right on desktop, links to
+  /profile ("Level N · Title"). On phone the ring sits on the Profile tab instead, whose name
+  becomes "Profile · Level N"; Settings is a link in the Profile header.
+- `ui/LevelRing.svelte` — the decorative ring both use.
+- Fixed overlays (OfflineBanner, BackToTop, toasts) add `var(--nav-bottom)` / `var(--nav-left)`,
+  set on `:root` by the layout, so they stay clear of the navigation.

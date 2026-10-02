@@ -7,7 +7,8 @@
   import "$lib/styles/global.css";
   import AppBackground from "$lib/components/ui/AppBackground.svelte";
   import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
-  import ProfileMenu from "$lib/components/ui/ProfileMenu.svelte";
+  import AppNav from "$lib/components/ui/AppNav.svelte";
+  import LevelChip from "$lib/components/ui/LevelChip.svelte";
   import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
   import ReminderToast from "$lib/components/planner/ReminderToast.svelte";
   import StartupProblem from "$lib/components/ui/StartupProblem.svelte";
@@ -25,11 +26,18 @@
   import { afterNavigate, goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { reminderStore } from "$lib/stores/reminders.svelte";
+  import { applyTheme } from "$lib/theme";
   import { detailPath } from "$lib/domain/libraryView";
   import { inAppHistory } from "$lib/utils/history";
   import type { DueSession } from "$lib/domain/reminders";
+  import { sectionOf, type Section } from "$lib/domain/navigation";
 
   let { children }: { children: Snippet } = $props();
+
+  // DOM side effect: the saved theme wins over the one painted at boot.
+  $effect(() => {
+    if (prefsStore.ready) applyTheme(prefsStore.prefs.theme);
+  });
 
   // Side effect only (patches console.*), per the $effect rule in AGENTS.md.
   $effect(() => forwardConsole());
@@ -66,8 +74,13 @@
   });
 
   // Feeds Back its in-app history; screens without provider calls still learn of a dropped network.
+  // A detail page keeps the tab it was opened from.
+  let lastSection = $state<Section | null>(null);
+  const section = $derived(sectionOf(page.url.pathname, lastSection));
+
   afterNavigate((navigation) => {
     inAppHistory.note(navigation);
+    if (navigation.to) lastSection = sectionOf(navigation.to.url.pathname, lastSection);
     void checkNetwork();
   });
   $effect(() => watchConnectivity(() => void checkNetwork()));
@@ -103,11 +116,16 @@
     <StartupProblem {problem} />
   </div>
 {:else}
-  <div class="app-content">
-    <header class="app-bar">
-      <ProfileMenu current={page.url.pathname} {progress} />
-    </header>
-    {@render children()}
+  <div class="app-shell">
+    <AppNav {section} {progress} />
+    <div class="app-content">
+      {#if progress}
+        <header class="app-bar">
+          <LevelChip level={progress.level} title={progress.title} />
+        </header>
+      {/if}
+      {@render children()}
+    </div>
   </div>
   <OfflineBanner />
   <LevelUpToast
@@ -125,7 +143,23 @@
 {/if}
 
 <style lang="scss">
-  // Mirrors the home page box so the button lines up with the search bar and carousels.
+  // Overlays read these to stay clear of the rail (desktop) or the tab bar (phone).
+  :global(:root) {
+    --nav-left: #{$nav-rail-width};
+    --nav-bottom: 0px;
+
+    @include respond-to(md) {
+      --nav-left: 0px;
+      --nav-bottom: #{$nav-bar-height};
+    }
+  }
+
+  .app-shell {
+    padding-left: var(--nav-left);
+    padding-bottom: calc(var(--nav-bottom) + env(safe-area-inset-bottom, 0px));
+  }
+
+  // Mirrors the home page box so the chip lines up with the search bar and carousels.
   .app-bar {
     position: absolute;
     inset: 0 0 auto;
@@ -136,5 +170,9 @@
     margin-inline: auto;
     padding: $spacing-lg $spacing-xl 0;
     pointer-events: none;
+
+    @include respond-to(md) {
+      display: none;
+    }
   }
 </style>

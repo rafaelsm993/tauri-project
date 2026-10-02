@@ -18,10 +18,10 @@
   // Bottom-left so it never meets the bottom-right back-to-top button.
   .offline {
     position: fixed;
-    left: calc(#{$spacing-md} + env(safe-area-inset-left, 0px));
-    bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom, 0px));
+    left: calc(#{$spacing-md} + var(--nav-left, 0px) + env(safe-area-inset-left, 0px));
+    bottom: calc(#{$spacing-lg} + var(--nav-bottom, 0px) + env(safe-area-inset-bottom, 0px));
     z-index: var(--z-toast);
-    max-width: calc(100% - 2 * #{$spacing-md});
+    max-width: calc(100% - 2 * #{$spacing-md} - var(--nav-left, 0px));
     pointer-events: none;
   }
 

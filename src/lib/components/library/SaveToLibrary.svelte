@@ -112,7 +112,7 @@
 
   .add-btn {
     background: var(--clr-primary);
-    color: var(--clr-text);
+    color: var(--clr-on-primary);
     border: none;
     padding: $spacing-sm $spacing-lg;
     border-radius: $radius-full;

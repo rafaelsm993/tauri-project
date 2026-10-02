@@ -59,7 +59,7 @@
   .back-to-top {
     position: fixed;
     right: calc(#{$spacing-lg} + env(safe-area-inset-right, 0px));
-    bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom, 0px));
+    bottom: calc(#{$spacing-lg} + var(--nav-bottom, 0px) + env(safe-area-inset-bottom, 0px));
     z-index: 10;
     display: inline-flex;
     align-items: center;
@@ -110,7 +110,7 @@
     // The label stays in the accessibility tree (sr-only).
     @include respond-to(sm) {
       right: calc(#{$spacing-md} + env(safe-area-inset-right, 0px));
-      bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom, 0px));
+      bottom: calc(#{$spacing-md} + var(--nav-bottom, 0px) + env(safe-area-inset-bottom, 0px));
       width: $touch-target;
       height: $touch-target;
       padding: 0;

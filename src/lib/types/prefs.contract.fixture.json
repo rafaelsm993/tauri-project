@@ -2,6 +2,7 @@
   "prefs": {
     "motion": true,
     "reading_pages_per_hour": null,
-    "seen_level": 0
+    "seen_level": 0,
+    "theme": "system"
   }
 }

@@ -58,7 +58,7 @@ async function mockLibrary(
 test("the library lists saved items and filters them", async ({ page }) => {
   await mockLibrary(page);
   await page.goto("/library");
-  const cards = page.getByRole("list").getByRole("link");
+  const cards = page.getByRole("main").getByRole("list").getByRole("link");
   await expect(cards).toHaveCount(8);
   await page
     .getByRole("group", { name: "Status" })
@@ -70,7 +70,7 @@ test("the library lists saved items and filters them", async ({ page }) => {
 test("the library has no horizontal overflow", async ({ page }) => {
   await mockLibrary(page);
   await page.goto("/library");
-  await expect(page.getByRole("list").getByRole("link")).toHaveCount(8);
+  await expect(page.getByRole("main").getByRole("list").getByRole("link")).toHaveCount(8);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
@@ -100,7 +100,7 @@ test("a cached poster that is gone falls back to the provider image", async ({ p
 test("searching narrows the library by title and clearing restores it", async ({ page }) => {
   await mockLibrary(page);
   await page.goto("/library");
-  const cards = page.getByRole("list").getByRole("link");
+  const cards = page.getByRole("main").getByRole("list").getByRole("link");
   await expect(cards).toHaveCount(8);
   const search = page.getByRole("searchbox", { name: "Search your library" });
   await search.fill("NUMBER 3");
@@ -121,7 +121,7 @@ test("the search survives opening a card and coming back", async ({ page }) => {
   await expect(page.getByRole("searchbox", { name: "Search your library" })).toHaveValue(
     "number 1",
   );
-  await expect(page.getByRole("list").getByRole("link")).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("list").getByRole("link")).toHaveCount(1);
 });
 
 test("the search field and its clear button are touch-sized", async ({ page, isMobile }) => {

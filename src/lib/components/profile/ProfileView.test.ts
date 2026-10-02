@@ -111,6 +111,11 @@ async function burstingStore() {
 }
 
 describe("ProfileView", () => {
+  it("links to Settings from its header, which phones reach no other way", async () => {
+    render(ProfileView, { store: storeWith(LOG) });
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
+  });
+
   it("shows the level, title and XP in the level card", async () => {
     render(ProfileView, { store: storeWith(LOG) });
     const card = await screen.findByRole("region", { name: "Level" });

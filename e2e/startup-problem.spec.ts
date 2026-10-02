@@ -17,7 +17,7 @@ test("a refused save file shows why instead of the app", async ({ page }) => {
     page.getByRole("heading", { name: "Your library could not be opened" }),
   ).toBeVisible();
   await expect(page.getByText(PROBLEM.dir)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Profile menu" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Main" })).toHaveCount(0);
 });
 
 test("nothing tries to load the refused data", async ({ page }) => {

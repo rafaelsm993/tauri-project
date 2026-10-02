@@ -1,5 +1,5 @@
 import { prefs as defaultClient, type PrefsClient } from "$lib/api/prefs";
-import { DEFAULT_PREFS, type Prefs, type PrefsPatch } from "$lib/types/prefs";
+import { DEFAULT_PREFS, THEMES, type Prefs, type PrefsPatch, type Theme } from "$lib/types/prefs";
 import { errorMessage } from "$lib/utils/errors";
 
 // Keeps only known fields with the right type; e2e fakes answer unknown commands with junk.
@@ -15,6 +15,7 @@ function normalize(raw: unknown): Prefs {
       Number.isInteger(r.reading_pages_per_hour) && (r.reading_pages_per_hour as number) > 0
         ? (r.reading_pages_per_hour as number)
         : DEFAULT_PREFS.reading_pages_per_hour,
+    theme: THEMES.includes(r.theme as Theme) ? (r.theme as Theme) : DEFAULT_PREFS.theme,
   };
 }
 

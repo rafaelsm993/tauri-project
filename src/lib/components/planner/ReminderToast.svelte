@@ -58,7 +58,7 @@
     &.primary {
       background: var(--clr-primary);
       border-color: var(--clr-primary);
-      color: var(--clr-text);
+      color: var(--clr-on-primary);
     }
 
     @include hover-capable {

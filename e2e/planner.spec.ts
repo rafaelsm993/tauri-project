@@ -84,8 +84,10 @@ test("planning from the library card shows up in the planner", async ({ page }) 
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("button", { name: "Edit plan for Arcane" })).toBeVisible();
-  await page.getByRole("button", { name: "Profile menu" }).click();
-  await page.getByRole("link", { name: "Planner" }).click();
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "Planner" })
+    .click();
   await expect(page.getByRole("list", { name: "Plans" })).toContainText("Arcane");
 });
 

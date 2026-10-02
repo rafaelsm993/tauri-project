@@ -53,7 +53,18 @@ describe("PrefsStore", () => {
       motion: true,
       seen_level: 0,
       reading_pages_per_hour: null,
+      theme: "system",
     });
+  });
+
+  it("keeps a known theme and drops an unknown one", async () => {
+    const load = vi.fn(async () => ({ theme: "light" }) as never);
+    const store = new PrefsStore(fakeClient({ load }));
+    await store.hydrate();
+    expect(store.prefs.theme).toBe("light");
+    load.mockResolvedValue({ theme: "sepia" } as never);
+    await store.reload();
+    expect(store.prefs.theme).toBe("system");
   });
 
   it("keeps a saved reading pace and drops one that is not a whole number", async () => {

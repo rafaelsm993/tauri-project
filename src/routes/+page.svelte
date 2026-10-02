@@ -155,17 +155,11 @@
     padding-bottom: $spacing-lg;
   }
 
-  // Leaves room for the profile button once the bar can no longer sit centred beside it.
   .search-slot {
     display: flex;
     justify-content: center;
     width: 100%;
     min-width: 0;
-
-    @include respond-to(md) {
-      justify-content: flex-start;
-      padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
-    }
   }
 
   // ── Body: single column ─────────────────────────────────

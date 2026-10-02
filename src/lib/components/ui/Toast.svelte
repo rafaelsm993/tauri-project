@@ -56,7 +56,11 @@
   .toast-region {
     position: fixed;
     inset: auto $spacing-md
-      calc(#{$spacing-lg + $touch-target + $spacing-sm} + env(safe-area-inset-bottom)) auto;
+      calc(
+        #{$spacing-lg + $touch-target + $spacing-sm} + var(--nav-bottom, 0px) +
+          env(safe-area-inset-bottom)
+      )
+      auto;
     z-index: var(--z-toast);
     display: flex;
     justify-content: flex-end;

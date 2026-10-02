@@ -310,7 +310,7 @@
   .card__overlay-title {
     font-size: 0.85rem;
     font-weight: 600;
-    color: var(--clr-ink);
+    color: rgb(var(--clr-on-scrim-rgb));
     line-height: 1.3;
     margin: 0;
     display: -webkit-box;
@@ -322,7 +322,7 @@
 
   .card__overview {
     font-size: 0.68rem;
-    color: rgb(var(--clr-ink-rgb) / 0.58);
+    color: rgb(var(--clr-on-scrim-rgb) / 0.68);
     line-height: 1.55;
     margin: 0;
     display: -webkit-box;
@@ -334,7 +334,7 @@
 
   .card__author {
     font-size: 0.68rem;
-    color: rgb(var(--clr-ink-rgb) / 0.45);
+    color: rgb(var(--clr-on-scrim-rgb) / 0.55);
     font-style: italic;
     margin: 0;
     @include truncate;
@@ -349,7 +349,7 @@
     span {
       font-family: $font-mono;
       font-size: 0.58rem;
-      color: rgb(var(--clr-ink-rgb) / 0.35);
+      color: rgb(var(--clr-on-scrim-rgb) / 0.45);
       letter-spacing: 0.03em;
     }
   }

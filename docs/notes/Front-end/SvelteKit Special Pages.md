@@ -24,7 +24,7 @@ Tauri loads a static bundle from disk, so there is no Node server to render page
 
 ## Root layout (`+layout.svelte`)
 
-The root layout does three things: it imports `global.css`, renders `<AppBackground />`, and wraps the page in `<div class="app-content">`. It has no nav, no auth check and no redirects.
+The root layout imports `global.css`, renders `<AppBackground />`, and wraps the page in the app shell: the main navigation (`AppNav`, a rail on desktop and a tab bar on phone) beside `<div class="app-content">`. It has no auth check and no redirects.
 
 ---
 
@@ -96,4 +96,4 @@ Titled sections use `DetailSection`.
 
 ## Placeholder routes
 
-`/library`, `/profile`, `/planner` and `/welcome` each render `RoutePlaceholder` with a title. They exist so later sprints add screens as new routes instead of growing the two big pages. They are reachable by URL only (no nav yet).
+`/library`, `/profile`, `/planner` and `/welcome` each render `RoutePlaceholder` with a title. They exist so later sprints add screens as new routes instead of growing the two big pages. Library, Planner and Profile are tabs in the main navigation; Settings is in the desktop rail and behind Profile on phone; `/welcome` is reachable by URL only.

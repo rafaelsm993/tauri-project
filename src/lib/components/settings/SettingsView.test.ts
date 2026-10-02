@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/svelte";
+import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import SettingsView from "./SettingsView.svelte";
 import { PrefsStore } from "$lib/stores/prefs.svelte";
@@ -20,34 +20,57 @@ function storeWith(
 }
 
 describe("SettingsView", () => {
-  it("shows animations as On by default and says what they cover", () => {
+  const animations = () => screen.getByRole("switch", { name: "Animations" });
+  const theme = () => screen.getByRole("group", { name: "Theme" });
+
+  it("shows animations as a switch, on by default, and says what they cover", () => {
     render(SettingsView, { store: storeWith().store });
-    expect(screen.getByRole("group", { name: "Animations" })).toBeInTheDocument();
-    expect(screen.getByText(/system's reduce-motion setting always wins/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true");
+    expect(animations()).toHaveAttribute("aria-checked", "true");
+    expect(animations()).toHaveAccessibleDescription(/system's reduce-motion setting always wins/i);
   });
 
   it("turning it off saves the preference", async () => {
     const { store, update } = storeWith();
     render(SettingsView, { store });
-    await userEvent.click(screen.getByRole("button", { name: "Off" }));
+    await userEvent.click(animations());
     expect(update).toHaveBeenCalledWith({ motion: false });
-    expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+    expect(animations()).toHaveAttribute("aria-checked", "false");
   });
 
-  it("keeps the toggle disabled until the saved prefs load", () => {
+  it("keeps the controls disabled until the saved prefs load", () => {
     const { store } = storeWith();
     store.ready = false;
     render(SettingsView, { store });
-    expect(screen.getByRole("button", { name: "On" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Off" })).toBeDisabled();
+    expect(animations()).toBeDisabled();
+    expect(within(theme()).getByRole("button", { name: "Light" })).toBeDisabled();
+  });
+
+  it("offers System, Dark and Light, following the system by default", () => {
+    render(SettingsView, { store: storeWith().store });
+    const options = within(theme()).getAllByRole("button");
+    expect(options.map((b) => b.textContent?.trim())).toEqual(["System", "Dark", "Light"]);
+    expect(within(theme()).getByRole("button", { name: "System" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("picking a theme saves it", async () => {
+    const { store, update } = storeWith();
+    render(SettingsView, { store });
+    await userEvent.click(within(theme()).getByRole("button", { name: "Light" }));
+    expect(update).toHaveBeenCalledWith({ theme: "light" });
+    expect(within(theme()).getByRole("button", { name: "Light" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("shows the error when saving fails", async () => {
     const { store } = storeWith(vi.fn(async () => Promise.reject<Prefs>("read-only disk")));
     render(SettingsView, { store });
-    await userEvent.click(screen.getByRole("button", { name: "Off" }));
+    await userEvent.click(animations());
     expect(await screen.findByRole("alert")).toHaveTextContent("read-only disk");
-    expect(screen.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true");
+    expect(animations()).toHaveAttribute("aria-checked", "true");
   });
 });

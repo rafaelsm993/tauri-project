@@ -104,7 +104,7 @@ Not usable on this host. The emulator's own qemu process (`qemu-system-x86_64`, 
 | Edit saved but nothing changes on the phone | the edited value is overridden by the caller (e.g. a prop default) | check the Vite log for `hmr update <file>`, then edit the value actually rendered |
 | `adb` commands hang | the device went away | wrap scripted calls in `timeout 10 adb …`; reconnect |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` when the other machine installed the app | each machine signs debug builds with its own `~/.android/debug.keystore` | export your data first (Settings → Backup), `adb uninstall com.rafaelsm993.aevum`, run again, import the backup. To avoid it, copy one `debug.keystore` to `~/.android/` on every dev machine |
-| Desktop dev window loses its styles (no profile button, no background) | Vite answered a component's CSS request with the raw `.svelte` file after a `tauri dev` restart | fixed by the `svelteCssBeforeJs` plugin in `vite.config.js`; restart `tauri dev` if it appears |
+| Desktop dev window loses its styles (no navigation, no background) | Vite answered a component's CSS request with the raw `.svelte` file after a `tauri dev` restart | fixed by the `svelteCssBeforeJs` plugin in `vite.config.js`; restart `tauri dev` if it appears |
 | Desktop and phone dev apps load the wrong code, or `/profile` crashes | `tauri dev` and `tauri android dev` both bind port 1420 and share `node_modules/.vite` | run one dev server at a time |
 
 ## Verified

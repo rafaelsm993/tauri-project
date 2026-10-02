@@ -1,36 +1,45 @@
 <script lang="ts">
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import Switch from "$lib/components/ui/Switch.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import BackupSection from "./BackupSection.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
+  import type { Theme } from "$lib/types/prefs";
 
   // The store prop exists for tests; the app uses the singleton.
   let { store = prefsStore }: { store?: PrefsStore } = $props();
 
-  type OnOff = "on" | "off";
-  const ON_OFF: { value: OnOff; label: string }[] = [
-    { value: "on", label: "On" },
-    { value: "off", label: "Off" },
+  const THEME_OPTIONS: { value: Theme; label: string }[] = [
+    { value: "system", label: "System" },
+    { value: "dark", label: "Dark" },
+    { value: "light", label: "Light" },
   ];
 </script>
 
 <main class="settings">
   <h1 class="settings-title">Settings</h1>
 
+  <section class="settings-row" aria-label="Animations">
+    <Switch
+      label="Animations"
+      hint="Covers the background, the level-up burst and planner movement. Your system's reduce-motion setting always wins."
+      checked={store.prefs.motion}
+      disabled={!store.ready}
+      onchange={(on) => store.update({ motion: on })}
+    />
+  </section>
+
   <section class="settings-row">
     <div class="settings-text">
-      <h2 class="settings-label">Animations</h2>
-      <p class="settings-hint">
-        Covers the background, the level-up burst and planner movement. Your system's reduce-motion
-        setting always wins.
-      </p>
+      <h2 class="settings-label">Theme</h2>
+      <p class="settings-hint">System follows your device's light or dark setting.</p>
     </div>
     <SegmentedControl
-      label="Animations"
-      options={ON_OFF}
-      value={store.prefs.motion ? "on" : "off"}
+      label="Theme"
+      options={THEME_OPTIONS}
+      value={store.prefs.theme}
       disabled={!store.ready}
-      onchange={(v) => store.update({ motion: v === "on" })}
+      onchange={(theme) => store.update({ theme })}
     />
   </section>
 
@@ -65,6 +74,10 @@
     border-radius: $radius-md;
     background: var(--clr-surface);
     min-width: 0;
+
+    > :global(.switch-row) {
+      flex: 1 1 auto;
+    }
   }
 
   .settings-text {

@@ -195,6 +195,7 @@
   .btn-primary {
     background: var(--clr-primary);
     border-color: transparent;
+    color: var(--clr-on-primary);
   }
 
   .btn-danger {

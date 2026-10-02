@@ -66,7 +66,7 @@
     &.active {
       background: var(--clr-primary);
       border-color: transparent;
-      color: var(--clr-text);
+      color: var(--clr-on-primary);
       font-weight: 600;
     }
 

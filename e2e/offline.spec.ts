@@ -73,9 +73,11 @@ test.describe("offline on screens without provider calls", () => {
     await expect(page.getByRole("heading", { name: "Library" })).toBeVisible();
     await expect(pill(page)).toHaveCount(0);
     await setOffline(page, true);
-    await page.getByRole("button", { name: "Profile menu" }).click();
-    await page.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(/settings/);
+    await page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Planner" })
+      .click();
+    await expect(page).toHaveURL(/planner/);
     await expect(pill(page)).toBeVisible();
     await setOffline(page, false);
     await expect(pill(page)).toHaveCount(0);

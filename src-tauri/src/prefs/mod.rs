@@ -8,6 +8,16 @@ use serde_json::Value;
 pub const MIGRATIONS: &[Migration] = &[rename_background_animation];
 pub const SCHEMA_VERSION: u32 = current_version(MIGRATIONS);
 
+// The colour scheme; `System` follows the OS light/dark setting.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    #[default]
+    System,
+    Dark,
+    Light,
+}
+
 // Everything the user sets once and the app remembers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -18,6 +28,7 @@ pub struct Prefs {
     pub seen_level: u32,
     // Asked the first time a book is planned; None until then.
     pub reading_pages_per_hour: Option<u32>,
+    pub theme: Theme,
 }
 
 impl Default for Prefs {
@@ -26,6 +37,7 @@ impl Default for Prefs {
             motion: true,
             seen_level: 0,
             reading_pages_per_hour: None,
+            theme: Theme::System,
         }
     }
 }
@@ -38,6 +50,7 @@ pub struct PrefsPatch {
     pub seen_level: Option<u32>,
     #[serde(default, deserialize_with = "crate::store::present")]
     pub reading_pages_per_hour: Option<Option<u32>>,
+    pub theme: Option<Theme>,
 }
 
 // v1 → v2: the background-only switch became the app-wide motion switch.
@@ -67,6 +80,9 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(pace) = patch.reading_pages_per_hour {
         prefs.reading_pages_per_hour = pace;
+    }
+    if let Some(theme) = patch.theme {
+        prefs.theme = theme;
     }
 }
 
@@ -172,6 +188,28 @@ mod tests {
         let v2 = crate::store::migrate(json!({ "seen_level": 1 }), 0, MIGRATIONS).unwrap();
         assert_eq!(v2, json!({ "seen_level": 1 }));
         assert!(serde_json::from_value::<Prefs>(v2).unwrap().motion);
+    }
+
+    #[test]
+    fn the_theme_follows_the_system_until_chosen() {
+        assert_eq!(Prefs::default().theme, Theme::System);
+        let old: Prefs = serde_json::from_value(json!({ "motion": false })).unwrap();
+        assert_eq!(old.theme, Theme::System);
+    }
+
+    #[test]
+    fn a_patch_picks_a_theme_by_name() {
+        let mut p = Prefs::default();
+        let patch: PrefsPatch = serde_json::from_value(json!({ "theme": "light" })).unwrap();
+        apply_patch(&mut p, patch);
+        assert_eq!(p.theme, Theme::Light);
+        assert_eq!(serde_json::to_value(&p).unwrap()["theme"], json!("light"));
+    }
+
+    #[test]
+    fn an_unknown_theme_is_refused() {
+        let bad = serde_json::from_value::<PrefsPatch>(json!({ "theme": "sepia" }));
+        assert!(bad.is_err());
     }
 
     #[test]

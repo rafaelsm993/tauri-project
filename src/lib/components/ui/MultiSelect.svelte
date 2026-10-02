@@ -215,7 +215,7 @@
     // After :hover so a selected row keeps its fill under the pointer.
     &:has(input:checked) {
       background: var(--clr-primary);
-      color: var(--clr-text);
+      color: var(--clr-on-primary);
       font-weight: 600;
     }
 

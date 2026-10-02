@@ -130,10 +130,16 @@ test.describe("level-up moment", () => {
     expect(box.width).toBeGreaterThanOrEqual(44);
   });
 
-  test("the menu shows the new level right away", async ({ page }) => {
+  test("the navigation shows the new level right away", async ({ page }) => {
     await onMoviePage(page);
     await completed(page).click();
-    await page.getByRole("button", { name: "Profile menu" }).click();
-    await expect(page.getByRole("link", { name: "Level 2 · Newcomer" })).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Main" });
+    await expect(
+      page
+        .getByRole("link", { name: "Level 2 · Newcomer" })
+        .or(nav.getByRole("link", { name: "Profile · Level 2" }))
+        .first(),
+    ).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Profile · Level 2" })).toHaveCount(1);
   });
 });

@@ -6,9 +6,30 @@ import { svelteTesting } from "@testing-library/svelte/vite";
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+// A restarted dev server asked for a component's CSS before its JS (the webview cached the JS)
+// would send the raw .svelte file; compile the component first so the CSS exists.
+function svelteCssBeforeJs() {
+  let server;
+  return {
+    name: "svelte-css-before-js",
+    enforce: "pre",
+    apply: "serve",
+    configureServer(s) {
+      server = s;
+    },
+    async load(id) {
+      const [file, query = ""] = id.split("?");
+      const params = new URLSearchParams(query);
+      if (!file.endsWith(".svelte") || !params.has("svelte") || params.get("type") !== "style")
+        return;
+      await server.transformRequest(file);
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [sveltekit(), svelteTesting()],
+  plugins: [svelteCssBeforeJs(), sveltekit(), svelteTesting()],
 
   css: {
     preprocessorOptions: {

@@ -88,7 +88,7 @@ fn write_posters(
     Ok(written)
 }
 
-// Posters first, then the library (atomic, rolls back), then the log, then prefs on replace.
+// Posters, library (atomic), log, prefs on replace; merged against what is saved at write time.
 pub async fn apply(
     library: &LibraryState,
     prefs: &PrefsState,
@@ -96,24 +96,26 @@ pub async fn apply(
     mode: ImportMode,
 ) -> Result<ImportReport, String> {
     let _posters = library.poster_lock.lock().await;
-    let current = library.store.read(LibraryFile::clone).await;
-    let (next, mut report, events) = match mode {
-        ImportMode::Replace => {
-            let report = replace_report(&current, &bundle.library);
-            (bundle.library, report, bundle.events)
-        }
-        ImportMode::Merge => {
-            let (next, report) = merge(&current, &bundle.library);
-            let events = merge_events(&read_events(&library.events)?, &bundle.events);
-            (next, report, events)
-        }
+    let _log = library.events_lock.lock().await;
+    let events = match mode {
+        ImportMode::Replace => bundle.events,
+        ImportMode::Merge => merge_events(&read_events(&library.events)?, &bundle.events),
     };
-    report.posters = write_posters(&library.posters, &next, &bundle.posters)?;
-    library
+    let incoming = bundle.library;
+    let posters = bundle.posters;
+    let mut report = library
         .store
         .commit(|f| {
+            let (next, mut report) = match mode {
+                ImportMode::Replace => {
+                    let report = replace_report(f, &incoming);
+                    (incoming, report)
+                }
+                ImportMode::Merge => merge(f, &incoming),
+            };
+            report.posters = write_posters(&library.posters, &next, &posters)?;
             *f = next;
-            Ok(())
+            Ok(report)
         })
         .await?;
     write_events(&library.events, &events)?;
@@ -157,7 +159,7 @@ pub async fn import(
 mod tests {
     use super::*;
     use crate::backup::bundle::tests::{entry, library, sample, PNG};
-    use crate::library::commands::{load, MIGRATIONS};
+    use crate::library::commands::{load, update, UserPatch, MIGRATIONS};
     use crate::library::types::tests::event;
     use crate::prefs::{Prefs, SCHEMA_VERSION as PREFS_SCHEMA};
     use crate::store::file::tests::scratch;
@@ -244,6 +246,48 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(on_disk.data.entries.len(), 2, "survives a restart");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn saves_made_during_a_merge_import_are_kept() {
+        let (dir, lib, prefs) = fresh("apply-race");
+        let prefs = std::sync::Arc::new(prefs);
+        apply(&lib, &prefs, sample(), ImportMode::Merge)
+            .await
+            .unwrap();
+        for round in 0..200u32 {
+            let (l, p) = (lib.clone(), prefs.clone());
+            let import =
+                tokio::spawn(async move { apply(&l, &p, sample(), ImportMode::Merge).await });
+            let note = format!("round {round}");
+            let patch = UserPatch {
+                review: Some(Some(note.clone())),
+                ..UserPatch::default()
+            };
+            let id = format!("save-{round}");
+            let saved = Event {
+                id: id.clone(),
+                ..event("x")
+            };
+            let at = format!("2099-01-01T00:{:02}:{:02}.000Z", round / 60, round % 60);
+            update(&lib, "tmdb:movie:1", patch, at, Some(saved))
+                .await
+                .unwrap();
+            import.await.unwrap().unwrap();
+            let entries = load(&lib).await;
+            let one = entries.iter().find(|e| e.key == "tmdb:movie:1").unwrap();
+            assert_eq!(
+                one.user.review,
+                Some(note),
+                "round {round}: the save was lost"
+            );
+            let log = read_events(&lib.events).unwrap();
+            assert!(
+                log.iter().any(|e| e.id == id),
+                "round {round}: the save's event was lost"
+            );
+        }
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

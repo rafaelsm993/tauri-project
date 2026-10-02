@@ -29,6 +29,8 @@ pub struct LibraryState {
     pub posters: PathBuf,
     pub poster_lock: Arc<tokio::sync::Mutex<()>>,
     pub poster_failures: Arc<tokio::sync::Mutex<HashMap<String, Instant>>>,
+    // Held for every write to the event log, so an import never drops an event appended meanwhile.
+    pub events_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl LibraryState {
@@ -39,6 +41,7 @@ impl LibraryState {
             posters: dir.join("posters"),
             poster_lock: Arc::default(),
             poster_failures: Arc::default(),
+            events_lock: Arc::default(),
         }
     }
 }
@@ -141,8 +144,9 @@ pub fn apply_patch(user: &mut UserData, patch: UserPatch) {
 }
 
 // The saved change is the truth; a failed append only costs that action its XP.
-fn log_event(state: &LibraryState, event: Option<Event>) {
+async fn log_event(state: &LibraryState, event: Option<Event>) {
     let Some(e) = event else { return };
+    let _log = state.events_lock.lock().await;
     if let Err(err) = append_event(&state.events, &e) {
         log::error!("[events] {} not logged: {err}", e.kind);
     }
@@ -197,7 +201,7 @@ pub async fn add(
         })
         .await?;
     if inserted {
-        log_event(state, event);
+        log_event(state, event).await;
     }
     Ok(entry)
 }
@@ -225,7 +229,7 @@ pub async fn update(
             Ok(entry.clone())
         })
         .await?;
-    log_event(state, event);
+    log_event(state, event).await;
     Ok(entry)
 }
 
@@ -237,7 +241,7 @@ pub async fn remove(state: &LibraryState, key: &str, event: Option<Event>) -> Re
     let Some(entry) = state.store.commit(|f| Ok(f.entries.remove(key))).await? else {
         return Ok(false);
     };
-    log_event(state, event);
+    log_event(state, event).await;
     if let Some(file) = entry.snapshot.poster_file {
         posters::remove_quietly(&state.posters.join(file));
     }

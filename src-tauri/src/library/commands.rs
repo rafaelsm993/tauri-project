@@ -140,10 +140,11 @@ pub fn apply_patch(user: &mut UserData, patch: UserPatch) {
     }
 }
 
-fn log_event(state: &LibraryState, event: Option<Event>) -> Result<(), String> {
-    match event {
-        Some(e) => append_event(&state.events, &e),
-        None => Ok(()),
+// The saved change is the truth; a failed append only costs that action its XP.
+fn log_event(state: &LibraryState, event: Option<Event>) {
+    let Some(e) = event else { return };
+    if let Err(err) = append_event(&state.events, &e) {
+        log::error!("[events] {} not logged: {err}", e.kind);
     }
 }
 
@@ -196,7 +197,7 @@ pub async fn add(
         })
         .await?;
     if inserted {
-        log_event(state, event)?;
+        log_event(state, event);
     }
     Ok(entry)
 }
@@ -224,7 +225,7 @@ pub async fn update(
             Ok(entry.clone())
         })
         .await?;
-    log_event(state, event)?;
+    log_event(state, event);
     Ok(entry)
 }
 
@@ -236,7 +237,7 @@ pub async fn remove(state: &LibraryState, key: &str, event: Option<Event>) -> Re
     let Some(entry) = state.store.commit(|f| Ok(f.entries.remove(key))).await? else {
         return Ok(false);
     };
-    log_event(state, event)?;
+    log_event(state, event);
     if let Some(file) = entry.snapshot.poster_file {
         posters::remove_quietly(&state.posters.join(file));
     }
@@ -378,6 +379,35 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].user.progress, 0);
         assert_eq!(entries[0].updated_at, "t1");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_failed_log_append_keeps_the_saved_change() {
+        let dir = scratch("b1-log-fails");
+        let state = state_in(&dir);
+        std::fs::create_dir_all(&state.events).unwrap();
+        let added = add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            "t1".into(),
+            Some(event("a")),
+        )
+        .await;
+        assert!(added.is_ok(), "{added:?}");
+        let patch = UserPatch {
+            progress: Some(3),
+            ..UserPatch::default()
+        };
+        let updated = update(&state, "tmdb:tv:7", patch, "t2".into(), Some(event("b"))).await;
+        assert_eq!(updated.map(|e| e.user.progress), Ok(3));
+        assert_eq!(saved(&dir).entries["tmdb:tv:7"].user.progress, 3);
+        assert_eq!(
+            remove(&state, "tmdb:tv:7", Some(event("c"))).await,
+            Ok(true)
+        );
+        assert!(saved(&dir).entries.is_empty());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -20,9 +20,10 @@ function storeWith(
 }
 
 describe("SettingsView", () => {
-  it("shows the animated background as On by default", () => {
+  it("shows animations as On by default and says what they cover", () => {
     render(SettingsView, { store: storeWith().store });
-    expect(screen.getByRole("group", { name: "Animated background" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Animations" })).toBeInTheDocument();
+    expect(screen.getByText(/system's reduce-motion setting always wins/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -30,7 +31,7 @@ describe("SettingsView", () => {
     const { store, update } = storeWith();
     render(SettingsView, { store });
     await userEvent.click(screen.getByRole("button", { name: "Off" }));
-    expect(update).toHaveBeenCalledWith({ background_animation: false });
+    expect(update).toHaveBeenCalledWith({ motion: false });
     expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
   });
 

@@ -23,3 +23,30 @@ test("the home search's clear button is touch-sized", async ({ page, isMobile })
   expect(box.height).toBeGreaterThanOrEqual(44);
   expect(box.width).toBeGreaterThanOrEqual(44);
 });
+
+test("Escape empties the search and brings the carousels back", async ({ page }) => {
+  const search = page.getByRole("searchbox", { name: "Search the catalog" });
+  await search.fill("dune");
+  await search.press("Enter");
+  await expect(page.getByText(/Results for/)).toBeVisible();
+  await search.press("Escape");
+  await expect(search).toHaveValue("");
+  await expect(page.getByText(/Results for/)).toHaveCount(0);
+  await expect(page.locator("section.carousel").first()).toBeVisible();
+});
+
+test("the Discover link leaves the search and empties the field", async ({ page }) => {
+  const search = page.getByRole("searchbox", { name: "Search the catalog" });
+  await search.fill("dune");
+  await search.press("Enter");
+  await expect(page.getByText(/Results for/)).toBeVisible();
+  await page.getByRole("button", { name: /Discover/ }).click();
+  await expect(search).toHaveValue("");
+  await expect(page.getByText(/Results for/)).toHaveCount(0);
+  await expect(page.locator("section.carousel").first()).toBeVisible();
+});
+
+test("the home search keeps the bar's height", async ({ page }) => {
+  const form = page.getByRole("search");
+  expect((await form.boundingBox())!.height).toBe(52);
+});

@@ -107,7 +107,7 @@ export const test = base.extend({
     await page.addInitScript((fixtures) => {
       const empty = { page: 1, total_pages: 1, total_results: 0, results: [] };
       const calls: string[] = [];
-      const prefs = { background_animation: true, seen_level: 0, reading_pages_per_hour: null };
+      const prefs = { motion: true, seen_level: 0, reading_pages_per_hour: null };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
         invoke: async (cmd: string, args?: { patch?: object; mode?: string; id?: string }) => {

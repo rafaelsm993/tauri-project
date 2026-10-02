@@ -1,8 +1,8 @@
 import { expect, test } from "./fixtures/tauri-ipc";
 
-test("turning the animated background off saves it", async ({ page }) => {
+test("turning animations off saves it", async ({ page }) => {
   await page.goto("/settings");
-  const group = page.getByRole("group", { name: "Animated background" });
+  const group = page.getByRole("group", { name: "Animations" });
   await expect(group.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true");
   await group.getByRole("button", { name: "Off" }).click();
   await expect(group.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
@@ -14,7 +14,7 @@ test("turning the animated background off saves it", async ({ page }) => {
 
 test("turning the background back on works too", async ({ page }) => {
   await page.goto("/settings");
-  const group = page.getByRole("group", { name: "Animated background" });
+  const group = page.getByRole("group", { name: "Animations" });
   await group.getByRole("button", { name: "Off" }).click();
   await expect(page.locator(".bg-area")).toHaveClass(/paused/);
   await group.getByRole("button", { name: "On" }).click();
@@ -26,7 +26,7 @@ test("settings controls are touch-sized on coarse pointers", async ({ page, isMo
   test.skip(!isMobile, "mouse viewports may use compact targets");
   await page.goto("/settings");
   const heights = await page
-    .getByRole("group", { name: "Animated background" })
+    .getByRole("group", { name: "Animations" })
     .getByRole("button")
     .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
   for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
@@ -37,7 +37,7 @@ test("the background pauses when the animation is turned off", async ({ page }) 
   const bg = page.locator(".bg-area");
   await expect(bg).not.toHaveClass(/paused/);
   await page
-    .getByRole("group", { name: "Animated background" })
+    .getByRole("group", { name: "Animations" })
     .getByRole("button", { name: "Off" })
     .click();
   await expect(bg).toHaveClass(/paused/);

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import BackToTop from "./BackToTop.svelte";
+import { motionStore } from "$lib/stores/motion.svelte";
 
 const NAME = "Back to top";
 
@@ -15,16 +16,7 @@ async function scrollWindowTo(y: number) {
 }
 
 function mockReducedMotion(reduce: boolean) {
-  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-    matches: reduce && query.includes("prefers-reduced-motion: reduce"),
-    media: query,
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }));
+  vi.spyOn(motionStore, "reduced", "get").mockReturnValue(reduce);
 }
 
 describe("BackToTop", () => {

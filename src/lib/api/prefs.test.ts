@@ -15,16 +15,14 @@ function record(reply: unknown) {
 
 describe("prefs client", () => {
   it("load calls prefs_load with no arguments", async () => {
-    const calls = record({ background_animation: true });
-    expect(await prefs.load()).toEqual({ background_animation: true });
+    const calls = record({ motion: true });
+    expect(await prefs.load()).toEqual({ motion: true });
     expect(calls).toEqual([{ cmd: "prefs_load", args: {} }]);
   });
 
   it("update sends only the changed fields as `patch`", async () => {
-    const calls = record({ background_animation: false });
-    await prefs.update({ background_animation: false });
-    expect(calls).toEqual([
-      { cmd: "prefs_update", args: { patch: { background_animation: false } } },
-    ]);
+    const calls = record({ motion: false });
+    await prefs.update({ motion: false });
+    expect(calls).toEqual([{ cmd: "prefs_update", args: { patch: { motion: false } } }]);
   });
 });

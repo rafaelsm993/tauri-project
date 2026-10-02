@@ -6,10 +6,7 @@ import { errorMessage } from "$lib/utils/errors";
 function normalize(raw: unknown): Prefs {
   const r = (raw ?? {}) as Partial<Record<keyof Prefs, unknown>>;
   return {
-    background_animation:
-      typeof r.background_animation === "boolean"
-        ? r.background_animation
-        : DEFAULT_PREFS.background_animation,
+    motion: typeof r.motion === "boolean" ? r.motion : DEFAULT_PREFS.motion,
     seen_level:
       Number.isInteger(r.seen_level) && (r.seen_level as number) >= 0
         ? (r.seen_level as number)

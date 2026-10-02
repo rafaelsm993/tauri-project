@@ -241,7 +241,7 @@ mod tests {
         assert_eq!((r.added, r.posters, r.prefs_restored), (2, 1, true));
         assert_eq!(load(&lib).await.len(), 2);
         assert_eq!(read_events(&lib.events).unwrap().len(), 2);
-        assert!(!crate::prefs::ipc::load(&prefs).await.background_animation);
+        assert!(!crate::prefs::ipc::load(&prefs).await.motion);
         let poster = std::fs::read(lib.posters.join("tmdb_movie_1.png")).unwrap();
         assert_eq!(poster, PNG);
         let on_disk = crate::store::load::<LibraryFile>(&dir.join("library.json"), MIGRATIONS)
@@ -295,7 +295,7 @@ mod tests {
             .await
             .unwrap();
         assert!(!r.prefs_restored);
-        assert!(crate::prefs::ipc::load(&prefs).await.background_animation);
+        assert!(crate::prefs::ipc::load(&prefs).await.motion);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

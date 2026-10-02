@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
+  import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import LibraryCard from "$lib/components/library/LibraryCard.svelte";
   import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
   import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
@@ -79,7 +80,7 @@
   </header>
 
   {#if store.error}
-    <p class="library-error" role="alert">⚠ {store.error}</p>
+    <ErrorNote message={store.error} />
   {/if}
 
   {#if !store.ready && !store.error}
@@ -164,10 +165,5 @@
       display: inline-flex;
       align-items: center;
     }
-  }
-
-  .library-error {
-    color: var(--clr-error);
-    font-size: 0.85rem;
   }
 </style>

@@ -78,6 +78,8 @@ Reminders (`src/lib/domain/reminders.ts`, `src/lib/stores/reminders.svelte.ts`) 
 | --- | --- | --- |
 | `startup_status` | — | `StartupProblem \| null` |
 
+`prefs.json` is schema v2: v1's `background_animation` became `motion` (one switch for every decorative animation); a v1 file or backup is upgraded on load and the old field name is refused in a `prefs_update` patch. An older build opening a v2 file shows the newer-version screen below.
+
 If `library.json` or `prefs.json` is from a newer app or cannot be read, setup keeps the file untouched, skips the library and prefs state, and the root layout shows `StartupProblem.svelte` (why, the data folder, a copy button) instead of the app.
 
 ## The `Provider` trait

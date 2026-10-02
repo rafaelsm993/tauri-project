@@ -17,13 +17,13 @@
   import { untrack, type Snippet } from "svelte";
   import { forwardConsole, reportCspViolations } from "$lib/logging/console";
   import { libraryStore } from "$lib/stores/library.svelte";
+  import { motionStore } from "$lib/stores/motion.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
   import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
   import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
   import { afterNavigate, goto } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import { MediaQuery } from "svelte/reactivity";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import { detailPath } from "$lib/domain/libraryView";
   import { inAppHistory } from "$lib/utils/history";
@@ -85,9 +85,6 @@
     };
   });
 
-  const reduced = new MediaQuery("prefers-reduced-motion: reduce");
-  const motion = $derived(prefsStore.prefs.background_animation && !reduced.current);
-
   function start(session: DueSession) {
     reminderStore.dismiss();
     const path = detailPath(session.entry);
@@ -113,10 +110,14 @@
     {@render children()}
   </div>
   <OfflineBanner />
-  <LevelUpToast moment={gamificationStore.moment} onclose={() => gamificationStore.dismiss()} />
+  <LevelUpToast
+    moment={gamificationStore.moment}
+    motion={motionStore.on}
+    onclose={() => gamificationStore.dismiss()}
+  />
   <ReminderToast
     session={reminderStore.visibleToast}
-    {motion}
+    motion={motionStore.on}
     onstart={start}
     onlater={() => reminderStore.later()}
     onclose={() => reminderStore.dismiss()}

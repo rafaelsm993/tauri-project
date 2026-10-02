@@ -5,11 +5,12 @@
   import type { MediaItem } from "$lib/types/media";
   import { BrowseStore } from "$lib/stores/browse.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
-  import SearchBar from "$lib/components/ui/SearchBar.svelte";
+  import SearchField from "$lib/components/ui/SearchField.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
   import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import GenreCarousel from "$lib/components/ui/GenreCarousel.svelte";
+  import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import BackToTop from "$lib/components/ui/BackToTop.svelte";
   import MultiSelect from "$lib/components/ui/MultiSelect.svelte";
   import BrowseContext from "$lib/components/browse/BrowseContext.svelte";
@@ -55,10 +56,14 @@
 <div class="page">
   <header class="page-header">
     <div class="search-slot">
-      <SearchBar
-        bind:query={typed}
+      <SearchField
+        mode="submit"
+        label="Search the catalog"
+        placeholder="Search movies, TV, anime, manga, books, games…"
+        value={typed}
         loading={browse.loading && browse.isSearch}
-        onSearch={(q) => browse.search(q)}
+        onchange={(v) => (typed = v)}
+        onsubmit={(q) => browse.search(q)}
         onclear={clearSearch}
       />
     </div>
@@ -95,8 +100,7 @@
 
       {#if browse.error && browse.gridMode}
         <div class="page-error">
-          <span>⚠ {browse.error}</span>
-          <button onclick={() => browse.retryFailed()}>Try again</button>
+          <ErrorNote message={browse.error} onretry={() => browse.retryFailed()} />
         </div>
       {/if}
 
@@ -187,28 +191,6 @@
 
   // ── States ──────────────────────────────────────────────
   .page-error {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-md;
-    padding: $spacing-md $spacing-lg;
-    background: rgb(var(--clr-error-rgb) / 0.07);
-    border: 1px solid rgb(var(--clr-error-rgb) / 0.2);
-    border-radius: $radius-md;
-    color: var(--clr-error);
-    font-size: 0.84rem;
     margin-bottom: $spacing-md;
-    button {
-      background: none;
-      border: 1px solid rgb(var(--clr-error-rgb) / 0.3);
-      color: var(--clr-error);
-      padding: $spacing-xs $spacing-sm;
-      border-radius: $radius-sm;
-      font-size: 0.76rem;
-      cursor: pointer;
-      &:hover {
-        background: rgb(var(--clr-error-rgb) / 0.1);
-      }
-    }
   }
 </style>

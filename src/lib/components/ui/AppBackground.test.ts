@@ -16,7 +16,7 @@ function isPaused(container: HTMLElement) {
 
 function readyPrefs(on = true) {
   const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
-  prefs.prefs = { ...DEFAULT_PREFS, background_animation: on };
+  prefs.prefs = { ...DEFAULT_PREFS, motion: on };
   prefs.ready = true;
   return prefs;
 }
@@ -52,7 +52,7 @@ describe("AppBackground", () => {
     const prefs = readyPrefs(false);
     const { container } = render(AppBackground, { prefs });
     expect(isPaused(container)).toBe(true);
-    prefs.prefs = { ...DEFAULT_PREFS, background_animation: true };
+    prefs.prefs = { ...DEFAULT_PREFS, motion: true };
     await tick();
     expect(isPaused(container)).toBe(false);
   });

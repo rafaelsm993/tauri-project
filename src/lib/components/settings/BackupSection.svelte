@@ -1,5 +1,6 @@
 <script lang="ts">
   import { backupStore, BackupStore } from "$lib/stores/backup.svelte";
+  import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { formatDate, plural } from "$lib/utils/format";
 
@@ -115,7 +116,7 @@
     <p class="backup-message" role="status">{store.message}</p>
   {/if}
   {#if store.error}
-    <p class="backup-error" role="alert">{store.error}</p>
+    <ErrorNote message={store.error} />
   {/if}
 </section>
 
@@ -239,17 +240,9 @@
     color: var(--clr-error);
   }
 
-  .backup-message,
-  .backup-error {
+  .backup-message {
     font-size: 0.85rem;
     overflow-wrap: anywhere;
-  }
-
-  .backup-message {
     color: var(--clr-teal);
-  }
-
-  .backup-error {
-    color: var(--clr-error);
   }
 </style>

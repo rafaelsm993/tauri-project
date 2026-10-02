@@ -138,6 +138,21 @@ test("the add sheet fits the narrowest window", async ({ page }) => {
   expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true);
 });
 
+test("the add sheet is modal and the backdrop closes it", async ({ page }) => {
+  await mockIpc(page, false);
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: /add to library/i }).click();
+
+  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  await expect(sheet).toBeVisible();
+  expect(await sheet.evaluate((node) => node.matches(":modal"))).toBe(true);
+  await page.mouse.click(4, 4);
+  await expect(sheet).toHaveCount(0);
+  expect(await page.evaluate(() => (window as unknown as { __addCalls: number }).__addCalls)).toBe(
+    0,
+  );
+});
+
 test("a saved item without length can add it later", async ({ page }) => {
   await mockIpc(page, false);
   await page.goto("/media/movie/1");

@@ -2,6 +2,8 @@
   // Snap-scrolling row of MediaCards for one genre on the home page.
   import type { MediaItem } from "$lib/types/media";
   import MediaCard from "$lib/components/media/MediaCard.svelte";
+  import ErrorNote from "./ErrorNote.svelte";
+  import Skeleton from "./Skeleton.svelte";
 
   let {
     title,
@@ -37,8 +39,10 @@
     railEl.scrollBy({ left: amount, behavior: "smooth" });
   }
 
+  const showsCards = $derived(!loading && !error && items.length > 0);
+
   $effect(() => {
-    if (railEl && !loading && items.length > 0) refreshArrows();
+    if (railEl && showsCards) refreshArrows();
   });
 </script>
 
@@ -51,53 +55,56 @@
   </header>
 
   <div class="carousel-body">
-    {#if canScrollLeft && !loading}
-      <button
-        type="button"
-        class="nav-btn nav-btn-left"
-        aria-label="Previous"
-        onclick={() => scrollByAmount(-1)}
-      >
-        ‹
-      </button>
-    {/if}
-
-    <div bind:this={railEl} class="rail" role="list" onscroll={refreshArrows}>
-      {#if loading}
-        <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -- skeleton placeholder, only the index is used -->
-        {#each { length: 8 } as _, i (i)}
-          <div class="rail-item skeleton">
-            <div class="skeleton-poster"></div>
-            <div class="skeleton-line" style="width:68%"></div>
-          </div>
-        {/each}
-      {:else if error}
-        <p class="rail-error">
-          ⚠ {error}
-          {#if onRetry}
-            <button type="button" class="retry-btn" onclick={onRetry}>Try again</button>
-          {/if}
-        </p>
-      {:else if items.length === 0}
-        <p class="rail-empty">No items available.</p>
-      {:else}
-        {#each items as item (item.media_key)}
-          <div class="rail-item" role="listitem">
-            <MediaCard {item} onclick={() => onCardClick(item)} />
-          </div>
-        {/each}
+    {#if error && !loading}
+      <div class="rail-note">
+        <ErrorNote message={error} onretry={onRetry} />
+      </div>
+    {:else}
+      {#if canScrollLeft && !loading}
+        <button
+          type="button"
+          class="nav-btn nav-btn-left"
+          aria-label="Previous"
+          onclick={() => scrollByAmount(-1)}
+        >
+          ‹
+        </button>
       {/if}
-    </div>
 
-    {#if canScrollRight && !loading}
-      <button
-        type="button"
-        class="nav-btn nav-btn-right"
-        aria-label="Next"
-        onclick={() => scrollByAmount(1)}
+      <div
+        bind:this={railEl}
+        class="rail"
+        role={showsCards ? "list" : undefined}
+        onscroll={refreshArrows}
       >
-        ›
-      </button>
+        {#if loading}
+          <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -- skeleton placeholder, only the index is used -->
+          {#each { length: 8 } as _, i (i)}
+            <div class="rail-item">
+              <Skeleton poster />
+            </div>
+          {/each}
+        {:else if items.length === 0}
+          <p class="rail-empty">No items available.</p>
+        {:else}
+          {#each items as item (item.media_key)}
+            <div class="rail-item" role="listitem">
+              <MediaCard {item} onclick={() => onCardClick(item)} />
+            </div>
+          {/each}
+        {/if}
+      </div>
+
+      {#if canScrollRight && !loading}
+        <button
+          type="button"
+          class="nav-btn nav-btn-right"
+          aria-label="Next"
+          onclick={() => scrollByAmount(1)}
+        >
+          ›
+        </button>
+      {/if}
     {/if}
   </div>
 </section>
@@ -179,8 +186,7 @@
     }
   }
 
-  .rail-empty,
-  .rail-error {
+  .rail-empty {
     color: var(--clr-text-3);
     font-size: 0.82rem;
     padding: $spacing-xl 0;
@@ -188,65 +194,8 @@
     width: 100%;
   }
 
-  .retry-btn {
-    margin-left: $spacing-sm;
-    padding: $spacing-xs $spacing-sm;
-    border: 1px solid rgb(var(--clr-ink-rgb) / 0.15);
-    border-radius: $radius-sm;
-    background: none;
-    color: var(--clr-text-2);
-    font-size: 0.76rem;
-    cursor: pointer;
-
-    @include hover-capable {
-      &:hover {
-        color: var(--clr-text);
-        border-color: rgb(var(--clr-ink-rgb) / 0.3);
-      }
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--clr-primary);
-      outline-offset: 2px;
-    }
-
-    @include touch {
-      min-height: $touch-target;
-    }
-  }
-
-  // ── Skeletons ───────────────────────────────────────────
-  .skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-xs;
-  }
-
-  .skeleton-poster {
-    aspect-ratio: 2 / 3;
-    border-radius: $radius-md;
-    background: var(--clr-surface);
-    overflow: hidden;
-    position: relative;
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        100deg,
-        transparent 0%,
-        rgb(var(--clr-ink-rgb) / 0.05) 50%,
-        transparent 100%
-      );
-      background-size: 200% 100%;
-      animation: shimmer 1.7s ease-in-out infinite;
-    }
-  }
-
-  .skeleton-line {
-    height: 9px;
-    border-radius: $radius-sm;
-    background: var(--clr-surface);
+  .rail-note {
+    padding: $spacing-xs;
   }
 
   // ── Nav arrows ──────────────────────────────────────────
@@ -286,14 +235,5 @@
   .nav-btn:hover {
     background: rgb(var(--clr-highlight-rgb) / 0.85);
     color: var(--clr-bg);
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
   }
 </style>

@@ -10,6 +10,7 @@
   import { latest } from "$lib/utils/latest";
   import { goBack } from "$lib/utils/history";
   import DetailSkeleton from "$lib/components/detail/DetailSkeleton.svelte";
+  import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import DetailHero from "$lib/components/detail/DetailHero.svelte";
   import DetailMeta from "$lib/components/detail/DetailMeta.svelte";
   import DetailSection from "$lib/components/detail/DetailSection.svelte";
@@ -68,9 +69,9 @@
   <DetailSkeleton />
 {:else if error}
   <div class="detail-error">
-    <span>⚠ {error}</span>
-    <button type="button" onclick={retry}>Try again</button>
-    <button type="button" onclick={back}><span aria-hidden="true">←</span> Back</button>
+    <ErrorNote message={error} onretry={retry}>
+      <button type="button" onclick={back}><span aria-hidden="true">←</span> Back</button>
+    </ErrorNote>
   </div>
 {:else if detail}
   <DetailHero
@@ -215,31 +216,9 @@
 
   // ── Error ───────────────────────────────────────────────
   .detail-error {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    padding: $spacing-lg $spacing-xl;
     max-width: 600px;
     margin: $spacing-2xl auto;
-    background: rgb(var(--clr-error-rgb) / 0.07);
-    border: 1px solid rgb(var(--clr-error-rgb) / 0.2);
-    border-radius: $radius-md;
-    color: var(--clr-error);
-    font-size: 0.84rem;
-
-    button {
-      background: none;
-      border: 1px solid rgb(var(--clr-error-rgb) / 0.3);
-      color: var(--clr-error);
-      padding: $spacing-xs $spacing-sm;
-      border-radius: $radius-sm;
-      font-size: 0.76rem;
-      cursor: pointer;
-      white-space: nowrap;
-      &:hover {
-        background: rgb(var(--clr-error-rgb) / 0.1);
-      }
-    }
+    padding-inline: $spacing-lg;
   }
 
   // ── Responsive ──────────────────────────────────────────

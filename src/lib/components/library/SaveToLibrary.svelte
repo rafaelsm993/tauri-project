@@ -1,5 +1,6 @@
 <script lang="ts">
   import AddSheet from "./AddSheet.svelte";
+  import Sheet from "$lib/components/ui/Sheet.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { lengthFromDetail } from "$lib/domain/length";
   import { isBinary } from "$lib/domain/progress";
@@ -37,11 +38,6 @@
     close();
     if (entry) store.update(item.media_key, value);
     else store.add(item, value);
-  }
-
-  // Moves focus into the sheet when it opens.
-  function focusFirst(node: HTMLElement) {
-    node.querySelector<HTMLElement>("input, textarea, button")?.focus();
   }
 
   const statusOptions = STATUSES.map((status) => ({ value: status, label: STATUS_LABELS[status] }));
@@ -88,14 +84,7 @@
 </div>
 
 {#if sheetOpen}
-  <div
-    class="sheet-wrap"
-    role="dialog"
-    aria-label="Add to library"
-    tabindex="-1"
-    {@attach focusFirst}
-    onkeydown={(event) => event.key === "Escape" && close()}
-  >
+  <Sheet label="Add to library" onclose={close}>
     <AddSheet
       mediaType={item.media_type}
       title={item.title}
@@ -105,7 +94,7 @@
       onsave={saveFromSheet}
       oncancel={close}
     />
-  </div>
+  </Sheet>
 {/if}
 
 {#if store.error}
@@ -171,10 +160,6 @@
       color: var(--clr-error);
       border-color: rgb(var(--clr-error-rgb) / 0.4);
     }
-  }
-
-  .sheet-wrap {
-    margin-bottom: $spacing-md;
   }
 
   .save-error {

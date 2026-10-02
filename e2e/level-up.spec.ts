@@ -52,7 +52,7 @@ async function onMoviePage(page: Page) {
       const w = window as unknown as { __TAURI_INTERNALS__: { invoke: Invoke } };
       const base = w.__TAURI_INTERNALS__.invoke;
       const seen = { level: 1 };
-      const prefs = () => ({ background_animation: true, seen_level: seen.level });
+      const prefs = () => ({ motion: true, seen_level: seen.level });
       w.__TAURI_INTERNALS__.invoke = async (cmd, args) => {
         if (cmd === "library_load") return [structuredClone(entry)];
         if (cmd === "library_events") return structuredClone(log);

@@ -210,12 +210,12 @@ describe("ProfileView", () => {
 
   it("follows the animation setting once the saved settings arrive", async () => {
     const store = await burstingStore();
-    prefsStore.prefs = { ...DEFAULT_PREFS, background_animation: false };
+    prefsStore.prefs = { ...DEFAULT_PREFS, motion: false };
     prefsStore.ready = true;
     render(ProfileView, { store });
     const ring = await screen.findByRole("img", { name: /^Level 1,/ });
     expect(ring).not.toHaveAttribute("data-burst");
-    prefsStore.prefs = { ...DEFAULT_PREFS, background_animation: true };
+    prefsStore.prefs = { ...DEFAULT_PREFS, motion: true };
     await tick();
     expect(ring).toHaveAttribute("data-burst");
   });

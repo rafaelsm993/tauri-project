@@ -191,6 +191,25 @@ test.describe("touch devices", () => {
   });
 });
 
+test.describe("error notes", () => {
+  for (const path of ["/", "/media/movie/1"]) {
+    test(`the retry on ${path} is touch-sized and fits the screen`, async ({ page, isMobile }) => {
+      await page.addInitScript(() => Object.assign(window, { __offline: true }));
+      await page.goto(path);
+      const note = page.getByRole("alert").filter({ hasText: "network unreachable" }).first();
+      const retry = note.getByRole("button", { name: "Try again" });
+      await expect(retry).toBeVisible();
+      const box = (await retry.boundingBox())!;
+      const noteBox = (await note.boundingBox())!;
+      expect(noteBox.x + noteBox.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+      if (isMobile) {
+        expect(box.width).toBeGreaterThanOrEqual(44);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+    });
+  }
+});
+
 test.describe("theming", () => {
   test("overriding a channel token re-skins components at runtime", async ({ page }) => {
     await page.goto("/");

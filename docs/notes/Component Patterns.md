@@ -58,7 +58,8 @@ A pill tab bar with a fixed list of categories: Movies, TV Shows, Anime, Manga, 
 A horizontally scrolling rail of `MediaCard`s with scroll-snap.
 
 - Arrow buttons appear when `canScrollLeft` / `canScrollRight` are true. These are `$state` values updated `onscroll` and by an `$effect` after items load. Each click scrolls about 85% of the visible width.
-- While loading it shows 8 skeleton cards. Errors and empty results render inline; with `onRetry` the error has a "Try again" button (home wires it to `browse.retrySection`).
+- While loading it shows 8 `Skeleton` cards. An error replaces the rail with an `ErrorNote` (with `onRetry` it has a "Try again" button; home wires it to `browse.retrySection`); an empty result renders inline.
+- The rail is a `list` only while it shows cards; skeletons, the error and the empty text are not list items.
 - "See all →" appears when `onSeeMore` is passed. The home page wires it to `switchGenre(genre.id)`.
 - Home mounts one carousel per genre and loads each one lazily with the `whenVisible` attachment (`src/lib/attachments/whenVisible.ts`).
 
@@ -93,21 +94,33 @@ A button that opens a popover of native checkboxes. Generic: values keep their t
 
 `DetailHero` (title, tagline, backdrop, back button), `DetailMeta` (`detail: MediaDetail`), `DetailSection` (titled wrapper with a `children` snippet), `TrailerEmbed` (`videoKey`, `name`), `ScreenshotStrip` (`screenshots`), `CastRow` (`cast`), `DetailSkeleton`.
 
+## ErrorNote and Skeleton
+
+- `src/lib/components/ui/ErrorNote.svelte`: `message`, `onretry?`, `children?` (extra actions after the retry, e.g. the detail page's Back). A `role="alert"` box in the error colours; buttons are ≥ 44 px under `touch`. Every page-level and section-level error uses it: home grid, carousels, detail, library, profile, settings, backup. Errors inside a form (`SaveToLibrary`, `PlanDialog`) stay as plain text next to the fields.
+- `src/lib/components/ui/Skeleton.svelte`: `poster?` (a 2:3 block), `heading?` (a title and a subtitle bar), `lines = 1`. Always `aria-hidden`, no inline styles; the shimmer stops under the system's reduce-motion. Used by `GenreCarousel`, `ResultsGrid` and `DetailSkeleton`.
+
+## Sheet
+
+- File: `src/lib/components/ui/Sheet.svelte`
+- Props: `label`, `onclose()`, `children`
+
+The one modal for add/edit forms: a native `<dialog>` opened with `showModal()`, centred, over a dimmed `::backdrop` (`--clr-shade-rgb`). Focus moves to its first field and returns to the opener when it unmounts. Escape, the system back gesture (`cancel`) and a click on the backdrop call `onclose`; the parent decides and unmounts it. While an on-screen keyboard is up it sits above it (`--sheet-covered`, from `visualViewport`), so Save stays reachable. Android's back button navigates the page instead of closing the sheet (W5). The form inside keeps its own card look. Used by `SaveToLibrary` (add / edit length) and `PlanDialog`. jsdom has no `showModal`, so `vitest-setup.ts` stubs it.
+
 ## BackToTop and RoutePlaceholder
 
 - `src/lib/components/ui/BackToTop.svelte`: `threshold?`, `label = "Back to top"`; appears after scrolling past the threshold.
 - `src/lib/components/ui/RoutePlaceholder.svelte`: `title`; the body of `/library`, `/profile`, `/planner` and `/welcome` until their sprints.
 
-## SearchBar
+## SearchField
 
-- File: `src/lib/components/ui/SearchBar.svelte`
-- Props: `placeholder?: string`, `onSearch?: (q: string) => void`
+- File: `src/lib/components/ui/SearchField.svelte`
+- Props: `label`, `value`, `onchange(value)`, `placeholder?`, `mode?: "instant" | "submit"` (default `instant`), `loading?`, `onsubmit?(query)`, `onclear?()`
 
-A `<form>` with a search icon, a clear (×) button and focus glow.
+One search input for the whole app; the parent owns `value`.
 
-- Submitting calls `onSearch(query.trim())`.
-- The spinner (1.5s) and success pulse (2s) that follow run on **fixed timers**. They are not tied to the real request.
-- Clear only empties the input. It does not call `onSearch`, so the parent keeps the previous results. The home page's "← Discover" link is what actually resets search.
+- `instant` (library filter): reports every keystroke; no landmark, no spinner.
+- `submit` (home catalog): a `<form role="search">` the height of the app bar (`$bar-height`). Enter calls `onsubmit(value.trim())`, a blank value submits nothing. The spinner shows only while `loading` (the real request), and `aria-busy` follows it.
+- In both modes the clear (×) button and Escape empty the field and call `onclear`; the clear button keeps focus in the input and is ≥ 44 px under `touch`. Home's `onclear` also drops the search results, like the "← Discover" link.
 
 ## AppBackground
 
@@ -120,7 +133,7 @@ A fixed, `aria-hidden` decorative layer with three parts:
 2. `.circles`: 20 `<li>` bubbles animated with CSS `@keyframes`.
 3. `.bg-vignette`.
 
-No JavaScript animation loop runs; the bubbles pause while the window is hidden or blurred, or when the background animation setting is off. Colors come from the `--clr-*-rgb` channel tokens.
+No JavaScript animation loop runs; the bubbles pause while the window is hidden or blurred, or when the Animations setting (`prefs.motion`) is off. Colors come from the `--clr-*-rgb` channel tokens.
 
 ---
 

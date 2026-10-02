@@ -34,7 +34,7 @@ A thin shell: all state lives in `BrowseStore` (`src/lib/stores/browse.svelte.ts
 
 ```
 ┌──────────────────────────────────────────────┐
-│  SearchBar                                   │
+│  SearchField (submit)                        │
 │  CategoryTabs (scrolls)          [Genres ▾]  │
 ├──────────────────────────────────────────────┤
 │  BrowseContext (← Discover / ← All genres)   │

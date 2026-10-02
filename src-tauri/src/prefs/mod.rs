@@ -2,16 +2,18 @@ pub mod ipc;
 
 use crate::store::{current_version, Migration};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 // prefs.json upgrade steps, oldest first; a new field needs a serde default, not a step.
-pub const MIGRATIONS: &[Migration] = &[];
+pub const MIGRATIONS: &[Migration] = &[rename_background_animation];
 pub const SCHEMA_VERSION: u32 = current_version(MIGRATIONS);
 
 // Everything the user sets once and the app remembers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Prefs {
-    pub background_animation: bool,
+    // Every decorative animation: background, level-up burst, planner movement.
+    pub motion: bool,
     // The last level the user was congratulated on; 0 until the first check adopts the current one.
     pub seen_level: u32,
     // Asked the first time a book is planned; None until then.
@@ -21,7 +23,7 @@ pub struct Prefs {
 impl Default for Prefs {
     fn default() -> Self {
         Self {
-            background_animation: true,
+            motion: true,
             seen_level: 0,
             reading_pages_per_hour: None,
         }
@@ -32,10 +34,19 @@ impl Default for Prefs {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PrefsPatch {
-    pub background_animation: Option<bool>,
+    pub motion: Option<bool>,
     pub seen_level: Option<u32>,
     #[serde(default, deserialize_with = "crate::store::present")]
     pub reading_pages_per_hour: Option<Option<u32>>,
+}
+
+// v1 → v2: the background-only switch became the app-wide motion switch.
+fn rename_background_animation(mut v: Value) -> Result<Value, String> {
+    let map = v.as_object_mut().ok_or("prefs is not an object")?;
+    if let Some(on) = map.remove("background_animation") {
+        map.insert("motion".into(), on);
+    }
+    Ok(v)
 }
 
 pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
@@ -48,8 +59,8 @@ pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
 }
 
 pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
-    if let Some(on) = patch.background_animation {
-        prefs.background_animation = on;
+    if let Some(on) = patch.motion {
+        prefs.motion = on;
     }
     if let Some(level) = patch.seen_level {
         prefs.seen_level = level;
@@ -62,11 +73,11 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{json, Value};
+    use serde_json::json;
 
     #[test]
-    fn background_animation_is_on_by_default() {
-        assert!(Prefs::default().background_animation);
+    fn motion_is_on_by_default() {
+        assert!(Prefs::default().motion);
     }
 
     #[test]
@@ -83,24 +94,24 @@ mod tests {
         apply_patch(
             &mut p,
             PrefsPatch {
-                background_animation: Some(false),
+                motion: Some(false),
                 ..PrefsPatch::default()
             },
         );
-        assert!(!p.background_animation);
+        assert!(!p.motion);
     }
 
     #[test]
     fn a_patch_with_an_unknown_field_is_rejected() {
-        let err = serde_json::from_value::<PrefsPatch>(json!({ "background_animatoin": false }));
+        let err = serde_json::from_value::<PrefsPatch>(json!({ "motoin": false }));
         assert!(err.is_err());
     }
 
     #[test]
     fn a_file_from_before_level_ups_starts_with_no_level_seen() {
-        let p: Prefs = serde_json::from_value(json!({ "background_animation": false })).unwrap();
+        let p: Prefs = serde_json::from_value(json!({ "motion": false })).unwrap();
         assert_eq!(p.seen_level, 0);
-        assert!(!p.background_animation);
+        assert!(!p.motion);
     }
 
     #[test]
@@ -109,7 +120,7 @@ mod tests {
         let patch: PrefsPatch = serde_json::from_value(json!({ "seen_level": 4 })).unwrap();
         apply_patch(&mut p, patch);
         assert_eq!(p.seen_level, 4);
-        assert!(p.background_animation);
+        assert!(p.motion);
     }
 
     #[test]
@@ -144,6 +155,29 @@ mod tests {
         assert!(validate_patch(&pace(5)).is_ok());
         assert!(validate_patch(&pace(300)).is_ok());
         assert!(validate_patch(&PrefsPatch::default()).is_ok());
+    }
+
+    #[test]
+    fn a_v1_file_keeps_its_animation_choice_as_motion() {
+        let v1 = json!({ "background_animation": false, "seen_level": 3 });
+        let v2 = crate::store::migrate(v1, 0, MIGRATIONS).unwrap();
+        assert_eq!(v2, json!({ "motion": false, "seen_level": 3 }));
+        let p: Prefs = serde_json::from_value(v2).unwrap();
+        assert!(!p.motion);
+        assert_eq!(p.seen_level, 3);
+    }
+
+    #[test]
+    fn a_v1_file_without_the_choice_gets_the_default() {
+        let v2 = crate::store::migrate(json!({ "seen_level": 1 }), 0, MIGRATIONS).unwrap();
+        assert_eq!(v2, json!({ "seen_level": 1 }));
+        assert!(serde_json::from_value::<Prefs>(v2).unwrap().motion);
+    }
+
+    #[test]
+    fn the_old_patch_field_is_refused() {
+        let old = serde_json::from_value::<PrefsPatch>(json!({ "background_animation": false }));
+        assert!(old.is_err());
     }
 
     const CONTRACT: &str = concat!(

@@ -44,6 +44,8 @@ export default defineConfig(async () => ({
   test: {
     environment: "jsdom",
     pool: "vmThreads",
+    // Node 22 vm contexts cannot load dagre's ESM file from a CommonJS package; Vite transforms it.
+    server: { deps: { inline: ["@dagrejs/dagre"] } },
     include: ["src/**/*.test.ts"], // e2e/ belongs to Playwright, not Vitest
     setupFiles: ["./vitest-setup.ts"],
   },

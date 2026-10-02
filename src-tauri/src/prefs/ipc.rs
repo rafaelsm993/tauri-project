@@ -85,16 +85,16 @@ mod tests {
         let saved = update(
             &first,
             PrefsPatch {
-                background_animation: Some(false),
+                motion: Some(false),
                 ..PrefsPatch::default()
             },
         )
         .await
         .unwrap();
-        assert!(!saved.background_animation);
+        assert!(!saved.motion);
         drop(first);
         let second = init(&dir).unwrap();
-        assert!(!load(&second).await.background_animation);
+        assert!(!load(&second).await.motion);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -106,13 +106,13 @@ mod tests {
         let saved = update(
             &state,
             PrefsPatch {
-                background_animation: Some(false),
+                motion: Some(false),
                 ..PrefsPatch::default()
             },
         )
         .await;
         assert!(saved.is_err());
-        assert!(load(&state).await.background_animation);
+        assert!(load(&state).await.motion);
         assert!(dir.join("prefs.json").is_dir());
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -132,6 +132,26 @@ mod tests {
         assert!(saved.is_err());
         assert_eq!(load(&state).await, Prefs::default());
         assert!(!dir.join("prefs.json").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_v1_file_on_disk_loads_as_motion_and_is_rewritten_at_v2() {
+        let dir = scratch("prefs-v1");
+        let path = dir.join("prefs.json");
+        std::fs::write(
+            &path,
+            br#"{"schema_version":1,"data":{"background_animation":false,"seen_level":2}}"#,
+        )
+        .unwrap();
+        let state = init(&dir).unwrap();
+        assert!(!load(&state).await.motion);
+        state.store.flush().await.unwrap();
+        let saved: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved["schema_version"], 2);
+        assert_eq!(saved["data"]["motion"], false);
+        assert!(saved["data"].get("background_animation").is_none());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

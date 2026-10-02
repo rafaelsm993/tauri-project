@@ -1,5 +1,6 @@
 <script lang="ts">
   import PlanSheet, { type PlanSave } from "$lib/components/library/PlanSheet.svelte";
+  import Sheet from "$lib/components/ui/Sheet.svelte";
   import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import type { LibraryEntry } from "$lib/types/library";
@@ -45,21 +46,9 @@
     if (!saved) failure = store.error || "The change could not be saved.";
     return saved;
   }
-
-  // Moves focus into the sheet when it opens.
-  function focusFirst(node: HTMLElement) {
-    node.querySelector<HTMLElement>("input, button")?.focus();
-  }
 </script>
 
-<div
-  class="plan-dialog"
-  role="dialog"
-  aria-label="Plan {entry.snapshot.title}"
-  tabindex="-1"
-  {@attach focusFirst}
-  onkeydown={(event) => event.key === "Escape" && onclose()}
->
+<Sheet label="Plan {entry.snapshot.title}" {onclose}>
   <PlanSheet
     {entry}
     {today}
@@ -72,14 +61,9 @@
   {#if failure}
     <p class="plan-error" role="alert">⚠ {failure}</p>
   {/if}
-</div>
+</Sheet>
 
 <style lang="scss">
-  .plan-dialog {
-    margin-block: $spacing-md;
-    min-width: 0;
-  }
-
   .plan-error {
     margin-top: $spacing-sm;
     color: var(--clr-error);

@@ -319,7 +319,7 @@ pub(crate) mod tests {
             library: lib,
             events: vec![event("a"), event("b")],
             prefs: Prefs {
-                background_animation: false,
+                motion: false,
                 seen_level: 3,
                 reading_pages_per_hour: Some(40),
             },
@@ -394,6 +394,14 @@ pub(crate) mod tests {
         let b = read(&minimal(vec![]), &Limits::DEFAULT).unwrap();
         assert_eq!(b.prefs, Prefs::default());
         assert!(b.events.is_empty() && b.library.entries.is_empty());
+    }
+
+    #[test]
+    fn a_backup_with_v1_prefs_imports_the_animation_choice_as_motion() {
+        let prefs = library_json(1, json!({ "background_animation": false, "seen_level": 5 }));
+        let b = read(&minimal(vec![("prefs.json", prefs)]), &Limits::DEFAULT).unwrap();
+        assert!(!b.prefs.motion);
+        assert_eq!(b.prefs.seen_level, 5);
     }
 
     #[test]

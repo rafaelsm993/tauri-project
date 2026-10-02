@@ -24,7 +24,7 @@ Colors are **runtime tokens**, so a theme is a set of `--clr-*-rgb` overrides on
 | `--clr-surface-2-rgb` | `20 20 20` | `--clr-surface-2` | Glass surfaces |
 | `--clr-primary-rgb` | `229 9 20` | `--clr-primary`, `--clr-primary-subtle` | Brand red: actions, accents, glows |
 | `--clr-accent-rgb` | `178 7 16` | `--clr-accent` | Darker red, hover states |
-| `--clr-teal-rgb` | `70 211 105` | `--clr-teal` | Success (e.g. SearchBar submitted) |
+| `--clr-teal-rgb` | `70 211 105` | `--clr-teal` | Success (e.g. the home search while loading) |
 | `--clr-error-rgb` | `255 82 99` | `--clr-error` | Error text and borders |
 | `--clr-ink-rgb` | `255 255 255` | `--clr-ink`, `--clr-border`, `--clr-border-2` | Light overlays on dark (flips for a light theme) |
 | `--clr-shade-rgb` | `0 0 0` | shadows | Dark overlays and shadows |

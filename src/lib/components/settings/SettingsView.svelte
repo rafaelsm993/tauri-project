@@ -1,5 +1,6 @@
 <script lang="ts">
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import BackupSection from "./BackupSection.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
 
@@ -18,22 +19,23 @@
 
   <section class="settings-row">
     <div class="settings-text">
-      <h2 class="settings-label">Animated background</h2>
+      <h2 class="settings-label">Animations</h2>
       <p class="settings-hint">
-        Moving shapes behind the app. It always pauses while the window is hidden or unfocused.
+        Covers the background, the level-up burst and planner movement. Your system's reduce-motion
+        setting always wins.
       </p>
     </div>
     <SegmentedControl
-      label="Animated background"
+      label="Animations"
       options={ON_OFF}
-      value={store.prefs.background_animation ? "on" : "off"}
+      value={store.prefs.motion ? "on" : "off"}
       disabled={!store.ready}
-      onchange={(v) => store.update({ background_animation: v === "on" })}
+      onchange={(v) => store.update({ motion: v === "on" })}
     />
   </section>
 
   {#if store.error}
-    <p class="settings-error" role="alert">{store.error}</p>
+    <ErrorNote message={store.error} />
   {/if}
 
   <BackupSection />
@@ -82,9 +84,5 @@
   .settings-hint {
     font-size: 0.85rem;
     color: var(--clr-text-2);
-  }
-
-  .settings-error {
-    color: var(--clr-error);
   }
 </style>

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { untrack } from "svelte";
-  import { MediaQuery } from "svelte/reactivity";
   import PlanDialog from "./PlanDialog.svelte";
   import WeekTimeline from "./WeekTimeline.svelte";
   import { addDays, weekStart } from "$lib/domain/calendar";
@@ -9,11 +8,10 @@
   import { LENGTH_LABELS } from "$lib/domain/length";
   import { plannerData, weekView } from "$lib/domain/planner";
   import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
+  import { motionStore } from "$lib/stores/motion.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import { formatDay } from "$lib/utils/format";
   import type { LibraryEntry } from "$lib/types/library";
-
-  const reduced = new MediaQuery("prefers-reduced-motion: reduce");
 
   // `library`, `prefs`, `today` and `motion` exist for tests; the route passes today's local date.
   let {
@@ -23,9 +21,7 @@
     motion,
   }: { today: string; library?: LibraryStore; prefs?: PrefsStore; motion?: boolean } = $props();
 
-  const moves = $derived(
-    motion ?? (prefs.ready && prefs.prefs.background_animation && !reduced.current),
-  );
+  const moves = $derived(motion ?? motionStore.on);
 
   let weekOf = $state(untrack(() => today));
   let editing = $state<LibraryEntry | null>(null);

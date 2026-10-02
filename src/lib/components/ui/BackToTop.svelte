@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { motionStore } from "$lib/stores/motion.svelte";
+
   // Scrolls the window: the document is the scroller, `.app-content` has no overflow.
   let {
     threshold,
@@ -29,8 +31,7 @@
   });
 
   function scrollToTop() {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.scrollTo({ top: 0, behavior: reduce ? "instant" : "smooth" });
+    window.scrollTo({ top: 0, behavior: motionStore.reduced ? "instant" : "smooth" });
   }
 </script>
 

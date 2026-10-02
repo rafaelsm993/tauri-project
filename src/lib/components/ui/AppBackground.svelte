@@ -8,7 +8,7 @@
 
   let hidden = $state(false);
   let blurred = $state(false);
-  const paused = $derived(hidden || blurred || !prefs.ready || !prefs.prefs.background_animation);
+  const paused = $derived(hidden || blurred || !prefs.ready || !prefs.prefs.motion);
 
   // Stops the infinite background loops while nobody can see them.
   $effect(() => {

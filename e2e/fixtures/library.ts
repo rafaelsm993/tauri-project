@@ -49,7 +49,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
     ({ list, events, seenLevel }) => {
       const library = structuredClone(list) as { key: string; user: Record<string, unknown> }[];
       const prefs = {
-        background_animation: true,
+        motion: true,
         seen_level: seenLevel,
         reading_pages_per_hour: null,
       };

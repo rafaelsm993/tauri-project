@@ -1,6 +1,6 @@
 {
   "prefs": {
-    "background_animation": true,
+    "motion": true,
     "reading_pages_per_hour": null,
     "seen_level": 0
   }

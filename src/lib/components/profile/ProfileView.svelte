@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import "layerchart/core.css";
   import LevelCard from "./LevelCard.svelte";
   import StatTiles from "./StatTiles.svelte";
@@ -9,18 +10,13 @@
   import TasteCard from "./TasteCard.svelte";
   import ForecastCard from "./ForecastCard.svelte";
   import { gamificationStore, GamificationStore } from "$lib/stores/gamification.svelte";
-  import { prefsStore } from "$lib/stores/prefs.svelte";
-  import { MediaQuery } from "svelte/reactivity";
-
-  const reduced = new MediaQuery("prefers-reduced-motion: reduce");
+  import { motionStore } from "$lib/stores/motion.svelte";
 
   // `store` and `motion` exist for tests; the app follows the OS and the saved setting.
   let { store = gamificationStore, motion }: { store?: GamificationStore; motion?: boolean } =
     $props();
 
-  const moves = $derived(
-    motion ?? (prefsStore.ready && prefsStore.prefs.background_animation && !reduced.current),
-  );
+  const moves = $derived(motion ?? motionStore.on);
 
   // The layout loads the log once and live saves keep it current; a visit only moves the day.
   onMount(() => {
@@ -43,7 +39,7 @@
   <h1 class="profile-title">Profile</h1>
 
   {#if store.error}
-    <p class="profile-error" role="alert">{store.error}</p>
+    <ErrorNote message={store.error} />
   {/if}
 
   <div class="dashboard" class:empty={!showCharts}>
@@ -143,9 +139,5 @@
   .profile-empty {
     grid-area: hint;
     color: var(--clr-text-2);
-  }
-
-  .profile-error {
-    color: var(--clr-error);
   }
 </style>

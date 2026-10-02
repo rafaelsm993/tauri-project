@@ -3,7 +3,7 @@ import fixture from "./prefs.contract.fixture.json";
 import { DEFAULT_PREFS, type Prefs } from "./prefs";
 
 const PREFS_KEYS = {
-  background_animation: 0,
+  motion: 0,
   seen_level: 0,
   reading_pages_per_hour: 0,
 } satisfies Record<keyof Prefs, 0>;

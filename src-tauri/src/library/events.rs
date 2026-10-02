@@ -1,17 +1,15 @@
 use super::types::Event;
 use crate::store::file::write_atomic;
 use std::collections::HashSet;
-use std::fs::{self, OpenOptions};
-use std::io::{ErrorKind, Write};
+use std::fs::{self, File, OpenOptions};
+use std::io::{ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 // Appends one JSON line and fsyncs; a torn tail from a crash is closed off first.
 pub fn append_event(path: &Path, event: &Event) -> Result<(), String> {
     let mut line = serde_json::to_vec(event).map_err(|e| format!("serialize event: {e}"))?;
     line.push(b'\n');
-    let torn = fs::read(path)
-        .map(|b| !b.is_empty() && !b.ends_with(b"\n"))
-        .unwrap_or(false);
+    let torn = ends_mid_line(path);
     let mut f = OpenOptions::new()
         .create(true)
         .append(true)
@@ -25,6 +23,15 @@ pub fn append_event(path: &Path, event: &Event) -> Result<(), String> {
         .map_err(|e| format!("write {}: {e}", path.display()))?;
     f.sync_all()
         .map_err(|e| format!("fsync {}: {e}", path.display()))
+}
+
+// Looks at the last byte only; a missing or empty log is not torn.
+fn ends_mid_line(path: &Path) -> bool {
+    let Ok(mut f) = File::open(path) else {
+        return false;
+    };
+    let mut last = [0u8; 1];
+    f.seek(SeekFrom::End(-1)).is_ok() && f.read_exact(&mut last).is_ok() && last[0] != b'\n'
 }
 
 // Reads the log oldest first, keeping the first event per id and skipping unreadable lines.
@@ -115,6 +122,17 @@ mod tests {
         assert_eq!(ids(&read_events(&path).unwrap()), ["a"]);
         append_event(&path, &event("c")).unwrap();
         assert_eq!(ids(&read_events(&path).unwrap()), ["a", "c"]);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn an_empty_log_gets_no_blank_first_line() {
+        let dir = scratch("empty-log");
+        let path = dir.join("events.jsonl");
+        fs::write(&path, b"").unwrap();
+        append_event(&path, &event("a")).unwrap();
+        assert!(!fs::read(&path).unwrap().starts_with(b"\n"));
+        assert_eq!(ids(&read_events(&path).unwrap()), ["a"]);
         fs::remove_dir_all(&dir).unwrap();
     }
 

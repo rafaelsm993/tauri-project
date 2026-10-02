@@ -78,7 +78,7 @@
           {/if}
           {#if item.chapters}
             <span>·</span>
-            <span>{item.chapters} caps</span>
+            <span>{item.chapters} ch.</span>
           {/if}
           {#if item.vote_count > 0}
             <span>·</span>

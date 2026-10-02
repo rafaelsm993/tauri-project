@@ -20,7 +20,7 @@
     Results for <strong>"{query}"</strong>
     <button class="link-btn" onclick={onClearSearch}>← Discover</button>
   {:else if genreName !== null}
-    Populares em <strong>{genreName}</strong>
+    Popular in <strong>{genreName}</strong>
     <button class="link-btn" onclick={onAllGenres}> ← All genres </button>
   {:else}
     Browse by genre

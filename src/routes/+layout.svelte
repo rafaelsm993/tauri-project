@@ -65,8 +65,7 @@
     return () => void stop.then((unlisten) => unlisten());
   });
 
-  // Back needs to know whether an in-app page is behind; screens without provider calls
-  // (library, settings) still learn when the network drops.
+  // Feeds Back its in-app history; screens without provider calls still learn of a dropped network.
   afterNavigate((navigation) => {
     inAppHistory.note(navigation);
     void checkNetwork();

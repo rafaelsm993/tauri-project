@@ -18,7 +18,7 @@ export interface ReminderDeps {
     entries: LibraryEntry[];
     ready: boolean;
     error: string;
-    plan: (key: MediaKey, plan: Plan | null) => Promise<void>;
+    plan: (key: MediaKey, plan: Plan | null) => Promise<boolean>;
   };
   game: { events: LibraryEvent[]; ready: boolean; moment: unknown };
   pace: () => number;
@@ -41,6 +41,7 @@ export class ReminderStore {
 
   today = $state("");
   toast = $state<DueSession | null>(null);
+  readonly data: TodayPlan;
 
   constructor(
     private deps: ReminderDeps = defaults,
@@ -48,11 +49,9 @@ export class ReminderStore {
     private clock: () => Date = () => new Date(),
   ) {
     this.today = localDay(clock());
-  }
-
-  get data(): TodayPlan {
-    const { library, game, pace } = this.deps;
-    return todaySessions(library.entries, game.events, this.today, pace());
+    this.data = $derived(
+      todaySessions(deps.library.entries, deps.game.events, this.today, deps.pace()),
+    );
   }
 
   // A level-up owns the toast slot first.
@@ -100,12 +99,12 @@ export class ReminderStore {
     const plan = library.entries.find((e) => e.key === key)?.user.plan;
     if (!plan || this.busy(key)) return;
     this.saving = [...this.saving, key];
-    try {
-      await library.plan(key, { ...plan, since: addDays(this.today, 1) });
-    } finally {
-      this.saving = this.saving.filter((k) => k !== key);
-    }
-    if (library.error) return;
+    const saved = await library
+      .plan(key, { ...plan, since: addDays(this.today, 1) })
+      .finally(() => {
+        this.saving = this.saving.filter((k) => k !== key);
+      });
+    if (!saved) return;
     if (this.toast?.entry.key === key) this.toast = null;
     this.deps.log(`[reminder] ${action} ${key}`);
   }

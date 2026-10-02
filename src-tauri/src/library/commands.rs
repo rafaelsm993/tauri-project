@@ -1,6 +1,6 @@
 use super::events::{append_event, read_events};
 use super::posters;
-use super::types::{Event, Length, LibraryEntry, MediaSnapshot, Plan, Status, UserData};
+use super::types::{Event, EventKind, Length, LibraryEntry, MediaSnapshot, Plan, Status, UserData};
 use crate::api::types::{MediaItem, MediaType};
 use crate::store::writer::StoreHandle;
 use crate::store::{current_version, Migration};
@@ -143,9 +143,22 @@ pub fn apply_patch(user: &mut UserData, patch: UserPatch) {
     }
 }
 
+// An event must name the command's key, carry an id and be a kind that command logs.
+fn check_event(e: &Event, key: &str, allowed: &[EventKind]) -> Result<(), String> {
+    if e.id.is_empty() {
+        return Err("event has no id".into());
+    }
+    if e.media_key != key {
+        return Err(format!("event is for {}, not {key}", e.media_key));
+    }
+    if !allowed.iter().any(|k| k.as_str() == e.kind) {
+        return Err(format!("{} is not an event this command logs", e.kind));
+    }
+    Ok(())
+}
+
 // The saved change is the truth; a failed append only costs that action its XP.
-async fn log_event(state: &LibraryState, event: Option<Event>) {
-    let Some(e) = event else { return };
+async fn log_event(state: &LibraryState, e: Event) {
     let _log = state.events_lock.lock().await;
     if let Err(err) = append_event(&state.events, &e) {
         log::error!("[events] {} not logged: {err}", e.kind);
@@ -174,12 +187,13 @@ pub async fn add(
     state: &LibraryState,
     item: &MediaItem,
     user: UserData,
-    at: String,
-    event: Option<Event>,
+    event: Event,
 ) -> Result<LibraryEntry, String> {
     validate_user_data(item.media_type, &user)?;
     let snapshot = MediaSnapshot::from_item(item);
     let key = snapshot.media_key.clone();
+    check_event(&event, &key, &[EventKind::LibraryAdd])?;
+    let at = event.at_utc.clone();
     if let Some(existing) = state.store.read(|f| f.entries.get(&key).cloned()).await {
         return Ok(existing);
     }
@@ -211,9 +225,14 @@ pub async fn update(
     state: &LibraryState,
     key: &str,
     patch: UserPatch,
-    at: String,
-    event: Option<Event>,
+    event: Event,
 ) -> Result<LibraryEntry, String> {
+    check_event(
+        &event,
+        key,
+        &[EventKind::LibraryUpdate, EventKind::LibraryPlan],
+    )?;
+    let at = event.at_utc.clone();
     let entry = state
         .store
         .commit(|f| {
@@ -234,7 +253,8 @@ pub async fn update(
 }
 
 /// Removes an entry and its cached poster; returns false when the key was not there.
-pub async fn remove(state: &LibraryState, key: &str, event: Option<Event>) -> Result<bool, String> {
+pub async fn remove(state: &LibraryState, key: &str, event: Event) -> Result<bool, String> {
+    check_event(&event, key, &[EventKind::LibraryRemove])?;
     if !state.store.read(|f| f.entries.contains_key(key)).await {
         return Ok(false);
     }
@@ -295,15 +315,19 @@ mod tests {
         }
     }
 
-    fn event(id: &str) -> Event {
+    fn ev(kind: &str, key: &str, id: &str, at: &str) -> Event {
         Event {
             id: id.into(),
-            kind: "library_add".into(),
-            media_key: "tmdb:tv:7".into(),
-            at_utc: "2026-09-25T12:00:00Z".into(),
+            kind: kind.into(),
+            media_key: key.into(),
+            at_utc: at.into(),
             local_date: "2026-09-25".into(),
             payload: serde_json::Value::Null,
         }
+    }
+
+    fn event(id: &str) -> Event {
+        ev("library_add", "tmdb:tv:7", id, "2026-09-25T12:00:00Z")
     }
 
     #[test]
@@ -338,8 +362,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t1".into(),
-            None,
+            ev("library_add", "tmdb:tv:7", "add", "t1"),
         )
         .await
         .unwrap();
@@ -363,8 +386,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t1".into(),
-            None,
+            ev("library_add", "tmdb:tv:7", "add", "t1"),
         )
         .await
         .unwrap();
@@ -375,10 +397,21 @@ mod tests {
             progress: Some(3),
             ..UserPatch::default()
         };
-        assert!(update(&state, "tmdb:tv:7", patch, "t2".into(), None)
-            .await
-            .is_err());
-        assert!(remove(&state, "tmdb:tv:7", None).await.is_err());
+        assert!(update(
+            &state,
+            "tmdb:tv:7",
+            patch,
+            ev("library_update", "tmdb:tv:7", "upd", "t2")
+        )
+        .await
+        .is_err());
+        assert!(remove(
+            &state,
+            "tmdb:tv:7",
+            ev("library_remove", "tmdb:tv:7", "rm", "t9")
+        )
+        .await
+        .is_err());
         let entries = load(&state).await;
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].user.progress, 0);
@@ -395,8 +428,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t1".into(),
-            Some(event("a")),
+            ev("library_add", "tmdb:tv:7", "a", "t1"),
         )
         .await;
         assert!(added.is_ok(), "{added:?}");
@@ -404,11 +436,22 @@ mod tests {
             progress: Some(3),
             ..UserPatch::default()
         };
-        let updated = update(&state, "tmdb:tv:7", patch, "t2".into(), Some(event("b"))).await;
+        let updated = update(
+            &state,
+            "tmdb:tv:7",
+            patch,
+            ev("library_update", "tmdb:tv:7", "b", "t2"),
+        )
+        .await;
         assert_eq!(updated.map(|e| e.user.progress), Ok(3));
         assert_eq!(saved(&dir).entries["tmdb:tv:7"].user.progress, 3);
         assert_eq!(
-            remove(&state, "tmdb:tv:7", Some(event("c"))).await,
+            remove(
+                &state,
+                "tmdb:tv:7",
+                ev("library_remove", "tmdb:tv:7", "c", "t9")
+            )
+            .await,
             Ok(true)
         );
         assert!(saved(&dir).entries.is_empty());
@@ -423,8 +466,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t1".into(),
-            None,
+            ev("library_add", "tmdb:tv:7", "add", "t1"),
         )
         .await
         .unwrap();
@@ -432,7 +474,13 @@ mod tests {
         let file = state.posters.join("tmdb_tv_7.jpg");
         std::fs::write(&file, b"jpg").unwrap();
         attach_poster(&state, "tmdb:tv:7", "tmdb_tv_7.jpg").await;
-        assert!(remove(&state, "tmdb:tv:7", None).await.unwrap());
+        assert!(remove(
+            &state,
+            "tmdb:tv:7",
+            ev("library_remove", "tmdb:tv:7", "rm", "t9")
+        )
+        .await
+        .unwrap());
         assert!(!file.exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -462,8 +510,7 @@ mod tests {
             &state,
             &tv,
             UserData::default(),
-            "t1".into(),
-            Some(event("a")),
+            ev("library_add", "tmdb:tv:7", "a", "t1"),
         )
         .await
         .unwrap();
@@ -471,9 +518,14 @@ mod tests {
             progress: Some(3),
             ..UserPatch::default()
         };
-        update(&state, "tmdb:tv:7", patch, "t2".into(), Some(event("b")))
-            .await
-            .unwrap();
+        update(
+            &state,
+            "tmdb:tv:7",
+            patch,
+            ev("library_update", "tmdb:tv:7", "b", "t2"),
+        )
+        .await
+        .unwrap();
         crate::library::events::append_event(&state.events, &event("a")).unwrap();
         let ids: Vec<_> = events(&state).unwrap().into_iter().map(|e| e.id).collect();
         assert_eq!(ids, ["a", "b"]);
@@ -579,8 +631,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t1".into(),
-            None,
+            ev("library_add", "tmdb:tv:7", "add", "t1"),
         )
         .await
         .unwrap();
@@ -588,15 +639,18 @@ mod tests {
             plan: Some(Some(plan(&[], 60, "2026-10-01"))),
             ..UserPatch::default()
         };
-        assert!(
-            update(&state, "tmdb:tv:7", patch, "t2".into(), Some(event("p")))
-                .await
-                .is_err()
-        );
+        assert!(update(
+            &state,
+            "tmdb:tv:7",
+            patch,
+            ev("library_plan", "tmdb:tv:7", "p", "t2")
+        )
+        .await
+        .is_err());
         let entry = &saved(&dir).entries["tmdb:tv:7"];
         assert_eq!(entry.user.plan, None);
         assert_eq!(entry.updated_at, "t1");
-        assert!(events_in(&dir).is_empty());
+        assert_eq!(events_in(&dir).len(), 1, "only the add is logged");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -608,8 +662,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "2026-09-25T12:00:00Z".into(),
-            Some(event("e1")),
+            ev("library_add", "tmdb:tv:7", "e1", "2026-09-25T12:00:00Z"),
         )
         .await
         .unwrap();
@@ -632,8 +685,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             used,
-            "t1".into(),
-            Some(event("e1")),
+            ev("library_add", "tmdb:tv:7", "e1", "t1"),
         )
         .await
         .unwrap();
@@ -641,8 +693,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t2".into(),
-            Some(event("e2")),
+            ev("library_add", "tmdb:tv:7", "e2", "t2"),
         )
         .await
         .unwrap();
@@ -664,8 +715,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             user,
-            "t1".into(),
-            Some(event("e1")),
+            ev("library_add", "tmdb:tv:7", "e1", "t1"),
         )
         .await
         .unwrap_err();
@@ -682,8 +732,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "2026-09-25T12:00:00Z".into(),
-            Some(event("e1")),
+            ev("library_add", "tmdb:tv:7", "e1", "2026-09-25T12:00:00Z"),
         )
         .await
         .unwrap();
@@ -695,8 +744,7 @@ mod tests {
                 progress: Some(5),
                 ..UserPatch::default()
             },
-            "2026-09-25T13:00:00Z".into(),
-            Some(event("e2")),
+            ev("library_update", "tmdb:tv:7", "e2", "2026-09-25T13:00:00Z"),
         )
         .await
         .unwrap();
@@ -717,8 +765,7 @@ mod tests {
             &state,
             "tmdb:tv:999",
             UserPatch::default(),
-            "t".into(),
-            None,
+            ev("library_update", "tmdb:tv:999", "upd", "t"),
         )
         .await
         .unwrap_err();
@@ -734,8 +781,7 @@ mod tests {
             &state,
             &item(MediaType::Movie),
             UserData::default(),
-            "t1".into(),
-            None,
+            ev("library_add", "tmdb:movie:7", "add", "t1"),
         )
         .await
         .unwrap();
@@ -746,8 +792,7 @@ mod tests {
                 progress: Some(2),
                 ..UserPatch::default()
             },
-            "t2".into(),
-            None,
+            ev("library_update", "tmdb:movie:7", "upd", "t2"),
         )
         .await
         .unwrap_err();
@@ -763,19 +808,85 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "t1".into(),
-            Some(event("e1")),
+            ev("library_add", "tmdb:tv:7", "e1", "t1"),
         )
         .await
         .unwrap();
-        assert!(remove(&state, "tmdb:tv:7", Some(event("e2")))
-            .await
-            .unwrap());
-        assert!(!remove(&state, "tmdb:tv:7", Some(event("e3")))
-            .await
-            .unwrap());
+        assert!(remove(
+            &state,
+            "tmdb:tv:7",
+            ev("library_remove", "tmdb:tv:7", "e2", "t9")
+        )
+        .await
+        .unwrap());
+        assert!(!remove(
+            &state,
+            "tmdb:tv:7",
+            ev("library_remove", "tmdb:tv:7", "e3", "t9")
+        )
+        .await
+        .unwrap());
         assert!(saved(&dir).entries.is_empty());
         assert_eq!(events_in(&dir).len(), 2);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    fn bad(kind: &str, key: &str, id: &str) -> Event {
+        Event {
+            id: id.into(),
+            kind: kind.into(),
+            media_key: key.into(),
+            ..event("x")
+        }
+    }
+
+    #[tokio::test]
+    async fn an_event_that_does_not_fit_the_command_is_refused_and_nothing_changes() {
+        let dir = scratch("w3-event-check");
+        let state = state_in(&dir);
+        let tv = item(MediaType::Tv);
+        let user = UserData::default;
+        for e in [
+            bad("library_add", "tmdb:tv:8", "a"),
+            bad("library_zap", "tmdb:tv:7", "a"),
+            bad("library_update", "tmdb:tv:7", "a"),
+            bad("library_add", "tmdb:tv:7", ""),
+        ] {
+            let res = add(&state, &tv, user(), e.clone()).await;
+            assert!(res.is_err(), "add accepted {e:?}");
+        }
+        assert!(!dir.join("library.json").exists());
+        add(
+            &state,
+            &tv,
+            user(),
+            ev("library_add", "tmdb:tv:7", "ok", "t1"),
+        )
+        .await
+        .unwrap();
+        for e in [
+            bad("library_update", "tmdb:tv:8", "b"),
+            bad("library_remove", "tmdb:tv:7", "b"),
+            bad("library_update", "tmdb:tv:7", ""),
+        ] {
+            let patch = UserPatch {
+                progress: Some(3),
+                ..UserPatch::default()
+            };
+            let res = update(&state, "tmdb:tv:7", patch, e.clone()).await;
+            assert!(res.is_err(), "update accepted {e:?}");
+        }
+        for e in [
+            bad("library_remove", "tmdb:tv:8", "c"),
+            bad("library_add", "tmdb:tv:7", "c"),
+            bad("library_remove", "tmdb:tv:7", ""),
+        ] {
+            let res = remove(&state, "tmdb:tv:7", e.clone()).await;
+            assert!(res.is_err(), "remove accepted {e:?}");
+        }
+        let entry = &saved(&dir).entries["tmdb:tv:7"];
+        assert_eq!(entry.user.progress, 0);
+        assert_eq!(events_in(&dir).len(), 1);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -787,8 +898,7 @@ mod tests {
             &state,
             &item(MediaType::Tv),
             UserData::default(),
-            "2026-09-25T10:00:00Z".into(),
-            None,
+            ev("library_add", "tmdb:tv:7", "add", "2026-09-25T10:00:00Z"),
         )
         .await
         .unwrap();
@@ -798,8 +908,7 @@ mod tests {
             &state,
             &game,
             UserData::default(),
-            "2026-09-25T11:00:00Z".into(),
-            None,
+            ev("library_add", "rawg:game:1", "add", "2026-09-25T11:00:00Z"),
         )
         .await
         .unwrap();
@@ -822,8 +931,7 @@ mod tests {
                 review: Some("Great".into()),
                 ..UserData::default()
             },
-            "t1".into(),
-            Some(event("e1")),
+            ev("library_add", "tmdb:tv:7", "e1", "t1"),
         )
         .await
         .unwrap();

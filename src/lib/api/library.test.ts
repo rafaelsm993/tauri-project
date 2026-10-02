@@ -37,7 +37,7 @@ describe("library client", () => {
     expect(cmd).toBe("library_add");
     expect(args.item).toBe(ITEM);
     expect(args.user).toEqual({ status: "planning" });
-    expect(args.at).toBe("2026-09-25T12:00:00.000Z");
+    expect(args).not.toHaveProperty("at");
     const event = args.event as Record<string, unknown>;
     expect(event.kind).toBe("library_add");
     expect(event.media_key).toBe("tmdb:tv:7");
@@ -115,7 +115,7 @@ describe("live events", () => {
     mockIPC((cmd, args) => {
       const a = args as Record<string, unknown>;
       calls.push({ cmd, args: a });
-      if (cmd === "library_add") return { created_at: a.at };
+      if (cmd === "library_add") return { created_at: (a.event as { at_utc: string }).at_utc };
       return cmd === "library_remove" ? true : {};
     });
     const seen: unknown[] = [];

@@ -6,6 +6,7 @@ pub mod target;
 use crate::library::commands::{LibraryFile, LibraryState};
 use crate::library::events::read_events;
 use crate::prefs::ipc::PrefsState;
+use crate::store::file::off_thread;
 use bundle::{build, manifest_for, read, Bundle, Limits};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -67,19 +68,15 @@ pub async fn collect(
     created_at: &str,
 ) -> Result<Bundle, String> {
     let file = library.store.read(LibraryFile::clone).await;
-    let events = read_events(&library.events)?;
     let prefs = crate::prefs::ipc::load(prefs).await;
-    let mut posters = Vec::new();
-    for name in file
+    let names: Vec<String> = file
         .entries
         .values()
-        .filter_map(|e| e.snapshot.poster_file.as_deref())
-    {
-        match std::fs::read(library.posters.join(name)) {
-            Ok(bytes) => posters.push((name.to_string(), bytes)),
-            Err(e) => log::warn!("[backup] poster {name} skipped: {e}"),
-        }
-    }
+        .filter_map(|e| e.snapshot.poster_file.clone())
+        .collect();
+    let (log, dir) = (library.events.clone(), library.posters.clone());
+    let (events, posters) =
+        off_thread(move || Ok((read_events(&log)?, read_posters(&dir, names)))).await?;
     let manifest = manifest_for(&file, events.len(), posters.len(), created_at);
     Ok(Bundle {
         manifest,
@@ -90,6 +87,20 @@ pub async fn collect(
     })
 }
 
+// The poster files that are still on disk; a missing one is logged and skipped.
+fn read_posters(dir: &Path, names: Vec<String>) -> Vec<(String, Vec<u8>)> {
+    names
+        .into_iter()
+        .filter_map(|name| match std::fs::read(dir.join(&name)) {
+            Ok(bytes) => Some((name, bytes)),
+            Err(e) => {
+                log::warn!("[backup] poster {name} skipped: {e}");
+                None
+            }
+        })
+        .collect()
+}
+
 // Writes the backup and reads it back, so a report means the file really imports.
 pub async fn export_to(
     path: &Path,
@@ -98,15 +109,21 @@ pub async fn export_to(
     created_at: &str,
 ) -> Result<ExportReport, String> {
     let bundle = collect(library, prefs, created_at).await?;
-    let bytes = build(&bundle)?;
-    crate::store::file::write_atomic(path, &bytes)?;
-    load_bundle(path, &Limits::DEFAULT)
-        .map_err(|e| format!("the written backup did not verify: {e}"))?;
+    let (entries, posters) = (bundle.manifest.entries, bundle.manifest.posters);
+    let to = path.to_path_buf();
+    let bytes = off_thread(move || {
+        let bytes = build(&bundle)?;
+        crate::store::file::write_atomic(&to, &bytes)?;
+        load_bundle(&to, &Limits::DEFAULT)
+            .map_err(|e| format!("the written backup did not verify: {e}"))?;
+        Ok(bytes.len())
+    })
+    .await?;
     Ok(ExportReport {
         path: path.display().to_string(),
-        entries: bundle.manifest.entries,
-        posters: bundle.manifest.posters,
-        bytes: bytes.len(),
+        entries,
+        posters,
+        bytes,
     })
 }
 
@@ -147,13 +164,16 @@ pub async fn export_into(
     copied
 }
 
-pub fn load_from(
+pub async fn load_from(
     files: &impl target::Files,
     from: &tauri_plugin_fs::FilePath,
     limits: &Limits,
 ) -> Result<Bundle, String> {
     match from {
-        tauri_plugin_fs::FilePath::Path(path) => load_bundle(path, limits),
+        tauri_plugin_fs::FilePath::Path(path) => {
+            let (path, limits) = (path.clone(), *limits);
+            off_thread(move || load_bundle(&path, &limits)).await
+        }
         url => read(&target::read_from(files, url, limits)?, limits),
     }
 }
@@ -342,13 +362,15 @@ mod tests {
         )
         .await
         .unwrap();
-        let bundle = load_from(&files, &uri(DOC), &Limits::DEFAULT).unwrap();
+        let bundle = load_from(&files, &uri(DOC), &Limits::DEFAULT)
+            .await
+            .unwrap();
         assert_eq!(bundle.manifest.entries, 0);
         let tiny = Limits {
             total_bytes: 5,
             ..Limits::DEFAULT
         };
-        let err = load_from(&files, &uri(DOC), &tiny).unwrap_err();
+        let err = load_from(&files, &uri(DOC), &tiny).await.unwrap_err();
         assert!(err.contains("too large"), "{err}");
         std::fs::remove_dir_all(&dir).unwrap();
     }

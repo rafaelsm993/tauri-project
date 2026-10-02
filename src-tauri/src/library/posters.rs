@@ -220,7 +220,8 @@ mod tests {
     use super::*;
     use crate::api::types::{Id, MediaItem, MediaType, ProviderId};
     use crate::library::commands::{add, remove};
-    use crate::library::types::UserData;
+    use crate::library::types::tests::stamped;
+    use crate::library::types::{EventKind, UserData};
     use crate::store::file::tests::scratch;
 
     const PNG: &[u8] = &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
@@ -245,9 +246,14 @@ mod tests {
             poster_path: Some(poster.into()),
             ..MediaItem::new(Id::Num(7), "Arcane".into(), MediaType::Tv, ProviderId::Tmdb)
         };
-        add(&state, &item, UserData::default(), "t1".into(), None)
-            .await
-            .unwrap();
+        add(
+            &state,
+            &item,
+            UserData::default(),
+            stamped(EventKind::LibraryAdd, "tmdb:tv:7", "a", "t1"),
+        )
+        .await
+        .unwrap();
         (dir, state)
     }
 
@@ -265,7 +271,13 @@ mod tests {
         fill_with(state.clone(), png).await;
         assert_eq!(poster_file(&dir).as_deref(), Some("tmdb_tv_7.png"));
         assert!(state.posters.join("tmdb_tv_7.png").is_file());
-        remove(&state, "tmdb:tv:7", None).await.unwrap();
+        remove(
+            &state,
+            "tmdb:tv:7",
+            stamped(EventKind::LibraryRemove, "tmdb:tv:7", "r", "t2"),
+        )
+        .await
+        .unwrap();
         assert!(!state.posters.join("tmdb_tv_7.png").exists());
         std::fs::remove_dir_all(&dir).unwrap();
     }

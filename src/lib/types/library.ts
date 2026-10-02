@@ -52,6 +52,15 @@ export interface LibraryEntry {
   updated_at: string;
 }
 
+// The kinds the library commands accept, pinned to Rust's `EventKind` by the contract test.
+export const EVENT_KINDS = [
+  "library_add",
+  "library_update",
+  "library_plan",
+  "library_remove",
+] as const;
+export type EventKind = (typeof EVENT_KINDS)[number];
+
 // One activity-log line; ids and dates are stamped by the frontend.
 export interface LibraryEvent {
   id: string;

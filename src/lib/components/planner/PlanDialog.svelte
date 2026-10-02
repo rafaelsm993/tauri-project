@@ -23,7 +23,7 @@
 
   let failure = $state("");
 
-  // Each step stops the rest when its store reports an error; the dialog stays open to retry.
+  // A step that did not save stops the rest; the dialog stays open to retry.
   async function save({ plan, length, pagesPerHour }: PlanSave) {
     failure = "";
     if (
@@ -40,10 +40,10 @@
     if (await step(library, () => library.plan(entry.key, null))) onclose();
   }
 
-  async function step(store: { error: string }, run: () => Promise<void>): Promise<boolean> {
-    await run();
-    failure = store.error;
-    return failure === "";
+  async function step(store: { error: string }, run: () => Promise<boolean>): Promise<boolean> {
+    const saved = await run();
+    if (!saved) failure = store.error || "The change could not be saved.";
+    return saved;
   }
 
   // Moves focus into the sheet when it opens.

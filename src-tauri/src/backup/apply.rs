@@ -3,7 +3,7 @@ use crate::library::commands::{LibraryFile, LibraryState};
 use crate::library::events::{oldest_first, read_events, write_events};
 use crate::library::types::Event;
 use crate::prefs::ipc::PrefsState;
-use crate::store::file::write_atomic;
+use crate::store::file::{off_thread, write_atomic};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashSet};
 use std::path::Path;
@@ -118,7 +118,8 @@ pub async fn apply(
             Ok(report)
         })
         .await?;
-    write_events(&library.events, &events)?;
+    let log = library.events.clone();
+    off_thread(move || write_events(&log, &events)).await?;
     if mode == ImportMode::Replace {
         let restored = bundle.prefs;
         prefs
@@ -160,7 +161,8 @@ mod tests {
     use super::*;
     use crate::backup::bundle::tests::{entry, library, sample, PNG};
     use crate::library::commands::{load, update, UserPatch, MIGRATIONS};
-    use crate::library::types::tests::event;
+    use crate::library::types::tests::{event, stamped};
+    use crate::library::types::EventKind;
     use crate::prefs::{Prefs, SCHEMA_VERSION as PREFS_SCHEMA};
     use crate::store::file::tests::scratch;
     use crate::store::writer::StoreHandle;
@@ -266,14 +268,9 @@ mod tests {
                 ..UserPatch::default()
             };
             let id = format!("save-{round}");
-            let saved = Event {
-                id: id.clone(),
-                ..event("x")
-            };
             let at = format!("2099-01-01T00:{:02}:{:02}.000Z", round / 60, round % 60);
-            update(&lib, "tmdb:movie:1", patch, at, Some(saved))
-                .await
-                .unwrap();
+            let saved = stamped(EventKind::LibraryUpdate, "tmdb:movie:1", &id, &at);
+            update(&lib, "tmdb:movie:1", patch, saved).await.unwrap();
             import.await.unwrap().unwrap();
             let entries = load(&lib).await;
             let one = entries.iter().find(|e| e.key == "tmdb:movie:1").unwrap();

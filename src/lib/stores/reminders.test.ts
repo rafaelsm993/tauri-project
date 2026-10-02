@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { ReminderStore, type ReminderDeps } from "./reminders.svelte";
-import { SNOOZE_MS } from "$lib/domain/reminders";
+import { SNOOZE_MS, todaySessions } from "$lib/domain/reminders";
 import type { Length, LibraryEntry, LibraryEvent, Plan } from "$lib/types/library";
+
+vi.mock("$lib/domain/reminders", async (real) => {
+  const mod = await real<typeof import("$lib/domain/reminders")>();
+  return { ...mod, todaySessions: vi.fn(mod.todaySessions) };
+});
 
 const DAILY: Plan = { days: [0, 1, 2, 3, 4, 5, 6], max_session_minutes: 60, since: "2026-10-01" };
 
@@ -45,7 +50,7 @@ function entry(id: number, title: string, plan: Plan | null = DAILY): LibraryEnt
 function setup(entries: LibraryEntry[] = [entry(1, "Dune")], ready = true) {
   let now = new Date(2026, 9, 1, 10, 0);
   const deps = {
-    library: { entries, ready, error: "", plan: vi.fn(async () => {}) },
+    library: { entries, ready, error: "", plan: vi.fn(async () => true) },
     game: { events: [] as LibraryEvent[], ready, moment: null as unknown },
     pace: () => 40,
     log: vi.fn(),
@@ -56,6 +61,17 @@ function setup(entries: LibraryEntry[] = [entry(1, "Dune")], ready = true) {
 }
 
 describe("ReminderStore", () => {
+  it("works out today's sessions once, however often they are read", () => {
+    const { store } = setup();
+    vi.mocked(todaySessions).mockClear();
+    const reads = [store.data, store.data, store.data];
+    expect(reads[0].due).toHaveLength(1);
+    expect(todaySessions).toHaveBeenCalledTimes(1);
+    store.today = "2026-10-02";
+    expect(store.data.due).toHaveLength(1);
+    expect(todaySessions).toHaveBeenCalledTimes(2);
+  });
+
   it("shows nothing until the library and the log are loaded", () => {
     const { store } = setup([entry(1, "Dune")], false);
     store.check();
@@ -121,9 +137,7 @@ describe("ReminderStore", () => {
 
   it("keeps the toast when the save fails", async () => {
     const { store, deps } = setup();
-    deps.library.plan.mockImplementation(async () => {
-      deps.library.error = "Could not save.";
-    });
+    deps.library.plan.mockResolvedValue(false);
     store.check();
     await store.done("tmdb:tv:1");
     expect(store.toast?.entry.key).toBe("tmdb:tv:1");
@@ -133,7 +147,9 @@ describe("ReminderStore", () => {
   it("marks an item busy while its save runs", async () => {
     const { store, deps } = setup();
     let finish = () => {};
-    deps.library.plan.mockImplementation(() => new Promise<void>((r) => (finish = r)));
+    deps.library.plan.mockImplementation(
+      () => new Promise<boolean>((r) => (finish = () => r(true))),
+    );
     const saving = store.done("tmdb:tv:1");
     expect(store.busy("tmdb:tv:1")).toBe(true);
     finish();

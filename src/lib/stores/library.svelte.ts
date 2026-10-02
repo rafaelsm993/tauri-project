@@ -114,27 +114,30 @@ export class LibraryStore {
     }
   }
 
-  async add(item: MediaItem, user: Partial<UserData> = {}): Promise<void> {
+  // Each save resolves true only when the backend kept it; `error` says why it did not.
+  async add(item: MediaItem, user: Partial<UserData> = {}): Promise<boolean> {
     const key = item.media_key;
-    if (this.map.has(key)) return;
+    if (this.map.has(key)) return false;
     this.error = "";
     this.write(key, optimisticEntry(item, user));
     this.mark(key, true);
     try {
       this.write(key, await this.client.add(item, user));
+      return true;
     } catch (e) {
       this.drop(key);
       this.error = errorMessage(e, "Failed to save this item.");
+      return false;
     } finally {
       this.mark(key, false);
     }
   }
 
-  update(key: MediaKey, patch: Partial<UserData>): Promise<void> {
+  update(key: MediaKey, patch: Partial<UserData>): Promise<boolean> {
     return this.patch(key, patch, () => this.client.update(key, patch));
   }
 
-  plan(key: MediaKey, plan: Plan | null): Promise<void> {
+  plan(key: MediaKey, plan: Plan | null): Promise<boolean> {
     return this.patch(key, { plan }, () => this.client.plan(key, plan));
   }
 
@@ -143,33 +146,37 @@ export class LibraryStore {
     key: MediaKey,
     patch: Partial<UserData>,
     save: () => Promise<LibraryEntry>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const before = this.map.get(key);
-    if (!before) return;
+    if (!before) return false;
     this.error = "";
     this.write(key, { ...before, user: { ...before.user, ...patch } });
     this.mark(key, true);
     try {
       this.write(key, await save());
+      return true;
     } catch (e) {
       this.write(key, before);
       this.error = errorMessage(e, "Failed to save the change.");
+      return false;
     } finally {
       this.mark(key, false);
     }
   }
 
-  async remove(key: MediaKey): Promise<void> {
+  async remove(key: MediaKey): Promise<boolean> {
     const before = this.map.get(key);
-    if (!before) return;
+    if (!before) return false;
     this.error = "";
     this.drop(key);
     this.mark(key, true);
     try {
       await this.client.remove(key);
+      return true;
     } catch (e) {
       this.write(key, before);
       this.error = errorMessage(e, "Failed to remove this item.");
+      return false;
     } finally {
       this.mark(key, false);
     }

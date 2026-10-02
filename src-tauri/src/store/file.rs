@@ -16,6 +16,15 @@ pub(crate) fn sibling(path: &Path, ext: &str) -> PathBuf {
     PathBuf::from(p)
 }
 
+// Runs blocking file work on the blocking pool, so the async workers stay free.
+pub async fn off_thread<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|e| format!("file task failed: {e}"))?
+}
+
 // temp → fsync → keep the previous file as .bak → rename over the target.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let tmp = sibling(path, ".tmp");

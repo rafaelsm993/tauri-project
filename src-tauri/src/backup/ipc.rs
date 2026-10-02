@@ -78,7 +78,7 @@ pub async fn backup_pick_import(
     let Some(from) = open_target(&app).await? else {
         return Ok(None);
     };
-    let bundle = load_from(app.fs(), &from, &Limits::DEFAULT)?;
+    let bundle = load_from(app.fs(), &from, &Limits::DEFAULT).await?;
     let preview = ImportPreview::of(&bundle);
     *backup.pending.lock().await = Some(bundle);
     Ok(Some(preview))

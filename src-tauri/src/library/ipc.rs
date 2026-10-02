@@ -40,10 +40,9 @@ pub async fn library_add(
     state: State<'_, LibraryState>,
     item: MediaItem,
     user: Option<UserData>,
-    at: String,
-    event: Option<Event>,
+    event: Event,
 ) -> Result<LibraryEntry, String> {
-    let entry = commands::add(&state, &item, user.unwrap_or_default(), at, event).await?;
+    let entry = commands::add(&state, &item, user.unwrap_or_default(), event).await?;
     tauri::async_runtime::spawn(posters::fill(state.inner().clone()));
     Ok(entry)
 }
@@ -53,17 +52,16 @@ pub async fn library_update(
     state: State<'_, LibraryState>,
     key: String,
     patch: UserPatch,
-    at: String,
-    event: Option<Event>,
+    event: Event,
 ) -> Result<LibraryEntry, String> {
-    commands::update(&state, &key, patch, at, event).await
+    commands::update(&state, &key, patch, event).await
 }
 
 #[tauri::command]
 pub async fn library_remove(
     state: State<'_, LibraryState>,
     key: String,
-    event: Option<Event>,
+    event: Event,
 ) -> Result<bool, String> {
     commands::remove(&state, &key, event).await
 }
@@ -92,6 +90,8 @@ pub fn library_poster_dir(state: State<'_, LibraryState>) -> String {
 mod tests {
     use super::*;
     use crate::api::types::{Id, MediaType, ProviderId};
+    use crate::library::types::tests::stamped;
+    use crate::library::types::EventKind;
     use crate::store::file::tests::scratch;
 
     #[test]
@@ -115,9 +115,14 @@ mod tests {
         let dir = scratch("ipc-reload");
         let first = init(&dir).unwrap();
         let item = MediaItem::new(Id::Num(7), "Arcane".into(), MediaType::Tv, ProviderId::Tmdb);
-        commands::add(&first, &item, UserData::default(), "t1".into(), None)
-            .await
-            .unwrap();
+        commands::add(
+            &first,
+            &item,
+            UserData::default(),
+            stamped(EventKind::LibraryAdd, "tmdb:tv:7", "a", "t1"),
+        )
+        .await
+        .unwrap();
         drop(first);
 
         let second = init(&dir).unwrap();

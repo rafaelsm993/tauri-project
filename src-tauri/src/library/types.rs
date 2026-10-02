@@ -107,6 +107,33 @@ pub struct Event {
     pub payload: serde_json::Value,
 }
 
+// The kinds the commands accept; stored `Event.kind` stays a string so newer logs still read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EventKind {
+    LibraryAdd,
+    LibraryUpdate,
+    LibraryPlan,
+    LibraryRemove,
+}
+
+impl EventKind {
+    pub const ALL: [EventKind; 4] = [
+        EventKind::LibraryAdd,
+        EventKind::LibraryUpdate,
+        EventKind::LibraryPlan,
+        EventKind::LibraryRemove,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            EventKind::LibraryAdd => "library_add",
+            EventKind::LibraryUpdate => "library_update",
+            EventKind::LibraryPlan => "library_plan",
+            EventKind::LibraryRemove => "library_remove",
+        }
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -130,6 +157,18 @@ pub(crate) mod tests {
             poster_path: Some("https://example.com/p.jpg".into()),
             first_air_date: Some("2021-10-02".into()),
             ..MediaItem::new(Id::Num(7), "Arcane".into(), MediaType::Tv, ProviderId::Tmdb)
+        }
+    }
+
+    // An event a library command accepts for `key`.
+    pub(crate) fn stamped(kind: EventKind, key: &str, id: &str, at: &str) -> Event {
+        Event {
+            id: id.into(),
+            kind: kind.as_str().into(),
+            media_key: key.into(),
+            at_utc: at.into(),
+            local_date: "2026-09-25".into(),
+            payload: serde_json::Value::Null,
         }
     }
 
@@ -238,7 +277,8 @@ pub(crate) mod tests {
     }
 
     fn contract() -> Value {
-        json!({ "entry": entry(), "event": event("e1") })
+        let kinds: Vec<_> = EventKind::ALL.iter().map(|k| k.as_str()).collect();
+        json!({ "entry": entry(), "event": event("e1"), "event_kinds": kinds })
     }
 
     #[test]

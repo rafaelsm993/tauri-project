@@ -51,15 +51,18 @@ export class PrefsStore {
     await this.hydrate();
   }
 
-  async update(patch: PrefsPatch): Promise<void> {
+  // Resolves true only when the backend kept the change; `error` says why it did not.
+  async update(patch: PrefsPatch): Promise<boolean> {
     const before = this.prefs;
     this.error = "";
     this.prefs = { ...before, ...patch };
     try {
       this.prefs = normalize(await this.client.update(patch));
+      return true;
     } catch (e) {
       this.prefs = before;
       this.error = errorMessage(e, "Failed to save your settings.");
+      return false;
     }
   }
 }

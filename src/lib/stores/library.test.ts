@@ -308,3 +308,36 @@ describe("poster retry", () => {
     expect(store.error).toBe("");
   });
 });
+
+describe("saves say whether they worked", () => {
+  const fail = vi.fn(async () => {
+    throw new Error("disk full");
+  });
+
+  it("resolves true when the backend saved", async () => {
+    const store = new LibraryStore(fakeClient());
+    expect(await store.add(ITEM)).toBe(true);
+    expect(await store.update("tmdb:tv:7", { progress: 2 })).toBe(true);
+    expect(await store.plan("tmdb:tv:7", null)).toBe(true);
+    expect(await store.remove("tmdb:tv:7")).toBe(true);
+  });
+
+  it("resolves false when the backend refused", async () => {
+    const client = fakeClient({ load: vi.fn(async () => [entry()]) });
+    const store = new LibraryStore({ ...client, update: fail, plan: fail, remove: fail });
+    await store.hydrate();
+    expect(await store.update("tmdb:tv:7", { progress: 2 })).toBe(false);
+    expect(await store.plan("tmdb:tv:7", null)).toBe(false);
+    expect(await store.remove("tmdb:tv:7")).toBe(false);
+    expect(await new LibraryStore(fakeClient({ add: fail })).add(ITEM)).toBe(false);
+  });
+
+  it("resolves false when there was nothing to save", async () => {
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [entry()]) }));
+    await store.hydrate();
+    expect(await store.add(ITEM)).toBe(false);
+    expect(await store.update("tmdb:tv:999", { progress: 1 })).toBe(false);
+    expect(await store.plan("tmdb:tv:999", null)).toBe(false);
+    expect(await store.remove("tmdb:tv:999")).toBe(false);
+  });
+});

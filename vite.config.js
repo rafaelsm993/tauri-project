@@ -43,6 +43,7 @@ export default defineConfig(async () => ({
   },
   test: {
     environment: "jsdom",
+    pool: "vmThreads",
     include: ["src/**/*.test.ts"], // e2e/ belongs to Playwright, not Vitest
     setupFiles: ["./vitest-setup.ts"],
   },

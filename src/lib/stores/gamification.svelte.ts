@@ -36,7 +36,9 @@ export type SeenLevel = { get: () => number | null; set: (level: number) => Prom
 
 const seenInPrefs: SeenLevel = {
   get: () => (prefsStore.ready ? prefsStore.prefs.seen_level : null),
-  set: (level) => prefsStore.update({ seen_level: level }),
+  set: async (level) => {
+    await prefsStore.update({ seen_level: level });
+  },
 };
 
 // The loaded log first, then saves heard meanwhile that it does not have yet.

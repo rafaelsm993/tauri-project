@@ -81,7 +81,7 @@ describe("PrefsStore", () => {
     const store = new PrefsStore(client);
     const pending = store.update({ background_animation: false });
     expect(store.prefs.background_animation).toBe(false);
-    await pending;
+    expect(await pending).toBe(true);
     expect(client.update).toHaveBeenCalledWith({ background_animation: false });
     expect(store.prefs.background_animation).toBe(false);
   });
@@ -90,7 +90,7 @@ describe("PrefsStore", () => {
     const store = new PrefsStore(
       fakeClient({ update: vi.fn(async () => Promise.reject(new Error("read-only disk"))) }),
     );
-    await store.update({ background_animation: false });
+    expect(await store.update({ background_animation: false })).toBe(false);
     expect(store.prefs.background_animation).toBe(true);
     expect(store.error).toBe("read-only disk");
   });

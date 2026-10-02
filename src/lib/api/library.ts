@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { LibraryEntry, LibraryEvent, Plan, UserData } from "$lib/types/library";
+import type { EventKind, LibraryEntry, LibraryEvent, Plan, UserData } from "$lib/types/library";
 
 import type { MediaItem, MediaKey } from "$lib/types/media";
 
@@ -7,7 +7,7 @@ import type { MediaItem, MediaKey } from "$lib/types/media";
 export type UserPatch = Partial<UserData>;
 
 // Ids and dates are stamped here: Rust stays timezone-free and dedupes by event id.
-function stamp(kind: string, media_key: MediaKey, payload: unknown = null): LibraryEvent {
+function stamp(kind: EventKind, media_key: MediaKey, payload: unknown = null): LibraryEvent {
   const now = new Date();
   return {
     id: crypto.randomUUID(),
@@ -55,17 +55,14 @@ function add(item: MediaItem, user?: UserPatch): Promise<LibraryEntry> {
   const event = stamp("library_add", item.media_key, user ?? null);
   return saved(
     event,
-    invoke<LibraryEntry>("library_add", { item, user, at: event.at_utc, event }),
+    invoke<LibraryEntry>("library_add", { item, user, event }),
     (entry) => entry?.created_at === event.at_utc,
   );
 }
 
 function update(key: MediaKey, patch: UserPatch): Promise<LibraryEntry> {
   const event = stamp("library_update", key, patch);
-  return saved(
-    event,
-    invoke<LibraryEntry>("library_update", { key, patch, at: event.at_utc, event }),
-  );
+  return saved(event, invoke<LibraryEntry>("library_update", { key, patch, event }));
 }
 
 // Sets or clears (null) an item's plan; logged as `library_plan`, which earns no XP.
@@ -76,7 +73,6 @@ function plan(key: MediaKey, value: Plan | null): Promise<LibraryEntry> {
     invoke<LibraryEntry>("library_update", {
       key,
       patch: { plan: value },
-      at: event.at_utc,
       event,
     }),
   );

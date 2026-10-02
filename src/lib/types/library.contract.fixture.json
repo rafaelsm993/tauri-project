@@ -43,5 +43,6 @@
       "from": "planning",
       "to": "in_progress"
     }
-  }
+  },
+  "event_kinds": ["library_add", "library_update", "library_plan", "library_remove"]
 }

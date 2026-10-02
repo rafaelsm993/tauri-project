@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixture from "./library.contract.fixture.json";
+import { EVENT_KINDS } from "./library";
 import type { Length, LibraryEntry, LibraryEvent, MediaSnapshot, Plan, UserData } from "./library";
 
 const ENTRY_KEYS = {
@@ -64,6 +65,10 @@ describe("library contract (Rust library types ↔ library.ts)", () => {
 
   it("LibraryEvent has exactly the Rust fields", () => {
     expect(keys(fixture.event)).toEqual(keys(EVENT_KEYS));
+  });
+
+  it("event kinds are exactly the ones the Rust commands accept", () => {
+    expect([...EVENT_KINDS]).toEqual(fixture.event_kinds);
   });
 
   it("statuses use the Rust spelling", () => {

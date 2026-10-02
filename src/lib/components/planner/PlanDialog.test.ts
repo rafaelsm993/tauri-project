@@ -121,6 +121,32 @@ describe("PlanDialog", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/disk full/i);
   });
 
+  it("trusts the save's answer, not an error another save cleared meanwhile", async () => {
+    const plan = vi.fn(async () => BOOK);
+    const library = new LibraryStore({
+      load: vi.fn(async () => [BOOK]),
+      add: vi.fn(),
+      update: vi.fn(async () => BOOK),
+      plan,
+      remove: vi.fn(),
+      posterDir: vi.fn(async () => "/p"),
+      retryPosters: vi.fn(async () => {}),
+    });
+    await library.hydrate();
+    const prefs = new PrefsStore({
+      load: vi.fn(async () => DEFAULT_PREFS),
+      update: vi.fn(async () => DEFAULT_PREFS),
+    });
+    vi.spyOn(prefs, "update").mockResolvedValue(false);
+    const onclose = vi.fn();
+    render(PlanDialog, { entry: BOOK, today: "2026-10-01", library, prefs, onclose });
+    await userEvent.click(screen.getByRole("button", { name: /save plan/i }));
+    expect(prefs.error).toBe("");
+    expect(plan).not.toHaveBeenCalled();
+    expect(onclose).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/could not be saved/i);
+  });
+
   it("stops planning", async () => {
     const { client, onclose } = await setup();
     await userEvent.click(screen.getByRole("button", { name: /stop planning/i }));

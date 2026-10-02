@@ -1,4 +1,4 @@
-use super::file::{write_atomic, Versioned};
+use super::file::{off_thread, write_atomic, Versioned};
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -43,13 +43,10 @@ impl<T: Serialize + Send + 'static> StoreHandle<T> {
                 return Err(e);
             }
         };
-        let file = Versioned {
-            schema_version: self.schema_version,
-            data: &*state,
+        let written = match self.encode(&state) {
+            Ok(bytes) => self.write(bytes).await,
+            Err(e) => Err(format!("serialize: {e}")),
         };
-        let written = serde_json::to_vec_pretty(&file)
-            .map_err(|e| format!("serialize: {e}"))
-            .and_then(|bytes| write_atomic(&self.path, &bytes));
         if let Err(e) = written {
             *state = before;
             return Err(e);
@@ -76,15 +73,24 @@ impl<T: Serialize + Send + 'static> StoreHandle<T> {
         if !self.dirty.swap(false, Ordering::AcqRel) {
             return Ok(false);
         }
-        let file = Versioned {
-            schema_version: self.schema_version,
-            data: &*state,
-        };
-        let bytes = serde_json::to_vec_pretty(&file).map_err(|e| format!("serialize: {e}"))?;
-        write_atomic(&self.path, &bytes).inspect_err(|_| {
+        let bytes = self.encode(&state).map_err(|e| format!("serialize: {e}"))?;
+        self.write(bytes).await.inspect_err(|_| {
             self.dirty.store(true, Ordering::Release);
         })?;
         Ok(true)
+    }
+
+    fn encode(&self, data: &T) -> serde_json::Result<Vec<u8>> {
+        serde_json::to_vec_pretty(&Versioned {
+            schema_version: self.schema_version,
+            data,
+        })
+    }
+
+    // Called with the state lock held, so writes land in the order they were made.
+    async fn write(&self, bytes: Vec<u8>) -> Result<(), String> {
+        let path = self.path.clone();
+        off_thread(move || write_atomic(&path, &bytes)).await
     }
 
     // Flushes dirty state every `every`; the caller keeps the handle to stop it.
@@ -131,6 +137,36 @@ mod tests {
         got.sort_unstable();
         assert_eq!(got, (0..100).collect::<Vec<_>>());
         assert_eq!(saved.schema_version, 1);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_commits_leave_the_file_matching_memory() {
+        let dir = scratch("commit-order");
+        let path = dir.join("library.json");
+        let store = StoreHandle::new(path.clone(), 1, Vec::<u32>::new());
+        let tasks: Vec<_> = (0..50u32)
+            .map(|i| {
+                let s = store.clone();
+                tokio::spawn(async move {
+                    s.commit(|v| {
+                        v.push(i);
+                        Ok(())
+                    })
+                    .await
+                })
+            })
+            .collect();
+        for t in tasks {
+            t.await.unwrap().unwrap();
+        }
+        let saved: Versioned<Vec<u32>> = read_with_recovery(&path).unwrap().unwrap();
+        assert_eq!(
+            saved.data,
+            store.read(Vec::clone).await,
+            "a later write was overtaken"
+        );
+        assert_eq!(saved.data.len(), 50);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

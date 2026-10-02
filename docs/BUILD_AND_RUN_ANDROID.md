@@ -103,6 +103,9 @@ Not usable on this host. The emulator's own qemu process (`qemu-system-x86_64`, 
 | Phone never appears in `lsusb` / kernel `error -71` | charge-only or faulty cable/socket | use Wireless debugging |
 | Edit saved but nothing changes on the phone | the edited value is overridden by the caller (e.g. a prop default) | check the Vite log for `hmr update <file>`, then edit the value actually rendered |
 | `adb` commands hang | the device went away | wrap scripted calls in `timeout 10 adb …`; reconnect |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` when the other machine installed the app | each machine signs debug builds with its own `~/.android/debug.keystore` | export your data first (Settings → Backup), `adb uninstall com.rafaelsm993.aevum`, run again, import the backup. To avoid it, copy one `debug.keystore` to `~/.android/` on every dev machine |
+| Desktop dev window loses its styles (no profile button, no background) | Vite answered a component's CSS request with the raw `.svelte` file after a `tauri dev` restart | fixed by the `svelteCssBeforeJs` plugin in `vite.config.js`; restart `tauri dev` if it appears |
+| Desktop and phone dev apps load the wrong code, or `/profile` crashes | `tauri dev` and `tauri android dev` both bind port 1420 and share `node_modules/.vite` | run one dev server at a time |
 
 ## Verified
 
@@ -112,3 +115,4 @@ Not usable on this host. The emulator's own qemu process (`qemu-system-x86_64`, 
 | 2026-09-27 | Samsung SM-A346M, Android 16, arm64, from the Windows laptop (Wireless debugging) | SDK tools 23 + NDK 27.3 without Android Studio; arm64 debug APK builds (Rust 3m42s cold, APK 3.3 min), installs and runs; logcat `[tmdb] → 200`; home carousels render; scrcpy 4.1 mirrors. |
 | 2026-09-27 | Samsung SM-A346M, Android 16 (C7b) | Backup across devices: a zip exported by the Windows app imports on the phone through the system picker (preview 4 items · 29 activity records · 4 posters → Replace; posters show, level matches); exporting on the phone to Downloads writes a zip that verifies (8 files, same counts) and leaves no staging file. |
 | 2026-09-23 | Emulator 37.1.11.0, API 35 / 37.1 x86_64 | Fails: qemu SIGSEGV when the WebView starts (see [Emulator](#emulator)). |
+| 2026-10-01 | Samsung SM-A346M, Android 16 (S5 E3 + E4) | Planner: plan sheet, week timeline and Plan buttons work; reminders: planning for today shows the Today strip, leaving and reopening the app shows the toast (`visibilitychange` fires on resume), Later keeps it away, Done moves the plan to tomorrow. |

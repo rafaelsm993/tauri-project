@@ -48,9 +48,11 @@ fn readable_name(u: &tauri::Url) -> Option<String> {
     looks_like_a_file.then(|| name.to_string())
 }
 
+#[cfg(any(unix, test))]
 const SHARED_STORAGE: [&str; 3] = ["/storage/", "/data/media/", "/mnt/user/"];
 
 // `/storage/emulated/0/Download/a.zip` → `Download/a.zip`; private or unnamed links give `None`.
+#[cfg(any(unix, test))]
 fn name_from_link(link: &Path) -> Option<String> {
     let full = link.to_str()?;
     if !SHARED_STORAGE.iter().any(|root| full.starts_with(root)) || full.ends_with(" (deleted)") {

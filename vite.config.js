@@ -8,7 +8,9 @@ const host = process.env.TAURI_DEV_HOST;
 
 // A restarted dev server asked for a component's CSS before its JS (the webview cached the JS)
 // would send the raw .svelte file; compile the component first so the CSS exists.
+/** @returns {import("vite").Plugin} */
 function svelteCssBeforeJs() {
+  /** @type {import("vite").ViteDevServer | undefined} */
   let server;
   return {
     name: "svelte-css-before-js",
@@ -22,7 +24,7 @@ function svelteCssBeforeJs() {
       const params = new URLSearchParams(query);
       if (!file.endsWith(".svelte") || !params.has("svelte") || params.get("type") !== "style")
         return;
-      await server.transformRequest(file);
+      await server?.transformRequest(file);
     },
   };
 }

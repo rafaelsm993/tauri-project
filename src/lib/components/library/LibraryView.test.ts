@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import LibraryPage from "./LibraryView.svelte";
 import { LibraryStore } from "$lib/stores/library.svelte";
-import { LibraryFilters } from "$lib/stores/ui.svelte";
+import { LibraryFilters } from "$lib/stores/libraryFilters.svelte";
 import { emptyLength } from "$lib/domain/length";
 import type { LibraryEntry, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";

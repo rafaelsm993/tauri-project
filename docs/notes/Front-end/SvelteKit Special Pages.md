@@ -90,7 +90,7 @@ The params come from `page` in `$app/stores`. An `$effect` runs `fetchDetail(typ
 | Screenshots | `ScreenshotStrip` (games) |
 | Cast | `CastRow`: drag-to-scroll; initials when there is no photo |
 
-Titled sections use `DetailSection`. The page sets `ui.detailMode = true` on creation and resets it in `onDestroy`.
+Titled sections use `DetailSection`.
 
 ---
 

@@ -53,13 +53,12 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 | ------------------ | ---------- | ---------------- | --------------- |
 | Display / Titles   | Bebas Neue | —                | `$font-display` |
 | Body / UI          | DM Sans    | `--font-body`    | `$font-body`    |
-| Monospace / Labels | DM Mono    | `--font-mono`    | `$font-mono`    |
+| Monospace / Labels | DM Mono    | —                | `$font-mono`    |
 
 ### Type Scale (CSS custom properties)
 
 | Token        | Size     | Pixels |
 | ------------ | -------- | ------ |
-| `--size-xs`  | 0.75rem  | 12px   |
 | `--size-sm`  | 0.875rem | 14px   |
 | `--size-md`  | 1rem     | 16px   |
 | `--size-lg`  | 1.125rem | 18px   |
@@ -73,8 +72,7 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 | ------------------- | ------ |
 | `--leading-snug`    | 1.3    |
 | `--leading-normal`  | 1.5    |
-| `--tracking-wide`   | 0.06em |
-| `--tracking-widest` | 0.2em  |
+| `--tracking-tight`  | -0.03em |
 
 ---
 
@@ -91,10 +89,6 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 | `$spacing-xl`  | 32px  |
 | `$spacing-2xl` | 48px  |
 
-### CSS Custom Properties (global)
-
-`--space-1` … `--space-6` and `--space-8` (4px to 32px) — follows the 4px base grid.
-
 ---
 
 ## Border Radius
@@ -102,8 +96,8 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 | Variable / Token                 | Value  |
 | -------------------------------- | ------ |
 | `$radius-sm` / `--radius-sm`     | 4px    |
-| `$radius-md` / `--radius-md`     | 8px    |
-| `$radius-lg` / `--radius-lg`     | 14px   |
+| `$radius-md`                     | 8px    |
+| `$radius-lg`                     | 14px   |
 | `$radius-xl`                     | 20px   |
 | `$radius-full` / `--radius-full` | 9999px |
 
@@ -161,7 +155,6 @@ Input, not width: `@include touch` (`hover: none` or coarse pointer) and `@inclu
 | Content    | 1                  | `.app-content` — all page content                     |
 | Film grain | 4                  | `body::before` — noise overlay (pointer-events: none) |
 | Raised     | `--z-raised: 10`   | Cards on hover                                        |
-| Modal      | `--z-modal: 200`   | Modal dialogs                                         |
 | Toast      | `--z-toast: 300`   | Notifications                                         |
 
 ---
@@ -173,16 +166,12 @@ All mixins are auto-injected — use directly in `<style lang="scss">` blocks.
 | Mixin                      | Usage                             | What It Does                                          |
 | -------------------------- | --------------------------------- | ----------------------------------------------------- |
 | `@include glass($blur)`    | `.panel { @include glass; }`      | Frosted glass surface: translucent bg + blur + border |
-| `@include card-lift`       | `.card { @include card-lift; }`   | Hover: translateY(-6px) + scale(1.02) + red glow      |
 | `@include glow-primary`    | `.badge { @include glow-primary; }` | Primary box-shadow aura (`--glow-primary`)          |
 | `@include truncate`        | `.title { @include truncate; }`   | Single-line ellipsis                                  |
 | `@include label-style`     | `.tag { @include label-style; }`  | Uppercase mono label (DM Mono, 0.7rem, `var(--clr-primary)`) |
 | `@include respond-to($bp)` | `@include respond-to(md) { ... }` | Max-width media query                                 |
 | `@include touch`           | `@include touch { min-height: $touch-target; }` | Touch / coarse-pointer input          |
 | `@include hover-capable`   | `@include hover-capable { &:hover { … } }` | Hover effects only where hover exists  |
-| `@include flex-center`     | `.box { @include flex-center; }`  | Centered flexbox                                      |
-| `@include flex-between`    | `.row { @include flex-between; }` | Space-between flexbox                                 |
-| `@include fill`            | `.overlay { @include fill; }`     | `position: absolute; inset: 0`                        |
 | `@include sr-only`         | `.label { @include sr-only; }`    | Visually hidden, accessible                           |
 
 ---

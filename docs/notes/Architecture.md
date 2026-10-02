@@ -105,7 +105,7 @@ MediaCard click → goto(`/media/${type}/${encodeURIComponent(id)}`)
 | Store | File | What it holds |
 | --- | --- | --- |
 | `BrowseStore` | `src/lib/stores/browse.svelte.ts` | Home: category, query, grid items/paging, genre sections, selected genres. Takes a `Catalog` in its constructor so tests inject a fake. |
-| `ui` | `src/lib/stores/ui.svelte.ts` | `detailMode` (detail-page background), `lastClick` (read by `AppBackground` for the bubble pulse; nothing sets it). `activeHue`, `intensity`, `triggerClickPulse()`, `setHoverHue()` have no callers (leftovers from the removed canvas background). |
+| `libraryFilters` | `src/lib/stores/libraryFilters.svelte.ts` | Library status, type and search filters, kept for the session so they survive opening a card. |
 
 ## Background system
 

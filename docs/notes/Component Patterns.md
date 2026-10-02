@@ -120,7 +120,7 @@ A fixed, `aria-hidden` decorative layer with three parts:
 2. `.circles`: 20 `<li>` bubbles animated with CSS `@keyframes`.
 3. `.bg-vignette`.
 
-An `$effect` watches `ui.lastClick` and adds `.pulsing` for 900ms. Nothing currently sets `lastClick`, so the pulse never fires in practice. No JavaScript animation loop runs. Colors come from the `--clr-*-rgb` channel tokens.
+No JavaScript animation loop runs; the bubbles pause while the window is hidden or blurred, or when the background animation setting is off. Colors come from the `--clr-*-rgb` channel tokens.
 
 ---
 

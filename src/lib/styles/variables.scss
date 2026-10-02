@@ -45,20 +45,6 @@ $dur-slower: 600ms;
 // MIXINS
 // ============================================================
 
-// Flex center
-@mixin flex-center {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-// Flex row with space-between
-@mixin flex-between {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 // Responsive breakpoints — DESKTOP-FIRST (max-width): styles inside apply at
 // this width AND BELOW. Usage: @include respond-to(md) { ... }
 // Never write raw px in @media inside components; add a token instead.
@@ -148,18 +134,6 @@ $page-max-width: 1440px;
   box-shadow: var(--glow-primary);
 }
 
-// Card hover lift
-@mixin card-lift {
-  transition:
-    transform $dur-slow $ease-out-expo,
-    box-shadow $dur-slow $ease-out-expo;
-
-  &:hover {
-    transform: translateY(-6px) scale(1.02);
-    @include glow-primary;
-  }
-}
-
 // Visually hidden (accessible)
 @mixin sr-only {
   position: absolute;
@@ -171,12 +145,6 @@ $page-max-width: 1440px;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
-}
-
-// Absolute fill
-@mixin fill {
-  position: absolute;
-  inset: 0;
 }
 
 // Label style (uppercase mono tag)

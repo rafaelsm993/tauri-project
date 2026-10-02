@@ -8,7 +8,7 @@
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
-  import { libraryFilters, LibraryFilters } from "$lib/stores/ui.svelte";
+  import { libraryFilters, LibraryFilters } from "$lib/stores/libraryFilters.svelte";
   import type { LibraryEntry } from "$lib/types/library";
   import {
     filterEntries,

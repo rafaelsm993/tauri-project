@@ -1,13 +1,11 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
-  import { onDestroy } from "svelte";
   import { catalog } from "$lib/api/catalog";
   import { toMediaItem, type MediaDetail } from "$lib/types/media";
   import { emptyLength, isPlannable, resolveTotal } from "$lib/domain/length";
   import { libraryStore } from "$lib/stores/library.svelte";
-  import { ui } from "$lib/stores/ui.svelte";
   import { errorMessage } from "$lib/utils/errors";
   import { latest } from "$lib/utils/latest";
   import { goBack } from "$lib/utils/history";
@@ -28,12 +26,6 @@
   let loading = $state(true);
   let error = $state("");
   let editingLength = $state(false);
-
-  // Detail pages use the geometric background.
-  ui.detailMode = true;
-  onDestroy(() => {
-    ui.detailMode = false;
-  });
 
   const trailer = $derived(
     detail?.videos.find((v) => v.type === "Trailer") ?? detail?.videos[0] ?? null,
@@ -63,11 +55,11 @@
   }
 
   const back = () => goBack(() => goto(resolve("/")));
-  const retry = () => fetchDetail($page.params.type ?? "", $page.params.id ?? "");
+  const retry = () => fetchDetail(page.params.type ?? "", page.params.id ?? "");
 
   // IPC side effect on route param change.
   $effect(() => {
-    const params = $page.params;
+    const params = page.params;
     fetchDetail(params.type ?? "", params.id ?? "");
   });
 </script>

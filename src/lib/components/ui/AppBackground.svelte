@@ -1,29 +1,10 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
-  import { ui } from "$lib/stores/ui.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
 
   // The store prop exists for tests; the app uses the singleton.
   let { prefs = prefsStore }: { prefs?: PrefsStore } = $props();
 
   const BUBBLE_COUNT = 20;
-  let pulsing = $state(false);
-  let pulseTimer: ReturnType<typeof setTimeout>;
-
-  $effect(() => {
-    const click = ui.lastClick;
-    if (click) {
-      pulsing = true;
-      clearTimeout(pulseTimer);
-      pulseTimer = setTimeout(() => {
-        pulsing = false;
-      }, 900);
-    }
-  });
-
-  onDestroy(() => {
-    clearTimeout(pulseTimer);
-  });
 
   let hidden = $state(false);
   let blurred = $state(false);
@@ -46,7 +27,7 @@
 </script>
 
 <div class="bg-layer" aria-hidden="true">
-  <div class="bg-area" class:pulsing class:paused>
+  <div class="bg-area" class:paused>
     <ul class="circles">
       <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -- skeleton placeholder, only the index is used -->
       {#each { length: BUBBLE_COUNT } as _, i (i)}
@@ -278,12 +259,6 @@
     animation-duration: 8s;
     animation-delay: 5s;
     background: rgb(var(--clr-accent-rgb) / 0.1);
-  }
-
-  // Pulse — flash bubbles brighter on card click
-  .bg-area.pulsing .circles li {
-    background: rgb(var(--clr-primary-rgb) / 0.3);
-    transition: background 0.2s ease-out;
   }
 
   @keyframes float {

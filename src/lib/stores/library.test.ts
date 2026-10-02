@@ -255,22 +255,6 @@ describe("optimistic remove", () => {
 });
 
 describe("derived views", () => {
-  it("counts entries by status", async () => {
-    const store = new LibraryStore(
-      fakeClient({
-        load: vi.fn(async () => [
-          entry({ key: "a", user: { ...USER, status: "completed" } }),
-          entry({ key: "b", user: { ...USER, status: "completed" } }),
-          entry({ key: "c", user: { ...USER, status: "planning" } }),
-        ]),
-      }),
-    );
-    await store.hydrate();
-    expect(store.countByStatus.completed).toBe(2);
-    expect(store.countByStatus.planning).toBe(1);
-    expect(store.countByStatus.dropped).toBe(0);
-  });
-
   it("orders entries by most recently updated", async () => {
     const store = new LibraryStore(
       fakeClient({

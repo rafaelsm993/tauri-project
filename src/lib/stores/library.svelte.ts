@@ -67,16 +67,6 @@ export class LibraryStore {
     [...this.map.values()].sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
   );
 
-  countByStatus = $derived(
-    STATUSES.reduce(
-      (acc, status) => {
-        acc[status] = this.entries.filter((e) => e.user.status === status).length;
-        return acc;
-      },
-      {} as Record<LibraryStatus, number>,
-    ),
-  );
-
   constructor(client: LibraryClient = defaultClient) {
     this.client = client;
   }

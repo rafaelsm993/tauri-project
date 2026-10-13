@@ -108,7 +108,7 @@ test.describe("level-up moment", () => {
 
   test("the toast stays clear of the offline pill", async ({ page }) => {
     await onMoviePage(page);
-    await expect(completed(page)).toBeVisible();
+    await completed(page).waitFor();
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     const pill = page.getByRole("status").filter({ hasText: "Offline" });
     await expect(pill).toBeVisible();

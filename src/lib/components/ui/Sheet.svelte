@@ -1,9 +1,14 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import { untrack, type Snippet } from "svelte";
+  import { pushState } from "$app/navigation";
+  import { page } from "$app/state";
+  import { dismissesSheet } from "$lib/utils/swipe";
 
-  // A modal form: Escape, the back gesture and the backdrop ask `onclose`; the parent unmounts it.
+  // A modal form: Escape, Back, the backdrop and a swipe down ask `onclose`; the parent unmounts it.
   let { label, onclose, children }: { label: string; onclose: () => void; children: Snippet } =
     $props();
+
+  let dragY = $state(0);
 
   function modal(dialog: HTMLDialogElement) {
     const opener = document.activeElement as HTMLElement | null;
@@ -12,12 +17,19 @@
       const covered = viewport ? innerHeight - viewport.height - viewport.offsetTop : 0;
       dialog.style.setProperty("--sheet-covered", `${Math.max(0, Math.round(covered))}px`);
     };
+    const back = () => {
+      if (!page.state.sheet) onclose();
+    };
     fit();
     viewport?.addEventListener("resize", fit);
     dialog.showModal();
+    untrack(() => pushState("", { sheet: label }));
+    addEventListener("popstate", back);
     dialog.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
     return () => {
       viewport?.removeEventListener("resize", fit);
+      removeEventListener("popstate", back);
+      if (page.state.sheet) history.back();
       opener?.focus();
     };
   }
@@ -26,16 +38,46 @@
     event.preventDefault();
     onclose();
   }
+
+  function drag(handle: HTMLElement) {
+    let startY = 0;
+    const down = (e: PointerEvent) => {
+      startY = e.clientY;
+      handle.setPointerCapture(e.pointerId);
+    };
+    const move = (e: PointerEvent) => {
+      if (handle.hasPointerCapture(e.pointerId)) dragY = Math.max(0, e.clientY - startY);
+    };
+    const up = () => {
+      const height = handle.closest("dialog")?.getBoundingClientRect().height ?? 0;
+      const dismiss = dismissesSheet(dragY, height);
+      dragY = 0;
+      if (dismiss) onclose();
+    };
+    handle.addEventListener("pointerdown", down);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+    handle.addEventListener("pointercancel", up);
+    return () => {
+      handle.removeEventListener("pointerdown", down);
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      handle.removeEventListener("pointercancel", up);
+    };
+  }
 </script>
 
 <dialog
   class="sheet"
   aria-label={label}
+  style:--sheet-drag="{dragY}px"
   {@attach modal}
   oncancel={ask}
   onkeydown={(event) => event.key === "Escape" && ask(event)}
   onclick={(event) => event.target === event.currentTarget && onclose()}
+  onfocusin={(event) => (event.target as HTMLElement).scrollIntoView?.({ block: "nearest" })}
 >
+  <div class="sheet-handle" aria-hidden="true" {@attach drag}></div>
   <div class="sheet-body">
     {@render children()}
   </div>
@@ -57,9 +99,53 @@
     &::backdrop {
       background: rgb(var(--clr-shade-rgb) / 0.6);
     }
+
+    @include respond-to(md) {
+      margin: auto 0 0;
+      width: 100%;
+      max-width: 100%;
+      max-height: calc(90dvh - var(--sheet-covered, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      border-radius: $radius-lg $radius-lg 0 0;
+      background: var(--clr-surface);
+      transform: translateY(var(--sheet-drag, 0px));
+      animation: sheet-up $dur-normal ease-out;
+    }
+  }
+
+  .sheet-handle {
+    display: none;
+
+    @include respond-to(md) {
+      display: block;
+      width: 40px;
+      height: $touch-target;
+      margin-inline: auto;
+      padding-block: 20px;
+      background: rgb(var(--clr-ink-rgb) / 0.25);
+      background-clip: content-box;
+      border-radius: $radius-full;
+      touch-action: none;
+      cursor: grab;
+    }
   }
 
   .sheet-body {
     min-width: 0;
+
+    @include respond-to(md) {
+      > :global(*) {
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        padding-top: 0;
+      }
+    }
+  }
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
   }
 </style>

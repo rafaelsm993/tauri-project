@@ -187,3 +187,49 @@ test("every rating pill is visible without scrolling", async ({ page }) => {
     await expect(group.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
   }
 });
+
+test("on a phone the add sheet sits at the bottom and Back closes it, not the page", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width > 768, "the bottom sheet is the phone layout");
+  await mockIpc(page, false);
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: /add to library/i }).click();
+
+  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  await expect(sheet).toBeVisible();
+  await sheet.evaluate((node) => Promise.all(node.getAnimations().map((a) => a.finished)));
+  const bottom = async () => {
+    const box = (await sheet.boundingBox())!;
+    return Math.round(box.y + box.height);
+  };
+  await expect.poll(bottom).toBe(page.viewportSize()!.height);
+  const fullWidth = await page.evaluate(() => {
+    const probe = document.body.appendChild(document.createElement("div"));
+    probe.style.cssText = "position:fixed;inset:0 0 auto 0;height:1px";
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  });
+  expect(Math.round((await sheet.boundingBox())!.width)).toBe(Math.round(fullWidth));
+  await expect(sheet.getByRole("button", { name: /^save/i })).toBeInViewport();
+
+  await page.goBack();
+  await expect(sheet).toHaveCount(0);
+  await expect(page).toHaveURL(/\/media\/movie\/1$/);
+});
+
+test("closing the sheet another way leaves Back for the page", async ({ page }) => {
+  await mockIpc(page, false);
+  await page.goto("/");
+  await page.goto("/media/movie/1");
+  await page.getByRole("button", { name: /add to library/i }).click();
+  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(page).toHaveURL(/\/media\/movie\/1$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+});

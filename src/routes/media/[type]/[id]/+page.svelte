@@ -3,7 +3,11 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { catalog } from "$lib/api/catalog";
-  import { toMediaItem, type MediaDetail } from "$lib/types/media";
+  import { toMediaItem, type MediaDetail, type MediaType } from "$lib/types/media";
+  import type { LibraryEntry } from "$lib/types/library";
+  import { detailSource, entryForRoute, snapshotItem } from "$lib/domain/detailView";
+  import { posterSources } from "$lib/domain/poster";
+  import { onReconnect } from "$lib/stores/online.svelte";
   import { emptyLength, isPlannable, resolveTotal } from "$lib/domain/length";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { errorMessage } from "$lib/utils/errors";
@@ -32,10 +36,18 @@
     detail?.videos.find((v) => v.type === "Trailer") ?? detail?.videos[0] ?? null,
   );
 
-  const savedEntry = $derived(detail ? libraryStore.get(detail.media_key) : undefined);
+  const routeEntry = $derived(
+    entryForRoute(libraryStore.entries, page.params.type ?? "", page.params.id ?? ""),
+  );
+  const savedEntry = $derived(detail ? libraryStore.get(detail.media_key) : routeEntry);
+  const source = $derived(detailSource({ loading, detail, error, entry: routeEntry }));
+  const mediaType = $derived<MediaType>(
+    detail?.media_type ?? savedEntry?.snapshot.media_type ?? "movie",
+  );
   const savedLength = $derived(savedEntry?.user.length ?? emptyLength());
-  const savedTotal = $derived(detail ? resolveTotal(detail.media_type, detail, savedLength) : null);
-  const savedPlannable = $derived(detail ? isPlannable(detail.media_type, savedLength) : true);
+  const savedTotal = $derived(resolveTotal(mediaType, detail, savedLength));
+  const savedPlannable = $derived(isPlannable(mediaType, savedLength));
+  const title = $derived(detail?.title ?? routeEntry?.snapshot.title ?? "");
 
   const begin = latest();
 
@@ -58,6 +70,10 @@
   const back = () => goBack(() => goto(resolve("/")));
   const retry = () => fetchDetail(page.params.type ?? "", page.params.id ?? "");
 
+  onReconnect(() => {
+    if (!detail) retry();
+  });
+
   // IPC side effect on route param change.
   $effect(() => {
     const params = page.params;
@@ -65,63 +81,55 @@
   });
 </script>
 
-<svelte:head><title>{detail ? `${detail.title} · Aevum` : "Aevum"}</title></svelte:head>
+<svelte:head><title>{title ? `${title} · Aevum` : "Aevum"}</title></svelte:head>
 
-{#if loading}
+{#snippet controls(entry: LibraryEntry)}
+  <ProgressEditor
+    {mediaType}
+    progress={entry.user.progress}
+    total={savedTotal}
+    plannable={savedPlannable}
+    rating={entry.user.rating}
+    disabled={libraryStore.isPending(entry.key)}
+    onprogress={(progress) => libraryStore.update(entry.key, { progress })}
+    onrating={(rating) => libraryStore.update(entry.key, { rating })}
+    onaddlength={() => (editingLength = true)}
+  />
+  {#if entry.user.status !== "dropped"}
+    {#if planning}
+      <PlanDialog {entry} today={localDay()} onclose={() => (planning = false)} />
+    {:else}
+      <button type="button" class="plan-btn" onclick={() => (planning = true)}>
+        {entry.user.plan ? "Edit plan" : "Plan"}
+      </button>
+    {/if}
+  {/if}
+{/snippet}
+
+{#if source.kind === "loading"}
   <DetailSkeleton />
-{:else if error}
+{:else if source.kind === "error"}
   <div class="detail-error">
-    <ErrorNote message={error} onretry={retry}>
+    <ErrorNote message={source.message} onretry={retry}>
       <button type="button" onclick={back}><span aria-hidden="true">←</span> Back</button>
     </ErrorNote>
   </div>
-{:else if detail}
+{:else if source.kind === "detail"}
+  {@const d = source.detail}
   <DetailHero
-    title={detail.title}
-    tagline={detail.tagline}
-    backdropUrl={detail.backdrop_path ?? null}
+    title={d.title}
+    tagline={d.tagline}
+    backdropUrl={d.backdrop_path ?? null}
+    posterUrl={d.poster_path ?? null}
     onBack={back}
   />
 
   <div class="detail-body">
-    <aside class="detail-poster">
-      {#if detail.poster_path}
-        <img src={detail.poster_path} alt={detail.title} class="poster-img" />
-      {:else}
-        <div class="poster-placeholder">No poster</div>
-      {/if}
-    </aside>
-
     <div class="detail-info">
-      <DetailMeta {detail} />
+      <DetailMeta detail={d} />
 
-      <SaveToLibrary item={toMediaItem(detail)} {detail} bind:editing={editingLength} />
-
-      {#if savedEntry}
-        <ProgressEditor
-          mediaType={detail.media_type}
-          progress={savedEntry.user.progress}
-          total={savedTotal}
-          plannable={savedPlannable}
-          rating={savedEntry.user.rating}
-          disabled={libraryStore.isPending(detail.media_key)}
-          onprogress={(progress) => libraryStore.update(savedEntry.key, { progress })}
-          onrating={(rating) => libraryStore.update(savedEntry.key, { rating })}
-          onaddlength={() => (editingLength = true)}
-        />
-        {#if savedEntry.user.status !== "dropped"}
-          {#if planning}
-            <PlanDialog entry={savedEntry} today={localDay()} onclose={() => (planning = false)} />
-          {:else}
-            <button type="button" class="plan-btn" onclick={() => (planning = true)}>
-              {savedEntry.user.plan ? "Edit plan" : "Plan"}
-            </button>
-          {/if}
-        {/if}
-      {/if}
-
-      {#if detail.overview}
-        <p class="overview">{detail.overview}</p>
+      {#if d.overview}
+        <p class="overview">{d.overview}</p>
       {/if}
 
       {#if trailer}
@@ -130,37 +138,140 @@
         </DetailSection>
       {/if}
 
-      {#if detail.screenshots && detail.screenshots.length > 0}
+      {#if d.screenshots && d.screenshots.length > 0}
         <DetailSection title="Screenshots">
-          <ScreenshotStrip screenshots={detail.screenshots} />
+          <ScreenshotStrip screenshots={d.screenshots} />
         </DetailSection>
       {/if}
 
-      {#if detail.cast.length > 0}
+      {#if d.cast.length > 0}
         <DetailSection title="Cast">
-          <CastRow cast={detail.cast} />
+          <CastRow cast={d.cast} />
         </DetailSection>
       {/if}
+    </div>
+
+    <div class="detail-actions">
+      <div class="detail-status">
+        <SaveToLibrary item={toMediaItem(d)} detail={d} bind:editing={editingLength} />
+      </div>
+      {#if savedEntry}
+        <div class="detail-controls">{@render controls(savedEntry)}</div>
+      {/if}
+    </div>
+  </div>
+{:else}
+  {@const entry = source.entry}
+  <DetailHero
+    title={entry.snapshot.title}
+    tagline=""
+    backdropUrl={null}
+    posterUrl={posterSources(entry.snapshot, libraryStore.posterDir)[0] ?? null}
+    onBack={back}
+  />
+
+  <div class="detail-body">
+    <div class="detail-info">
+      <p class="saved-note" role="note">
+        Showing your saved copy. Details load when you're online.
+      </p>
+    </div>
+
+    <div class="detail-actions">
+      <div class="detail-status">
+        <SaveToLibrary item={snapshotItem(entry.snapshot)} bind:editing={editingLength} />
+      </div>
+      <div class="detail-controls">{@render controls(entry)}</div>
     </div>
   </div>
 {/if}
 
 <style lang="scss">
-  // ── Detail body (2-col) ─────────────────────────────────
+  // ── Detail body: content, then the actions column (a sticky bar on phone) ──
   .detail-body {
     display: grid;
-    grid-template-columns: 260px 1fr;
+    grid-template-columns: minmax(0, 1fr) 320px;
     gap: $spacing-xl;
     max-width: 1440px;
     margin-inline: auto;
-    padding: 0 $spacing-xl $spacing-2xl;
+    padding: $spacing-2xl $spacing-xl $spacing-2xl;
     position: relative;
     z-index: 1;
+
+    @include respond-to(md) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: $spacing-md;
+      padding: $spacing-md $spacing-md calc(#{$touch-target} + #{$spacing-xl});
+    }
   }
 
   .detail-info {
     min-width: 0;
-    padding-top: $spacing-md;
+  }
+
+  // Phone: the status row is a bar fixed above the tab bar; progress, rating and plan sit under the hero.
+  .detail-actions {
+    position: sticky;
+    top: $spacing-lg;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+    min-width: 0;
+
+    @include respond-to(md) {
+      display: contents;
+    }
+  }
+
+  .detail-controls {
+    min-width: 0;
+
+    @include respond-to(md) {
+      order: -1;
+    }
+  }
+
+  .detail-status {
+    min-width: 0;
+
+    :global(.segmented) {
+      flex-wrap: wrap;
+    }
+
+    @include respond-to(md) {
+      position: fixed;
+      inset-inline: 0;
+      bottom: calc(var(--nav-bottom) + env(safe-area-inset-bottom, 0px));
+      z-index: var(--z-raised);
+      padding: $spacing-sm $spacing-md;
+
+      :global(.save-row) {
+        flex-wrap: nowrap;
+        margin-bottom: 0;
+      }
+
+      :global(.status-control) {
+        flex: 1 1 0;
+      }
+
+      :global(.segmented) {
+        flex-wrap: nowrap;
+      }
+
+      :global(.status-label) {
+        display: none;
+      }
+      background: rgb(var(--clr-surface-rgb) / 0.94);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--clr-border);
+    }
+  }
+
+  .saved-note {
+    font-size: 0.85rem;
+    color: var(--clr-text-2);
+    margin: 0 0 $spacing-md;
   }
 
   .plan-btn {
@@ -190,24 +301,6 @@
     }
   }
 
-  .poster-img {
-    width: 100%;
-    border-radius: $radius-lg;
-    box-shadow: 0 8px 30px rgb(var(--clr-shade-rgb) / 0.5);
-  }
-
-  .poster-placeholder {
-    width: 100%;
-    aspect-ratio: 2/3;
-    border-radius: $radius-lg;
-    background: var(--clr-surface);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--clr-text-3);
-    font-size: 0.82rem;
-  }
-
   // ── Overview ────────────────────────────────────────────
   .overview {
     font-size: 0.92rem;
@@ -221,18 +314,5 @@
     max-width: 600px;
     margin: $spacing-2xl auto;
     padding-inline: $spacing-lg;
-  }
-
-  // ── Responsive ──────────────────────────────────────────
-  @include respond-to(md) {
-    .detail-body {
-      grid-template-columns: 1fr;
-    }
-    .detail-poster {
-      display: none;
-    }
-    .detail-info {
-      padding-top: 0;
-    }
   }
 </style>

@@ -1,14 +1,16 @@
 <script lang="ts">
-  // Backdrop image with title, tagline and the back button.
+  // Backdrop image with the poster, title, tagline and the back button.
   let {
     title,
     tagline,
     backdropUrl,
+    posterUrl = null,
     onBack,
   }: {
     title: string;
     tagline: string;
     backdropUrl: string | null;
+    posterUrl?: string | null;
     onBack: () => void;
   } = $props();
 </script>
@@ -22,10 +24,17 @@
     <button type="button" class="back-btn" onclick={onBack}>
       <span aria-hidden="true">←</span> Back
     </button>
-    <h1 class="hero-title">{title}</h1>
-    {#if tagline}
-      <p class="hero-tagline">{tagline}</p>
-    {/if}
+    <div class="hero-row">
+      {#if posterUrl}
+        <img class="hero-poster" src={posterUrl} alt="" />
+      {/if}
+      <div class="hero-text">
+        <h1 class="hero-title">{title}</h1>
+        {#if tagline}
+          <p class="hero-tagline">{tagline}</p>
+        {/if}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -34,8 +43,10 @@
     position: relative;
     z-index: 2;
     width: 100%;
-    height: 420px;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: clamp(260px, 42vw, 420px);
   }
 
   .hero-img {
@@ -58,10 +69,8 @@
   }
 
   .hero-content {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
+    width: 100%;
     padding: $spacing-xl $spacing-xl $spacing-lg;
     max-width: 1440px;
     margin-inline: auto;
@@ -96,9 +105,39 @@
     }
   }
 
+  .hero-row {
+    display: flex;
+    align-items: flex-end;
+    gap: $spacing-lg;
+    min-width: 0;
+
+    @include respond-to(md) {
+      gap: $spacing-md;
+    }
+  }
+
+  .hero-text {
+    min-width: 0;
+  }
+
+  .hero-poster {
+    flex-shrink: 0;
+    width: clamp(84px, 22vw, 180px);
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: $radius-md;
+    box-shadow: 0 8px 30px rgb(var(--clr-shade-rgb) / 0.5);
+    transform: translateY(15%);
+
+    @include respond-to(md) {
+      transform: none;
+    }
+  }
+
   .hero-title {
     font-family: $font-display;
-    font-size: 2.8rem;
+    font-size: clamp(1.6rem, 4vw, 2.8rem);
+    overflow-wrap: anywhere;
     line-height: 1.1;
     color: var(--clr-text);
     margin: 0;
@@ -110,14 +149,5 @@
     color: var(--clr-text-2);
     font-style: italic;
     margin: $spacing-xs 0 0;
-  }
-
-  @include respond-to(md) {
-    .hero {
-      height: 300px;
-    }
-    .hero-title {
-      font-size: 1.8rem;
-    }
   }
 </style>

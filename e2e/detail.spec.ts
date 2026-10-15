@@ -75,3 +75,78 @@ test("Back from a detail page puts the app's own title back", async ({ page }) =
   await page.goBack();
   await expect(page).toHaveTitle("Aevum");
 });
+
+test("offline, a saved item opens from your library copy", async ({ page }) => {
+  await withSavedMovie(page);
+  await page.addInitScript(() => Object.assign(window, { __offline: true }));
+  await page.goto("/media/movie/1");
+  await expect(page.getByRole("heading", { level: 1, name: "Saved movie" })).toBeVisible();
+  await expect(page.getByText(/Showing your saved copy/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /retry|try again/i })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Status" })).toBeVisible();
+  await expect(page).toHaveTitle("Saved movie · Aevum");
+});
+
+test("on a phone the status bar sits on the tab bar even when the page is short", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width > 768, "the bar is the phone layout");
+  await withSavedMovie(page);
+  await page.addInitScript(() => Object.assign(window, { __offline: true }));
+  await page.goto("/media/movie/1");
+  await expect(page.getByText(/Showing your saved copy/)).toBeVisible();
+  const bar = (await page.locator(".detail-status").boundingBox())!;
+  const nav = (await page.getByRole("navigation", { name: "Main" }).boundingBox())!;
+  expect(Math.abs(bar.y + bar.height - nav.y)).toBeLessThanOrEqual(1);
+});
+
+test("offline, an unsaved item shows the error with a retry", async ({ page }) => {
+  await page.addInitScript(() => Object.assign(window, { __offline: true }));
+  await page.goto("/media/movie/1");
+  await expect(page.getByRole("button", { name: /retry|try again/i })).toBeVisible();
+});
+
+test("the poster sits in the hero next to the title", async ({ page }) => {
+  await page.addInitScript(() => {
+    const internals = (window as unknown as { __TAURI_INTERNALS__: { invoke: Invoke } })
+      .__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    const poster =
+      "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2' height='3'/>";
+    internals.invoke = async (cmd, args) => {
+      const out = await invoke(cmd, args);
+      return cmd === "catalog_detail" ? { ...(out as object), poster_path: poster } : out;
+    };
+  });
+  await page.goto("/media/movie/1");
+  const hero = page.locator(".hero");
+  await expect(hero.locator(".hero-poster")).toBeVisible();
+  await expect(page.locator(".detail-poster")).toHaveCount(0);
+  const poster = (await hero.locator(".hero-poster").boundingBox())!;
+  const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+  expect(poster.x + poster.width).toBeLessThanOrEqual(title.x);
+});
+
+test("on a phone the actions stay above the tab bar and never cover the end of the page", async ({
+  page,
+}) => {
+  test.skip(page.viewportSize()!.width > 768, "sticky bar is the phone layout");
+  await page.goto("/media/movie/1");
+  const bar = page.locator(".detail-status");
+  await expect(bar).toBeVisible();
+  const nav = (await page.getByRole("navigation", { name: "Main" }).boundingBox())!;
+  const before = (await bar.boundingBox())!;
+  expect(before.y + before.height).toBeLessThanOrEqual(nav.y + 1);
+  await page.evaluate(() =>
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }),
+  );
+  await expect
+    .poll(async () => {
+      const b = (await bar.boundingBox())!;
+      return Math.round(b.y + b.height - nav.y);
+    })
+    .toBeLessThanOrEqual(1);
+  const last = (await page.locator(".detail-info").boundingBox())!;
+  const after = (await bar.boundingBox())!;
+  expect(last.y + last.height).toBeLessThanOrEqual(after.y + 1);
+});

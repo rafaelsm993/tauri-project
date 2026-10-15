@@ -107,8 +107,18 @@ test("the phone bar sits at the bottom, full width; the desktop rail on the left
   await page.goto("/");
   const box = (await nav(page).boundingBox())!;
   if (isPhone(page)) {
+    // Full width is what any fixed box gets; mobile WebKit keeps a scrollbar's room out of it.
+    const fixedWidth = await page.evaluate(() => {
+      const probe = document.body.appendChild(document.createElement("div"));
+      probe.style.cssText = "position: fixed; left: 0; right: 0; bottom: 0; height: 1px";
+      const width = probe.getBoundingClientRect().width;
+      probe.remove();
+      return width;
+    });
+    expect(viewport.width - fixedWidth, "only a scrollbar's width").toBeLessThanOrEqual(20);
+    expect(box.x).toBe(0);
     expect(Math.round(box.y + box.height)).toBe(viewport.height);
-    expect(Math.round(box.width)).toBe(viewport.width);
+    expect(Math.round(box.width)).toBeGreaterThanOrEqual(Math.round(fixedWidth));
   } else {
     expect(box.x).toBe(0);
     expect(Math.round(box.height)).toBe(viewport.height);
@@ -136,16 +146,20 @@ test("tabs are touch-sized and labels are not cut off", async ({ page, isMobile 
 test("the bar never covers the back-to-top button or the end of the page", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("heading", { name: "Action" }).waitFor();
-  await page.mouse.wheel(0, 4000);
+  await page.evaluate(() => window.scrollTo({ top: 4000, behavior: "instant" }));
   const top = page.getByRole("button", { name: /back to top/i });
   await expect(top).toBeVisible();
   const navBox = (await nav(page).boundingBox())!;
   const topBox = (await top.boundingBox())!;
   if (isPhone(page)) expect(topBox.y + topBox.height).toBeLessThanOrEqual(navBox.y);
   else expect(topBox.x).toBeGreaterThanOrEqual(navBox.x + navBox.width);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  const mainBox = (await page.getByRole("main").boundingBox())!;
-  if (isPhone(page)) expect(mainBox.y + mainBox.height).toBeLessThanOrEqual(navBox.y + 1);
+  // Rails keep loading as the end comes into view, and WebKit lands the scroll a frame late.
+  const mainBottomAtEnd = () =>
+    page.evaluate(() => {
+      scrollTo(0, document.documentElement.scrollHeight);
+      return document.querySelector("main")!.getBoundingClientRect().bottom;
+    });
+  if (isPhone(page)) await expect.poll(mainBottomAtEnd).toBeLessThanOrEqual(navBox.y + 1);
 });
 
 test("keyboard order follows the tabs and focus is visible", async ({ page }) => {

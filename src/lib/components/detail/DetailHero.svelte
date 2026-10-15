@@ -78,8 +78,21 @@
     cursor: pointer;
     margin-bottom: $spacing-md;
     transition: background $dur-fast;
-    &:hover {
-      background: rgb(var(--clr-surface-rgb) / 0.9);
+
+    @include hover-capable {
+      &:hover {
+        background: rgb(var(--clr-surface-rgb) / 0.9);
+      }
+    }
+
+    @include touch {
+      min-height: $touch-target;
+      padding-inline: $spacing-lg;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-primary);
+      outline-offset: 2px;
     }
   }
 

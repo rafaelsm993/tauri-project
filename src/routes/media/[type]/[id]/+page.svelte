@@ -65,6 +65,8 @@
   });
 </script>
 
+<svelte:head><title>{detail ? `${detail.title} · Aevum` : "Aevum"}</title></svelte:head>
+
 {#if loading}
   <DetailSkeleton />
 {:else if error}

@@ -42,6 +42,14 @@ test.describe("touch devices", () => {
     for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
   });
 
+  test("the detail page Back button is touch-sized", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "mouse viewports may use compact targets");
+    await page.goto("/media/movie/1");
+    const box = (await page.getByRole("button", { name: "Back", exact: true }).boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
+  });
+
   test("every category tab is reachable (fits or scrolls horizontally)", async ({ page }) => {
     const nav = page.getByRole("navigation", { name: "Categories" });
     const ok = await nav.evaluate((el) => {

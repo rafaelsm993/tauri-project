@@ -62,3 +62,8 @@ test("Back on a detail page opened directly goes Home", async ({ page }) => {
   await page.getByRole("button", { name: "Back", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("the window title names the item", async ({ page }) => {
+  await page.goto("/media/movie/1");
+  await expect(page).toHaveTitle(/^Test movie 1 .* · Aevum$/);
+});

@@ -72,3 +72,11 @@ export function detailPath(entry: LibraryEntry): { type: MediaType; id: string }
   const id = entry.key.split(":").slice(2).join(":");
   return { type: entry.snapshot.media_type, id };
 }
+
+// Home's Continue row: what you are in the middle of, newest activity first.
+export function continueEntries(entries: LibraryEntry[], max = 12): LibraryEntry[] {
+  return entries
+    .filter((e) => e.user.status === "in_progress")
+    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .slice(0, max);
+}

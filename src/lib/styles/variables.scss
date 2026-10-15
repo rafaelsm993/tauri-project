@@ -138,6 +138,23 @@ $nav-bar-height: 56px;
   border: 1px solid var(--clr-border);
 }
 
+// A horizontal, snap-scrolling rail of cards with no visible scrollbar.
+@mixin card-rail($item: 160px) {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: $item;
+  gap: $spacing-md;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  padding: $spacing-xs;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @mixin glow-primary {
   box-shadow: var(--glow-primary);
 }

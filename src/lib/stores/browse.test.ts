@@ -332,4 +332,30 @@ describe("BrowseStore", () => {
     await s.switchGenre(null);
     expect(cat.fetchGenres).not.toHaveBeenCalled();
   });
+
+  it("ensureLoaded loads the first time only, so a second visit keeps the place", async () => {
+    const cat = fakeCatalog();
+    const s = new BrowseStore(cat);
+    await s.ensureLoaded();
+    await s.switchGenre(7);
+    await s.ensureLoaded();
+    expect(cat.fetchGenres).toHaveBeenCalledOnce();
+    expect(cat.fetchPage).toHaveBeenCalledOnce();
+    expect(s.activeGenre).toBe(7);
+  });
+
+  it("ensureLoaded tries again after a failed first load", async () => {
+    const cat = fakeCatalog({
+      fetchGenres: vi.fn().mockRejectedValueOnce("offline").mockResolvedValue(genres(2)),
+      fetchPage: vi
+        .fn()
+        .mockRejectedValueOnce("offline")
+        .mockResolvedValue(page([1])),
+    });
+    const s = new BrowseStore(cat);
+    await s.ensureLoaded();
+    expect(s.error).not.toBe("");
+    await s.ensureLoaded();
+    expect(s.sections).toHaveLength(2);
+  });
 });

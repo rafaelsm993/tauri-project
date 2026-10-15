@@ -17,7 +17,7 @@ export type GenreSection = {
   error: string;
 };
 
-// Home screen state; one instance per page mount.
+// Home screen state; one instance for the session so Back returns to the same place.
 export class BrowseStore {
   activeCategory = $state<MediaType>("movie");
   query = $state("");
@@ -201,6 +201,12 @@ export class BrowseStore {
     }
   }
 
+  // Home mounts again on every visit; only the first visit, or one after a failure, fetches.
+  ensureLoaded() {
+    if (this.loading || this.sections.length > 0 || this.items.length > 0) return;
+    return this.refreshView();
+  }
+
   search(q: string) {
     this.query = q;
     this.isSearch = !!q.trim();
@@ -232,3 +238,5 @@ export class BrowseStore {
     await this.refreshView();
   }
 }
+
+export const browseStore = new BrowseStore();

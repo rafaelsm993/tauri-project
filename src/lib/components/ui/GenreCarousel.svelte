@@ -158,19 +158,7 @@
   }
 
   .rail {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 160px;
-    gap: $spacing-md;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x proximity;
-    padding: $spacing-xs;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    @include card-rail;
   }
 
   .rail-item {

@@ -3,7 +3,9 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import type { MediaItem } from "$lib/types/media";
-  import { BrowseStore } from "$lib/stores/browse.svelte";
+  import { browseStore as browse } from "$lib/stores/browse.svelte";
+  import { libraryStore } from "$lib/stores/library.svelte";
+  import { continueEntries } from "$lib/domain/libraryView";
   import { onReconnect } from "$lib/stores/online.svelte";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
@@ -15,9 +17,8 @@
   import MultiSelect from "$lib/components/ui/MultiSelect.svelte";
   import BrowseContext from "$lib/components/browse/BrowseContext.svelte";
   import ResultsGrid from "$lib/components/browse/ResultsGrid.svelte";
+  import ContinueRow from "$lib/components/browse/ContinueRow.svelte";
   import { whenVisible } from "$lib/attachments/whenVisible";
-
-  const browse = new BrowseStore();
 
   // Carousels start loading about one screen before they scroll into view.
   const PRELOAD_MARGIN = "100% 0px";
@@ -28,7 +29,9 @@
       : (browse.genres.find((g) => g.id === browse.activeGenre)?.name ?? "genre"),
   );
 
-  let typed = $state("");
+  const continuing = $derived(continueEntries(libraryStore.entries));
+
+  let typed = $state(browse.query);
 
   // Both clear paths empty the field; only a submitted search has results to drop.
   function clearSearch() {
@@ -46,7 +49,7 @@
   }
 
   onMount(() => {
-    browse.refreshView();
+    void browse.ensureLoaded();
   });
 
   // Carousels or a grid that failed while offline load again once the network returns.
@@ -92,6 +95,10 @@
 
   <div class="page-body">
     <main class="main-col">
+      {#if !browse.isSearch}
+        <ContinueRow entries={continuing} posterDir={libraryStore.posterDir} />
+      {/if}
+
       <BrowseContext
         isSearch={browse.isSearch}
         query={browse.query}

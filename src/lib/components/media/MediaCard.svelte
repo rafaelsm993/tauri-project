@@ -2,13 +2,16 @@
   import type { MediaItem, MediaType } from "$lib/types/media";
   import { getPosterUrl, getYear, getRating, MEDIA_LABELS } from "$lib/types/media";
   import { pauseOffscreen } from "$lib/attachments/pauseOffscreen";
+  import { libraryStore, type LibraryStore } from "$lib/stores/library.svelte";
 
   let {
     item,
     onclick,
+    store = libraryStore,
   }: {
     item: MediaItem;
     onclick?: () => void;
+    store?: LibraryStore;
   } = $props();
 
   let loaded = $state(false);
@@ -18,9 +21,15 @@
   const year = $derived(getYear(item));
   const rating = $derived(getRating(item));
   const badge = $derived(MEDIA_LABELS[item.media_type as MediaType] ?? "Media");
+  const saved = $derived(store.has(item.media_key));
 </script>
 
-<button class="card" {onclick} type="button">
+<button
+  class="card"
+  {onclick}
+  type="button"
+  aria-label={saved ? `${item.title}, in your library` : undefined}
+>
   <div class="card__poster">
     {#if poster && !loaded && !errored}
       <div class="card__shimmer" aria-hidden="true" {@attach pauseOffscreen}></div>
@@ -92,7 +101,11 @@
 
   <div class="card__label">
     <span class="card__label-title">{item.title}</span>
-    {#if year}<span class="card__label-year">{year}</span>{/if}
+    {#if saved}
+      <span class="card__saved" aria-hidden="true">In library</span>
+    {:else if year}
+      <span class="card__label-year">{year}</span>
+    {/if}
   </div>
 </button>
 
@@ -295,6 +308,23 @@
     border-radius: $radius-sm;
     line-height: 1.7;
     white-space: nowrap;
+  }
+
+  // ── Saved badge: in the label row, where the year sits otherwise ──
+  .card__saved {
+    flex-shrink: 0;
+    padding: 0 6px;
+    border-radius: $radius-full;
+    background: var(--clr-primary);
+    color: var(--clr-on-primary);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.6;
+    white-space: nowrap;
+
+    &::before {
+      content: "✓ ";
+    }
   }
 
   // ── Score pill ──────────────────────────────────────────

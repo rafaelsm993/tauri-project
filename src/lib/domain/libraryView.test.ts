@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  continueEntries,
   detailPath,
   filterEntries,
   normalizeTitle,
@@ -124,5 +125,22 @@ describe("searchEntries", () => {
   it("needs every word, in any order", () => {
     expect(titles("knight dark")).toEqual(["The Dark Knight"]);
     expect(titles("dark heroes")).toEqual([]);
+  });
+});
+
+describe("continueEntries", () => {
+  it("in-progress only, most recently updated first, at most 12", () => {
+    const list = Array.from({ length: 14 }, (_, i) => ({
+      ...entry(`tmdb:movie:${i}`, "movie", "in_progress"),
+      updated_at: `2026-10-${10 + i}T00:00:00Z`,
+    }));
+    list.push({
+      ...entry("tmdb:movie:99", "movie", "completed"),
+      updated_at: "2026-10-30T00:00:00Z",
+    });
+    const out = continueEntries(list);
+    expect(out).toHaveLength(12);
+    expect(out[0].key).toBe("tmdb:movie:13");
+    expect(out.every((e) => e.user.status === "in_progress")).toBe(true);
   });
 });

@@ -50,3 +50,16 @@ test("the home search keeps the bar's height", async ({ page }) => {
   const form = page.getByRole("search");
   expect((await form.boundingBox())!.height).toBe(52);
 });
+
+test("rails far below the screen are not drawn, so their shimmers stay still", async ({ page }) => {
+  await page.getByRole("heading", { name: "Action" }).waitFor();
+  const drawn = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll(".carousel-slot > *")].map((rail) =>
+        rail.checkVisibility({ contentVisibilityAuto: true }),
+      ),
+    );
+  expect((await drawn()).at(-1), "the last rail is skipped while far away").toBe(false);
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(async () => (await drawn()).at(-1)).toBe(true);
+});

@@ -88,3 +88,17 @@ test("the last theme is painted before the app starts", async ({ page }) => {
   const boot = await page.evaluate(() => (window as unknown as { __boot?: string }).__boot);
   expect(boot).toBe("light");
 });
+
+test("Animations off stops every CSS animation", async ({ page }) => {
+  await page.goto("/settings");
+  await animations(page).click();
+  await expect(page.locator("html")).toHaveAttribute("data-motion", "off");
+  const iterations = await page.evaluate(() => {
+    const probe = document.body.appendChild(document.createElement("div"));
+    probe.style.animation = "x 1s infinite";
+    const value = getComputedStyle(probe).animationIterationCount;
+    probe.remove();
+    return value;
+  });
+  expect(iterations).toBe("1");
+});

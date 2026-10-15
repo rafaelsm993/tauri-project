@@ -179,8 +179,11 @@
 
   // Wrapper that carries the lazy-load observer. Loading carousels render
   // full-height skeletons, so only the first few slots start near the viewport.
+  // Off-screen rails are not drawn (nor their shimmers run) until they come near.
   .carousel-slot {
     min-width: 0;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 320px;
   }
 
   // ── States ──────────────────────────────────────────────

@@ -390,3 +390,17 @@ h6 {
     animation: spin 1.5s linear infinite;
   }
 }
+
+/* The in-app Animations switch; the system setting above covers the frame before it is read. */
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+:root[data-motion="off"] .skeleton {
+  animation: none;
+  background: var(--clr-surface-2);
+}

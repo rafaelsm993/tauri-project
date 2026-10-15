@@ -39,6 +39,11 @@
     if (prefsStore.ready) applyTheme(prefsStore.prefs.theme);
   });
 
+  // DOM side effect: CSS reads the motion answer as `<html data-motion>`.
+  $effect(() => {
+    document.documentElement.dataset.motion = motionStore.on ? "on" : "off";
+  });
+
   // Side effect only (patches console.*), per the $effect rule in AGENTS.md.
   $effect(() => forwardConsole());
   $effect(() => reportCspViolations());

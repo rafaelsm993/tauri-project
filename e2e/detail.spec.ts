@@ -67,3 +67,11 @@ test("the window title names the item", async ({ page }) => {
   await page.goto("/media/movie/1");
   await expect(page).toHaveTitle(/^Test movie 1 .* · Aevum$/);
 });
+
+test("Back from a detail page puts the app's own title back", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".carousel-slot .card").first().click();
+  await expect(page).toHaveTitle(/ · Aevum$/);
+  await page.goBack();
+  await expect(page).toHaveTitle("Aevum");
+});

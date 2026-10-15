@@ -63,3 +63,20 @@ test("rails far below the screen are not drawn, so their shimmers stay still", a
   await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
   await expect.poll(async () => (await drawn()).at(-1)).toBe(true);
 });
+
+test("only shimmers in view are animating", async ({ page }) => {
+  await page.getByRole("heading", { name: "Action" }).waitFor();
+  const strays = () =>
+    page.evaluate(
+      () =>
+        document.getAnimations().filter((a) => {
+          if (a.playState !== "running" || !(a instanceof CSSAnimation)) return false;
+          if (!a.animationName.endsWith("shimmer")) return false;
+          const box = (a.effect as KeyframeEffect).target!.getBoundingClientRect();
+          const off =
+            box.right < 0 || box.left > innerWidth || box.bottom < 0 || box.top > innerHeight;
+          return off;
+        }).length,
+    );
+  await expect.poll(strays).toBe(0);
+});

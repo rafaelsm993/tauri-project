@@ -80,6 +80,13 @@
     animation-play-state: paused;
   }
 
+  // Phone GPUs redraw the whole screen for every moving shape; the glow stays.
+  @include touch {
+    .circles {
+      display: none;
+    }
+  }
+
   .circles {
     position: absolute;
     inset: 0;

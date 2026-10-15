@@ -53,6 +53,8 @@
   onReconnect(() => browse.retryFailed());
 </script>
 
+<svelte:head><title>Aevum</title></svelte:head>
+
 <div class="page">
   <header class="page-header">
     <div class="search-slot">

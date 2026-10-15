@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { MediaItem, MediaType } from "$lib/types/media";
   import { getPosterUrl, getYear, getRating, MEDIA_LABELS } from "$lib/types/media";
+  import { pauseOffscreen } from "$lib/attachments/pauseOffscreen";
 
   let {
     item,
@@ -22,7 +23,7 @@
 <button class="card" {onclick} type="button">
   <div class="card__poster">
     {#if poster && !loaded && !errored}
-      <div class="card__shimmer" aria-hidden="true"></div>
+      <div class="card__shimmer" aria-hidden="true" {@attach pauseOffscreen}></div>
     {/if}
 
     {#if poster && !errored}
@@ -184,6 +185,10 @@
     );
     background-size: 200% 100%;
     animation: shimmer 1.6s ease-in-out infinite;
+
+    &:global([data-offscreen]) {
+      animation-play-state: paused;
+    }
   }
 
   // ── No-poster fallback ──────────────────────────────────

@@ -50,6 +50,16 @@ test.describe("touch devices", () => {
     expect(box.width).toBeGreaterThanOrEqual(44);
   });
 
+  test("phones skip the floating background shapes", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "mouse viewports keep the shapes");
+    const floating = await page
+      .locator(".circles li")
+      .evaluateAll((els) =>
+        els.flatMap((el) => el.getAnimations()).filter((a) => a.playState === "running"),
+      );
+    expect(floating.length).toBe(0);
+  });
+
   test("every category tab is reachable (fits or scrolls horizontally)", async ({ page }) => {
     const nav = page.getByRole("navigation", { name: "Categories" });
     const ok = await nav.evaluate((el) => {

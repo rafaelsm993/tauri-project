@@ -1,5 +1,7 @@
 <script lang="ts">
   // `poster`: a 2:3 block (cards, detail). `heading`: a title and a subtitle bar before the lines.
+  import { pauseOffscreen } from "$lib/attachments/pauseOffscreen";
+
   let {
     poster = false,
     heading = false,
@@ -7,7 +9,7 @@
   }: { poster?: boolean; heading?: boolean; lines?: number } = $props();
 </script>
 
-<div class="skeleton-block" class:text={heading} aria-hidden="true">
+<div class="skeleton-block" class:text={heading} aria-hidden="true" {@attach pauseOffscreen}>
   {#if poster}
     <div class="skeleton-poster"></div>
   {/if}
@@ -52,6 +54,10 @@
       );
       background-size: 200% 100%;
       animation: shimmer 1.7s ease-in-out infinite;
+
+      :global([data-offscreen]) & {
+        animation-play-state: paused;
+      }
     }
   }
 

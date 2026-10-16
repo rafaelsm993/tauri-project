@@ -59,7 +59,11 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
   await page.clock.setFixedTime(new Date(fake.now ?? "2026-10-01T10:00:00"));
   await page.addInitScript(
     ({ list, events, seenLevel, emptyLength }) => {
-      const library = structuredClone(list) as { key: string; user: Record<string, unknown> }[];
+      const library = structuredClone(list) as {
+        key: string;
+        user: Record<string, unknown>;
+        snapshot?: { title: string; provider: string };
+      }[];
       const prefs = {
         motion: true,
         seen_level: seenLevel,
@@ -77,6 +81,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
             user?: Record<string, unknown>;
             event?: { at_utc: string };
             id?: string;
+            media_type?: string;
           },
         ) => {
           calls.push({ cmd, args });
@@ -132,6 +137,28 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
           }
           // Like Rust: a provider can't parse the UUID of a hand-made item.
           if (cmd === "catalog_detail" && String(args?.id).includes("-")) throw "Invalid ID.";
+          if (cmd === "catalog_detail") {
+            const saved = library.find((e) => e.key.endsWith(`:${args?.media_type}:${args?.id}`));
+            const s = saved?.snapshot;
+            return {
+              id: Number(args?.id),
+              provider: s?.provider ?? "tmdb",
+              media_key: saved?.key ?? `tmdb:${args?.media_type}:${args?.id}`,
+              media_type: args?.media_type,
+              title: s?.title ?? "Untitled",
+              tagline: "",
+              overview: "",
+              poster_path: null,
+              backdrop_path: null,
+              vote_average: 0,
+              vote_count: 0,
+              release_date: "",
+              runtime: null,
+              genres: [],
+              cast: [],
+              videos: [],
+            };
+          }
           if (cmd === "library_events") return structuredClone(events);
           if (cmd === "startup_status") return null;
           if (cmd === "library_poster_dir") return "/nonexistent/posters";

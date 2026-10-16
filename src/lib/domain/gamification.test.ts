@@ -11,6 +11,7 @@ import {
   titleFor,
   totalXp,
   xpForLevel,
+  xpOfItem,
   TITLES,
   XP,
 } from "./gamification";
@@ -50,10 +51,35 @@ const xpOf = (events: LibraryEvent[]) => totalXp(awards(events));
 const reasons = (events: LibraryEvent[]) => awards(events).map((a) => a.reason);
 
 describe("awards", () => {
-  it("pays for an add once per item, even after remove and re-add", () => {
+  it("pays for an add once per item while it stays in the library", () => {
     expect(xpOf([add(MOVIE)])).toBe(XP.add);
-    expect(xpOf([add(MOVIE), del(MOVIE), add(MOVIE)])).toBe(XP.add);
+    expect(xpOf([add(MOVIE), add(MOVIE)])).toBe(XP.add);
     expect(xpOf([add(MOVIE), add(ANIME)])).toBe(2 * XP.add);
+  });
+
+  it("takes back everything an item earned when it is removed", () => {
+    const earned = [add(MOVIE), upd(MOVIE, { rating: 8 }), upd(MOVIE, { status: "completed" })];
+    expect(xpOf(earned)).toBeGreaterThan(0);
+    expect(xpOf([...earned, del(MOVIE)])).toBe(0);
+    expect(awards([...earned, del(MOVIE)])).toEqual([]);
+  });
+
+  it("leaves other items' XP alone on a removal", () => {
+    expect(xpOf([add(MOVIE), add(ANIME), upd(ANIME, { rating: 5 }), del(MOVIE)])).toBe(
+      XP.add + XP.rating,
+    );
+  });
+
+  it("pays again for an item removed and added back, but only once per stay", () => {
+    expect(xpOf([add(MOVIE), del(MOVIE), add(MOVIE)])).toBe(XP.add);
+    expect(xpOf([add(MOVIE), del(MOVIE), add(MOVIE), upd(MOVIE, { rating: 3 })])).toBe(
+      XP.add + XP.rating,
+    );
+  });
+
+  it("drops the refund from the past, so earlier weeks lose it too", () => {
+    const events = [add(MOVIE, null, "2026-09-01"), del(MOVIE, "2026-09-20")];
+    expect(awards(events).filter((a) => a.local_date === "2026-09-01")).toEqual([]);
   });
 
   it("pays for the first rating of an item only", () => {
@@ -310,5 +336,13 @@ describe("streaks", () => {
 
   it("crosses month ends by calendar day", () => {
     expect(streaks(days("2026-02-28", "2026-03-01"), "2026-03-01").current).toBe(2);
+  });
+});
+
+describe("xpOfItem", () => {
+  it("is what one item has earned so far, for the remove prompt", () => {
+    const list = awards([add(MOVIE), upd(MOVIE, { rating: 8 }), add(ANIME)]);
+    expect(xpOfItem(list, MOVIE)).toBe(XP.add + XP.rating);
+    expect(xpOfItem(list, "tmdb:tv:9")).toBe(0);
   });
 });

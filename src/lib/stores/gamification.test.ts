@@ -241,6 +241,23 @@ describe("level-up moment", () => {
     expect(seen.set).toHaveBeenCalledTimes(1);
   });
 
+  it("drops a level quietly on a removal and doesn't celebrate climbing back", async () => {
+    const { store, seen, emit } = live(NEAR_LEVEL_2);
+    await store.load();
+    emit(ev("3", { status: "completed" }));
+    expect(store.level.level).toBe(2);
+    store.dismiss();
+
+    emit({ ...ev("r", null), kind: "library_remove", media_key: "tmdb:movie:3" });
+    expect(store.level.level).toBe(1);
+    expect(store.moment).toBeNull();
+
+    emit(ev("5", { status: "completed" }));
+    expect(store.level.level).toBe(2);
+    expect(store.moment).toBeNull();
+    expect(seen.value).toBe(2);
+  });
+
   it("adopts the level silently on the first run", async () => {
     const { store, seen } = live(NEAR_LEVEL_2, 0);
     await store.load();

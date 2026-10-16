@@ -127,6 +127,7 @@ export const savedLengths = (entries: LibraryEntry[]): ReadonlyMap<MediaKey, Len
   new Map(entries.map((e) => [e.key, e.user.length]));
 
 // Replays the log once; each item pays for its first add, rating and completion only.
+// Removing an item takes back all it earned, from the past too; adding it again starts over.
 // `lengths` (the saved entries) sizes a completion the log never carried a length for.
 export function awards(
   events: LibraryEvent[],
@@ -134,9 +135,16 @@ export function awards(
 ): Award[] {
   const seen = new Set<string>();
   const items = new Map<MediaKey, ItemState>();
-  const out: Award[] = [];
+  let out: Award[] = [];
   for (const e of events) {
-    if (seen.has(e.id) || !counts(e)) continue;
+    if (seen.has(e.id)) continue;
+    if (e.kind === "library_remove") {
+      seen.add(e.id);
+      items.delete(e.media_key);
+      out = out.filter((a) => a.media_key !== e.media_key);
+      continue;
+    }
+    if (!counts(e)) continue;
     seen.add(e.id);
     const item = items.get(e.media_key) ?? {
       added: false,
@@ -166,6 +174,9 @@ export function awards(
 }
 
 export const totalXp = (list: Award[]): number => list.reduce((sum, a) => sum + a.xp, 0);
+
+export const xpOfItem = (list: Award[], key: MediaKey): number =>
+  totalXp(list.filter((a) => a.media_key === key));
 
 export const xpForLevel = (level: number): number =>
   level <= 1 ? 0 : Math.round(50 * level ** 1.5);

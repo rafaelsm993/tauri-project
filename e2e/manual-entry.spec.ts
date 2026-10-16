@@ -35,6 +35,7 @@ test.describe("add manually", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Mystery zine");
 
     await page.getByRole("button", { name: "Remove" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
     await expect(page.getByRole("alert")).toHaveText(/isn't in your library anymore/);
     await expect(page.getByRole("alert")).not.toContainText("Invalid ID");
     await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
@@ -197,4 +198,67 @@ test("offline: add a book with genres, open it, find its card, then plan it", as
   await expect(page.getByRole("listitem", { name: "Thu, Oct 1" })).toContainText("Piranesi");
   const asked = (await ipcCalls(page)).filter((c) => c.cmd.startsWith("catalog_"));
   expect(asked).toHaveLength(0);
+});
+
+test.describe("removing an item", () => {
+  const ev = (id: string, kind: string, payload: unknown) => ({
+    id,
+    kind,
+    media_key: "tmdb:tv:7",
+    at_utc: "2026-09-30T12:00:00.000Z",
+    local_date: "2026-09-30",
+    payload,
+  });
+
+  test.beforeEach(async ({ page }) => {
+    const arcane = item(7, "tv", "Arcane", { episodes: 9 }, null);
+    await mockLibrary(page, [arcane], {
+      seenLevel: 1,
+      events: [
+        ev("a", "library_add", null),
+        ev("r", "library_update", { rating: 9 }),
+        ev("c", "library_update", { status: "completed" }),
+      ],
+    });
+  });
+
+  const xpLine = (page: import("@playwright/test").Page) =>
+    page.getByRole("img", { name: /Level \d+, \d+ of \d+ XP/ });
+
+  test("asks first; Keep keeps it", async ({ page, isMobile }) => {
+    await page.goto("/media/tv/7");
+    await page.getByRole("button", { name: "Remove" }).click();
+    const sheet = page.getByRole("dialog", { name: "Remove Arcane?" });
+    await expect(sheet).toContainText(/You lose the \d+ XP it earned\./);
+    if (isMobile) {
+      for (const b of await sheet.getByRole("button").all()) {
+        expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+    }
+    await sheet.getByRole("button", { name: "Keep" }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Remove" })).toBeVisible();
+    const removes = (await ipcCalls(page)).filter((c) => c.cmd === "library_remove");
+    expect(removes).toHaveLength(0);
+  });
+
+  test("Remove takes the item and its XP away, and Profile shows less", async ({ page }) => {
+    await page.goto("/profile");
+    const before = await xpLine(page).getAttribute("aria-label");
+
+    await page.goto("/media/tv/7");
+    await page.getByRole("button", { name: "Remove" }).click();
+    const sheet = page.getByRole("dialog", { name: "Remove Arcane?" });
+    const lost = Number((await sheet.textContent())!.match(/lose the (\d+) XP/)![1]);
+    await sheet.getByRole("button", { name: "Remove" }).click();
+    await expect(page.getByRole("button", { name: "+ Add to library" })).toBeVisible();
+
+    await page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: /Profile/ })
+      .click();
+    const xpOf = (label: string | null) => Number(label!.match(/(\d+) of/)![1]);
+    await expect(xpLine(page)).not.toHaveAttribute("aria-label", before!);
+    expect(xpOf(before) - xpOf(await xpLine(page).getAttribute("aria-label"))).toBe(lost);
+  });
 });

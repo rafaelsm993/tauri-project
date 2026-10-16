@@ -1,24 +1,37 @@
 <script lang="ts">
   import AddSheet from "./AddSheet.svelte";
+  import RemoveConfirm from "./RemoveConfirm.svelte";
   import Sheet from "$lib/components/ui/Sheet.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { lengthFromDetail } from "$lib/domain/length";
+  import { xpOfItem } from "$lib/domain/gamification";
+  import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { isBinary } from "$lib/domain/progress";
   import { libraryStore, LibraryStore, STATUSES, STATUS_LABELS } from "$lib/stores/library.svelte";
   import type { Length, LibraryStatus } from "$lib/types/library";
-  import type { MediaDetail, MediaItem } from "$lib/types/media";
+  import type { MediaDetail, MediaItem, MediaKey } from "$lib/types/media";
 
   let {
     item,
     detail = null,
     store = libraryStore,
     editing = $bindable(false),
+    xpOf = (key: MediaKey) => xpOfItem(gamificationStore.awards, key),
   }: {
     item: MediaItem;
     detail?: MediaDetail | null;
     store?: LibraryStore;
     editing?: boolean;
+    // What an item has earned, shown before it is removed.
+    xpOf?: (key: MediaKey) => number;
   } = $props();
+
+  let removing = $state(false);
+
+  function remove() {
+    removing = false;
+    store.remove(item.media_key);
+  }
 
   const entry = $derived(store.get(item.media_key));
   const busy = $derived(store.isPending(item.media_key));
@@ -65,7 +78,8 @@
       type="button"
       class="remove-btn"
       disabled={busy}
-      onclick={() => store.remove(item.media_key)}
+      aria-haspopup="dialog"
+      onclick={() => (removing = true)}
     >
       Remove
     </button>
@@ -93,6 +107,17 @@
       {busy}
       onsave={saveFromSheet}
       oncancel={close}
+    />
+  </Sheet>
+{/if}
+
+{#if removing && entry}
+  <Sheet label="Remove {entry.snapshot.title}?" onclose={() => (removing = false)}>
+    <RemoveConfirm
+      title={entry.snapshot.title}
+      xp={xpOf(item.media_key)}
+      onremove={remove}
+      onkeep={() => (removing = false)}
     />
   </Sheet>
 {/if}

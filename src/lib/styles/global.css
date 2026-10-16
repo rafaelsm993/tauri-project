@@ -403,3 +403,25 @@ h6 {
   animation: none;
   background: var(--clr-surface-2);
 }
+
+/* Card ↔ detail: the poster moves and resizes; the rest of the page cross-fades quickly. */
+::view-transition-group(poster) {
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+}
+
+::view-transition-image-pair(poster) {
+  isolation: auto;
+}
+
+::view-transition-old(poster),
+::view-transition-new(poster) {
+  height: 100%;
+  object-fit: cover;
+  overflow: hidden;
+}

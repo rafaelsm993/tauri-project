@@ -5,12 +5,15 @@
     tagline,
     backdropUrl,
     posterUrl = null,
+    posterKey,
     onBack,
   }: {
     title: string;
     tagline: string;
     backdropUrl: string | null;
     posterUrl?: string | null;
+    // Shared with the card that opened this page, so the poster can carry over.
+    posterKey?: string;
     onBack: () => void;
   } = $props();
 </script>
@@ -26,7 +29,7 @@
     </button>
     <div class="hero-row">
       {#if posterUrl}
-        <img class="hero-poster" src={posterUrl} alt="" />
+        <img class="hero-poster" src={posterUrl} alt="" data-poster={posterKey} />
       {/if}
       <div class="hero-text">
         <h1 class="hero-title">{title}</h1>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { detailPath } from "$lib/domain/libraryView";
+  import { posterKey } from "$lib/utils/transition";
   import { resolveTotal } from "$lib/domain/length";
   import { posterSources } from "$lib/domain/poster";
   import { isBinary, percent, progressLabel } from "$lib/domain/progress";
@@ -33,7 +34,14 @@
   <a class="lib-card" {href}>
     <div class="lib-card__poster">
       {#if src}
-        <img {src} alt="" loading="lazy" class="lib-card__img" onerror={() => failed++} />
+        <img
+          {src}
+          alt=""
+          loading="lazy"
+          class="lib-card__img"
+          data-poster={posterKey(path.type, path.id)}
+          onerror={() => failed++}
+        />
       {:else}
         <div class="lib-card__no-poster" aria-hidden="true">No poster</div>
       {/if}

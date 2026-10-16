@@ -23,7 +23,8 @@
   import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
   import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
-  import { afterNavigate, goto } from "$app/navigation";
+  import { afterNavigate, goto, onNavigate } from "$app/navigation";
+  import { startTransition } from "$lib/utils/transition";
   import { resolve } from "$app/paths";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import { applyTheme } from "$lib/theme";
@@ -43,6 +44,11 @@
   $effect(() => {
     document.documentElement.dataset.motion = motionStore.on ? "on" : "off";
   });
+
+  // The poster carries over between a card and its detail page, and back again on Back.
+  onNavigate((navigation) =>
+    startTransition(navigation, { motion: motionStore.on, doc: document }),
+  );
 
   // Side effect only (patches console.*), per the $effect rule in AGENTS.md.
   $effect(() => forwardConsole());

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { MediaItem, MediaType } from "$lib/types/media";
   import { getPosterUrl, getYear, getRating, MEDIA_LABELS } from "$lib/types/media";
+  import { posterKey } from "$lib/utils/transition";
   import { pauseOffscreen } from "$lib/attachments/pauseOffscreen";
   import { libraryStore, type LibraryStore } from "$lib/stores/library.svelte";
 
@@ -41,6 +42,7 @@
         alt={item.title}
         loading="lazy"
         class="card__img"
+        data-poster={posterKey(item.media_type, String(item.id))}
         class:card__img--loaded={loaded}
         onload={() => (loaded = true)}
         onerror={() => (errored = true)}

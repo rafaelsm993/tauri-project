@@ -7,6 +7,7 @@
   import type { LibraryEntry } from "$lib/types/library";
   import { detailSource, entryForRoute, snapshotItem } from "$lib/domain/detailView";
   import { posterSources } from "$lib/domain/poster";
+  import { posterKey as toPosterKey } from "$lib/utils/transition";
   import { onReconnect } from "$lib/stores/online.svelte";
   import { emptyLength, isPlannable, resolveTotal } from "$lib/domain/length";
   import { libraryStore } from "$lib/stores/library.svelte";
@@ -49,6 +50,7 @@
   const savedTotal = $derived(resolveTotal(mediaType, detail, savedLength));
   const savedPlannable = $derived(isPlannable(mediaType, savedLength));
   const title = $derived(detail?.title ?? routeEntry?.snapshot.title ?? "");
+  const posterKey = $derived(toPosterKey(page.params.type ?? "", page.params.id ?? ""));
 
   const begin = latest();
 
@@ -122,6 +124,7 @@
     tagline={d.tagline}
     backdropUrl={d.backdrop_path ?? null}
     posterUrl={d.poster_path ?? null}
+    {posterKey}
     onBack={back}
   />
 
@@ -168,6 +171,7 @@
     tagline=""
     backdropUrl={null}
     posterUrl={posterSources(entry.snapshot, libraryStore.posterDir)[0] ?? null}
+    {posterKey}
     onBack={back}
   />
 

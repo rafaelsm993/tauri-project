@@ -199,3 +199,81 @@ test("a short synopsis has no Read more button", async ({ page }) => {
   await expect(page.getByText("Short.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Read more" })).toHaveCount(0);
 });
+
+// The card's poster and the hero's are one named element during the swap, both ways.
+test("the poster carries over from the card and back again", async ({ page }) => {
+  const poster =
+    "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='2' height='3'/>";
+  await page.addInitScript((src) => {
+    const internals = (window as unknown as { __TAURI_INTERNALS__: { invoke: Invoke } })
+      .__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    const withPoster = (x: unknown) =>
+      x && typeof x === "object" && "media_type" in x ? { ...x, poster_path: src } : x;
+    internals.invoke = async (cmd, args) => {
+      const out = (await invoke(cmd, args)) as { results?: unknown[] };
+      if (cmd === "catalog_detail") return withPoster(out);
+      if (out && Array.isArray(out.results))
+        return { ...out, results: out.results.map(withPoster) };
+      return out;
+    };
+    const named: string[] = [];
+    (window as unknown as { named: string[] }).named = named;
+    const start = document.startViewTransition.bind(document);
+    document.startViewTransition = ((update: () => Promise<void>) => {
+      const owner = () =>
+        [...document.querySelectorAll<HTMLElement>("[data-poster]")]
+          .filter((el) => el.style.viewTransitionName === "poster")
+          .map((el) => el.className.split(" ")[0])
+          .join("+");
+      named.push(owner());
+      return start(async () => {
+        await update();
+        named.push(owner());
+      });
+    }) as typeof document.startViewTransition;
+  }, poster);
+
+  await page.goto("/");
+  test.skip(
+    !(await page.evaluate(() => "startViewTransition" in document)),
+    "needs the View Transitions API",
+  );
+  await page
+    .getByRole("button", { name: /Test movie 1/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/media\/movie\/1$/);
+  await expect(page.locator(".hero-poster")).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).first().click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator(".card__img").first()).toBeVisible();
+
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { named: string[] }).named))
+    .toEqual(["card__img", "hero-poster", "hero-poster", "card__img"]);
+  await expect(page.locator("[style*='view-transition-name']")).toHaveCount(0);
+});
+
+test("with Animations off a card opens its page with no transition", async ({ page }) => {
+  await page.addInitScript(() => {
+    let calls = 0;
+    (window as unknown as { calls: () => number }).calls = () => calls;
+    const start = document.startViewTransition?.bind(document);
+    if (start)
+      document.startViewTransition = ((u: () => Promise<void>) => {
+        calls++;
+        return start(u);
+      }) as typeof document.startViewTransition;
+  });
+  await page.goto("/settings");
+  await page.getByRole("switch", { name: /Animations/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-motion", "off");
+  await page.getByRole("link", { name: "Home" }).first().click();
+  await page
+    .getByRole("button", { name: /Test movie 1/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/media\/movie\/1$/);
+  expect(await page.evaluate(() => (window as unknown as { calls: () => number }).calls())).toBe(0);
+});

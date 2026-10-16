@@ -20,7 +20,6 @@
   --clr-ink-rgb: 255 255 255;
   --clr-shade-rgb: 0 0 0;
   --clr-scrim-rgb: 8 11 16;
-  --clr-on-scrim-rgb: 255 255 255;
   --clr-highlight-rgb: 232 184 75;
 
   --clr-bg: rgb(var(--clr-bg-rgb));

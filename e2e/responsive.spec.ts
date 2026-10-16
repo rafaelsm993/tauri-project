@@ -196,16 +196,13 @@ test.describe("touch devices", () => {
     expect(opacity).toBe("1");
   });
 
-  test("the always-on overlay is legible: own scrim, no duplicate title behind it", async ({
+  test("the poster carries only the type and rating; a missing poster shows its title once", async ({
     page,
-    isMobile,
   }) => {
-    test.skip(!isMobile, "the overlay only stays visible on touch devices");
-    const body = page.locator(".card__overlay-body").first();
-    const background = await body.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(background).not.toBe("rgba(0, 0, 0, 0)");
-    const fallback = page.locator(".card__no-poster span").first();
-    await expect(fallback).toBeHidden();
+    const card = page.locator(".card").first();
+    await expect(card.locator(".card__overview, .card__overlay-title")).toHaveCount(0);
+    await expect(card.locator(".card__score")).toHaveText("★ 7.4");
+    await expect(card.locator(".card__no-poster span")).toBeVisible();
   });
 });
 

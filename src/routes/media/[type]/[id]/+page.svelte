@@ -15,6 +15,7 @@
   import { goBack } from "$lib/utils/history";
   import DetailSkeleton from "$lib/components/detail/DetailSkeleton.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
+  import Overview from "$lib/components/detail/Overview.svelte";
   import DetailHero from "$lib/components/detail/DetailHero.svelte";
   import DetailMeta from "$lib/components/detail/DetailMeta.svelte";
   import DetailSection from "$lib/components/detail/DetailSection.svelte";
@@ -129,7 +130,7 @@
       <DetailMeta detail={d} />
 
       {#if d.overview}
-        <p class="overview">{d.overview}</p>
+        <Overview text={d.overview} />
       {/if}
 
       {#if trailer}
@@ -299,14 +300,6 @@
       min-height: $touch-target;
       padding-inline: $spacing-lg;
     }
-  }
-
-  // ── Overview ────────────────────────────────────────────
-  .overview {
-    font-size: 0.92rem;
-    line-height: 1.7;
-    color: var(--clr-text-2);
-    margin-bottom: $spacing-xl;
   }
 
   // ── Error ───────────────────────────────────────────────

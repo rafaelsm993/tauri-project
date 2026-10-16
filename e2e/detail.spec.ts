@@ -150,3 +150,52 @@ test("on a phone the actions stay above the tab bar and never cover the end of t
   const after = (await bar.boundingBox())!;
   expect(last.y + last.height).toBeLessThanOrEqual(after.y + 1);
 });
+
+// Gives movie 1 a synopsis long enough to run past three lines at any width.
+async function withLongOverview(page: Page) {
+  await page.addInitScript(() => {
+    const internals = (window as unknown as { __TAURI_INTERNALS__: { invoke: Invoke } })
+      .__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    internals.invoke = async (cmd, args) => {
+      const answer = await invoke(cmd, args);
+      return cmd === "catalog_detail"
+        ? { ...(answer as object), overview: "A very long synopsis. ".repeat(60) }
+        : answer;
+    };
+  });
+}
+
+test("a long synopsis shows three lines and a Read more button", async ({ page }) => {
+  await withLongOverview(page);
+  await page.goto("/media/movie/1");
+  const text = page.locator(".overview");
+  await expect(text).toBeVisible();
+  const lines = () =>
+    text.evaluate((node) => {
+      const line = parseFloat(getComputedStyle(node).lineHeight);
+      return Math.round(node.getBoundingClientRect().height / line);
+    });
+  expect(await lines()).toBe(3);
+  const more = page.getByRole("button", { name: "Read more" });
+  await expect(more).toBeVisible();
+  await more.click();
+  expect(await lines()).toBeGreaterThan(3);
+  await page.getByRole("button", { name: "Show less" }).click();
+  expect(await lines()).toBe(3);
+});
+
+test("a short synopsis has no Read more button", async ({ page }) => {
+  await page.addInitScript(() => {
+    const internals = (window as unknown as { __TAURI_INTERNALS__: { invoke: Invoke } })
+      .__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    internals.invoke = async (cmd, args) => {
+      const answer = await invoke(cmd, args);
+      return cmd === "catalog_detail" ? { ...(answer as object), overview: "Short." } : answer;
+    };
+  });
+  await page.goto("/media/movie/1");
+  await expect(page.getByText("Short.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Read more" })).toHaveCount(0);
+});

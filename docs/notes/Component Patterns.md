@@ -174,8 +174,7 @@ on/off settings; a choice between named options stays a `SegmentedControl`.
 paints it before the app loads. `global.css` holds the dark palette on `:root` and the light one
 under `[data-theme="light"]` and, for `system`, under `prefers-color-scheme: light`.
 `scripts/contrast.test.mjs` (in `lint:guards`) checks every text/surface pair in both palettes (4.5:1 for text,
-3:1 for hints and accents). Text on a red fill uses `--clr-on-primary`; text over a poster scrim
-uses `--clr-on-scrim-rgb`, which stays white in both themes. On Android, `applyTheme` also calls the
+3:1 for hints and accents). Text on a red fill uses `--clr-on-primary`. On Android, `applyTheme` also calls the
 `AevumSystemBars` bridge from `MainActivity.kt` so the status and navigation bar icons turn dark on
 the light theme.
 

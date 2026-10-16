@@ -65,37 +65,10 @@
     {/if}
 
     <div class="card__overlay" aria-hidden="true">
-      <div class="card__overlay-top">
-        <span class="card__type">{badge}</span>
-        {#if rating}
-          <span class="card__score">★ {rating}</span>
-        {/if}
-      </div>
-
-      <div class="card__overlay-body">
-        <p class="card__overlay-title">{item.title}</p>
-        {#if item.author}
-          <p class="card__author">{item.author}</p>
-        {/if}
-        {#if item.overview}
-          <p class="card__overview">{item.overview}</p>
-        {/if}
-        <div class="card__meta">
-          {#if year}<span>{year}</span>{/if}
-          {#if item.episodes}
-            <span>·</span>
-            <span>{item.episodes} eps</span>
-          {/if}
-          {#if item.chapters}
-            <span>·</span>
-            <span>{item.chapters} ch.</span>
-          {/if}
-          {#if item.vote_count > 0}
-            <span>·</span>
-            <span>{item.vote_count.toLocaleString("en-US")} ratings</span>
-          {/if}
-        </div>
-      </div>
+      <span class="card__type">{badge}</span>
+      {#if rating}
+        <span class="card__score">★ {rating}</span>
+      {/if}
     </div>
   </div>
 
@@ -112,6 +85,7 @@
 <style lang="scss">
   // ── Card shell ──────────────────────────────────────────
   .card {
+    container-type: inline-size;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -233,13 +207,6 @@
         filter: brightness(0.45);
       }
     }
-
-    // The always-on touch overlay repeats the title; two copies collide mid-card.
-    @include touch {
-      span {
-        display: none;
-      }
-    }
   }
 
   // ── Hover overlay ───────────────────────────────────────
@@ -247,20 +214,13 @@
     position: absolute;
     inset: 0;
     display: flex;
-    flex-direction: column;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: $spacing-sm;
     padding: $spacing-sm;
     opacity: 0;
     pointer-events: none;
     transition: opacity 300ms ease;
-    // Gradient: transparent top → dark bottom
-    background: linear-gradient(
-      to bottom,
-      rgb(var(--clr-shade-rgb) / 0.05) 0%,
-      rgb(var(--clr-shade-rgb) / 0) 25%,
-      rgb(var(--clr-shade-rgb) / 0) 40%,
-      rgb(var(--clr-scrim-rgb) / 0.94) 100%
-    );
 
     @include hover-capable {
       .card:hover & {
@@ -273,26 +233,6 @@
     }
     .card:focus-visible & {
       opacity: 1;
-    }
-  }
-
-  .card__overlay-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-sm;
-  }
-
-  .card__overlay-body {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-
-    // Always visible under touch, so it needs its own scrim over bright posters.
-    @include touch {
-      padding: $spacing-xs;
-      border-radius: $radius-sm;
-      background: rgb(var(--clr-scrim-rgb) / 0.72);
     }
   }
 
@@ -327,66 +267,18 @@
     }
   }
 
-  // ── Score pill ──────────────────────────────────────────
+  // ── Score pill: solid so it reads on any poster ─────────
   .card__score {
     font-family: $font-mono;
     font-size: 0.68rem;
     font-weight: 500;
     color: var(--clr-primary);
-    background: rgb(var(--clr-primary-rgb) / 0.12);
+    background: rgb(var(--clr-scrim-rgb) / 0.72);
     border: 1px solid rgb(var(--clr-primary-rgb) / 0.28);
     padding: 2px 7px;
     border-radius: $radius-sm;
     line-height: 1.7;
     white-space: nowrap;
-  }
-
-  // ── Overlay text ────────────────────────────────────────
-  .card__overlay-title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: rgb(var(--clr-on-scrim-rgb));
-    line-height: 1.3;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .card__overview {
-    font-size: 0.68rem;
-    color: rgb(var(--clr-on-scrim-rgb) / 0.68);
-    line-height: 1.55;
-    margin: 0;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .card__author {
-    font-size: 0.68rem;
-    color: rgb(var(--clr-on-scrim-rgb) / 0.55);
-    font-style: italic;
-    margin: 0;
-    @include truncate;
-  }
-
-  .card__meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 2px;
-
-    span {
-      font-family: $font-mono;
-      font-size: 0.58rem;
-      color: rgb(var(--clr-on-scrim-rgb) / 0.45);
-      letter-spacing: 0.03em;
-    }
   }
 
   // ── Static label below poster ───────────────────────────
@@ -420,6 +312,13 @@
     font-size: 0.64rem;
     color: var(--clr-text-3);
     flex-shrink: 0;
+  }
+
+  // Narrow cards (phone-small rails): a smaller title keeps more letters.
+  @container (max-width: 140px) {
+    .card__label-title {
+      font-size: 0.72rem;
+    }
   }
 
   // ── Keyframes ───────────────────────────────────────────

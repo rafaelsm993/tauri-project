@@ -19,10 +19,21 @@ const manga: MediaItem = {
 };
 
 describe("MediaCard", () => {
-  it("labels chapters in English", () => {
-    render(MediaCard, { item: manga });
-    expect(screen.getByText("1100 ch.")).toBeInTheDocument();
-    expect(screen.queryByText(/caps/)).toBeNull();
+  it("keeps the poster clean: type and rating only, no description or title", () => {
+    render(MediaCard, {
+      item: {
+        ...manga,
+        poster_path: "https://example.com/p.jpg",
+        overview: "A pirate story.",
+        vote_average: 8.4,
+        author: "Eiichiro Oda",
+      },
+    });
+    expect(screen.queryByText("A pirate story.")).toBeNull();
+    expect(screen.getByText("★ 8.4")).toBeInTheDocument();
+    expect(screen.queryByText("Eiichiro Oda")).toBeNull();
+    expect(screen.getAllByText("One Piece")).toHaveLength(1);
+    expect(screen.getByText("Manga")).toBeInTheDocument();
   });
 });
 

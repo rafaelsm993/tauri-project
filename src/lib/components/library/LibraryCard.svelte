@@ -112,6 +112,7 @@
   }
 
   .lib-card {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
@@ -199,5 +200,21 @@
   .lib-card__fill {
     height: 100%;
     background: var(--clr-primary);
+  }
+
+  // Narrow cards: smaller text so the title keeps more letters.
+  @container (max-width: 140px) {
+    .lib-card__title {
+      font-size: 0.78rem;
+    }
+
+    .lib-card__status,
+    .lib-card__progress {
+      font-size: 0.7rem;
+    }
+
+    .lib-card__type {
+      font-size: 0.62rem;
+    }
   }
 </style>

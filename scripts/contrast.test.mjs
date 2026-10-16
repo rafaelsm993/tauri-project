@@ -54,7 +54,6 @@ const PAIRS = [
     ["--clr-teal", s, 3],
     ["--clr-highlight", s, 3],
   ]),
-  ["--clr-on-scrim", "--clr-scrim", 4.5],
   ["--clr-on-primary", "--clr-primary", 3],
   ["--clr-bg", "--clr-primary", 3],
 ];

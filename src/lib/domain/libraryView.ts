@@ -6,7 +6,7 @@ export type StatusFilter = LibraryStatus | "all";
 export type TypeFilter = MediaType | "all";
 export type FilterOption<T extends string> = { value: T; label: string; count: number };
 
-const TYPE_ORDER: MediaType[] = ["movie", "tv", "anime", "manga", "book", "game"];
+export const TYPE_ORDER: MediaType[] = ["movie", "tv", "anime", "manga", "book", "game"];
 
 export function filterEntries(
   entries: LibraryEntry[],

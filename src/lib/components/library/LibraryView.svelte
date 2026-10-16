@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
+  import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import LibraryCard from "$lib/components/library/LibraryCard.svelte";
   import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
   import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
@@ -46,7 +47,10 @@
 
 <main class="library">
   <header class="library-head">
-    <h1 class="library-title">Library</h1>
+    <div class="library-titlebar">
+      <h1 class="library-title">Library</h1>
+      <AddManuallyButton type={type === "all" ? undefined : type} variant="icon" />
+    </div>
     {#if store.entries.length > 0}
       <div class="library-filters">
         <SearchField
@@ -89,6 +93,7 @@
     <div class="library-empty">
       <p>Nothing saved yet.</p>
       <a class="library-link" href={resolve("/")}>Browse the catalog</a>
+      <AddManuallyButton variant="link" label="Add one yourself" />
     </div>
   {:else if visible.length === 0}
     <p class="library-note">{emptyFilterText}</p>
@@ -124,6 +129,14 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;
+    min-width: 0;
+  }
+
+  // The button sits by the title: the top-right corner belongs to the level chip on desktop.
+  .library-titlebar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
     min-width: 0;
   }
 

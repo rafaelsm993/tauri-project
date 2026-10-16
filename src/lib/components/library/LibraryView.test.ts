@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import LibraryPage from "./LibraryView.svelte";
 import { LibraryStore } from "$lib/stores/library.svelte";
 import { LibraryFilters } from "$lib/stores/libraryFilters.svelte";
+import { manualEntry } from "$lib/stores/manualEntry.svelte";
 import { emptyLength } from "$lib/domain/length";
 import type { LibraryEntry, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
@@ -45,6 +46,29 @@ async function storeWith(list: LibraryEntry[]) {
 
 const search = () => screen.getByRole("searchbox", { name: "Search your library" });
 const cards = () => screen.queryAllByRole("link", { name: /\bT\d\b/ });
+
+describe("LibraryView: add manually", () => {
+  it("the header opens the sheet for the type you filtered to", async () => {
+    const open = vi.spyOn(manualEntry, "open").mockImplementation(() => {});
+    const filters = new LibraryFilters();
+    render(LibraryPage, {
+      store: await storeWith([entry(1, "tv", "planning"), entry(2, "book", "planning")]),
+      filters,
+    });
+    const add = screen.getByRole("button", { name: "Add manually" });
+    await userEvent.click(add);
+    expect(open).toHaveBeenLastCalledWith(expect.objectContaining({ type: undefined }));
+    filters.type = "book";
+    await userEvent.click(await screen.findByRole("button", { name: "Add manually" }));
+    expect(open).toHaveBeenLastCalledWith(expect.objectContaining({ type: "book" }));
+    open.mockRestore();
+  });
+
+  it("an empty library offers adding one yourself next to browsing", async () => {
+    render(LibraryPage, { store: await storeWith([]), filters: new LibraryFilters() });
+    expect(screen.getByRole("button", { name: "Add one yourself" })).toBeInTheDocument();
+  });
+});
 
 describe("LibraryView", () => {
   it("shows the empty state with a way to browse", async () => {

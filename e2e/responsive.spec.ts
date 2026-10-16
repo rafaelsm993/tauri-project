@@ -206,6 +206,50 @@ test.describe("touch devices", () => {
   });
 });
 
+test.describe("add manually", () => {
+  // The tablet project has a coarse pointer too, so these run there and on both phones.
+  test("every Add manually button is touch-sized", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "mouse viewports may use compact targets");
+    for (const path of ["/library", "/planner"]) {
+      await page.goto(path);
+      const box = (await page.getByRole("button", { name: "Add manually" }).boundingBox())!;
+      expect(box.height, path).toBeGreaterThanOrEqual(44);
+      expect(box.width, path).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  test("the sheet fits the screen, its controls are touch-sized and Save clears the keyboard", async ({
+    page,
+    isMobile,
+  }) => {
+    await page.goto("/library");
+    await page.getByRole("button", { name: "Add manually" }).click();
+    const sheet = page.getByRole("dialog", { name: "Add manually" });
+    await expect(sheet).toBeVisible();
+    await page.getByRole("button", { name: "Game" }).click();
+    const overflow = await sheet.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(overflow, "the sheet is wider than its box").toBeLessThanOrEqual(0);
+    if (isMobile) {
+      const small = await sheet.locator("input, textarea, button").evaluateAll((els) =>
+        els
+          .filter((e) => (e as HTMLElement).offsetParent)
+          .map((e) => ({
+            name: e.getAttribute("aria-label") ?? e.id ?? e.textContent,
+            h: e.getBoundingClientRect().height,
+          }))
+          .filter((x) => x.h < 44),
+      );
+      expect(small, "controls under 44 px").toEqual([]);
+    }
+    // A 300 px keyboard: the sheet keeps above it and Save stays on screen.
+    await sheet.evaluate((el) => el.style.setProperty("--sheet-covered", "300px"));
+    const save = (await page.getByRole("button", { name: "Save" }).boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(save.y + save.height).toBeLessThanOrEqual(viewport.height - 300 + 1);
+    expect(save.y).toBeGreaterThanOrEqual(0);
+  });
+});
+
 test.describe("error notes", () => {
   for (const path of ["/", "/media/movie/1"]) {
     test(`the retry on ${path} is touch-sized and fits the screen`, async ({ page, isMobile }) => {

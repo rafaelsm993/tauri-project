@@ -97,6 +97,36 @@ describe("startTransition", () => {
     expect(skip).toHaveBeenCalledOnce();
   });
 
+  it("holds a navigation that interrupts one not yet rendered until that one settles", async () => {
+    let update = async () => {};
+    const start = vi.fn((fn: () => Promise<void>) => {
+      update = fn;
+      return { finished: new Promise<void>(() => {}), skipTransition: vi.fn() };
+    });
+    const doc = {
+      startViewTransition: start,
+      querySelectorAll: document.querySelectorAll.bind(document),
+    } as unknown as Document;
+    poster(posterKey("movie", "7"));
+    let abort: (reason: Error) => void = () => {};
+    const complete = new Promise<void>((_, reject) => (abort = reject));
+    const opening = startTransition(
+      { from: home, to: detail("movie", "7"), complete },
+      { motion: true, doc },
+    );
+    const back = startTransition(nav(home, home), { motion: true, doc });
+    const order: string[] = [];
+    void back?.then(() => order.push("back"));
+    await Promise.resolve();
+    expect(order).toEqual([]);
+    const updating = update().catch(() => {});
+    await opening;
+    abort(new Error("navigation aborted"));
+    await back;
+    await updating;
+    expect(order).toEqual(["back"]);
+  });
+
   it("hands the poster name from the card to the hero, then clears it", async () => {
     const { seen, doc } = engine();
     const card = poster(posterKey("movie", "7"));

@@ -19,6 +19,7 @@ import userEvent from "@testing-library/user-event";
 import PlannerView from "./PlannerView.svelte";
 import { LibraryStore, type LibraryClient } from "$lib/stores/library.svelte";
 import { PrefsStore } from "$lib/stores/prefs.svelte";
+import { manualEntry } from "$lib/stores/manualEntry.svelte";
 import { DEFAULT_PREFS } from "$lib/types/prefs";
 import { emptyLength } from "$lib/domain/length";
 import type { Length, LibraryEntry, Plan } from "$lib/types/library";
@@ -91,6 +92,17 @@ async function stores(list: LibraryEntry[]) {
 }
 
 const TODAY = "2026-10-01";
+
+describe("PlannerView: add manually", () => {
+  it("the header adds an item and stays on the planner", async () => {
+    const open = vi.spyOn(manualEntry, "open").mockImplementation(() => {});
+    const { library, prefs } = await stores([DUNE]);
+    render(PlannerView, { library, prefs, today: TODAY, motion: false });
+    await userEvent.click(screen.getByRole("button", { name: "Add manually" }));
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ after: "stay" }));
+    open.mockRestore();
+  });
+});
 
 describe("PlannerView", () => {
   it("says nothing is planned yet and points to the library", async () => {

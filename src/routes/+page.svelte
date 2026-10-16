@@ -139,6 +139,8 @@
           appending={browse.appending}
           hasMore={browse.hasMore}
           hasError={!!browse.error}
+          query={browse.isSearch ? browse.query : ""}
+          type={browse.activeCategory}
           onCardClick={openDetail}
           onLoadMore={() => browse.loadMore()}
         />

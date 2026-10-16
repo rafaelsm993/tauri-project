@@ -115,6 +115,35 @@ describe("Sheet", () => {
     expect(back).not.toHaveBeenCalled();
   });
 
+  it("reports closed only once its history entry has popped", async () => {
+    vi.spyOn(history, "back").mockImplementation(() => {});
+    const onclosed = vi.fn();
+    const view = render(Sheet, { label: "Add", onclose: vi.fn(), onclosed, children: fields });
+    view.unmount();
+    await Promise.resolve();
+    expect(onclosed).not.toHaveBeenCalled();
+    page.state = {};
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(onclosed).toHaveBeenCalledOnce();
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(onclosed).toHaveBeenCalledOnce();
+  });
+
+  it("reports closed right away when Back already took its entry", async () => {
+    const onclosed = vi.fn();
+    const view = render(Sheet, { label: "Add", onclose: vi.fn(), onclosed, children: fields });
+    page.state = {};
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    view.unmount();
+    await Promise.resolve();
+    expect(onclosed).toHaveBeenCalledOnce();
+  });
+
+  it("can be a full-height sheet for long forms", () => {
+    render(Sheet, { label: "Add", onclose: vi.fn(), size: "full", children: fields });
+    expect(screen.getByRole("dialog", { name: "Add" })).toHaveClass("full");
+  });
+
   it("asks to close after a long swipe down on the handle, not a short one", async () => {
     const { onclose, dialog } = open();
     vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({ height: 400 } as DOMRect);

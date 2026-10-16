@@ -30,7 +30,15 @@
     };
   });
 
+  // Rails that load on the way up grow the page; anchoring would then stop short of the top.
   function scrollToTop() {
+    const root = document.documentElement;
+    root.style.overflowAnchor = "none";
+    const done = () => {
+      if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: "instant" });
+      root.style.overflowAnchor = "";
+    };
+    window.addEventListener("scrollend", done, { once: true });
     window.scrollTo({ top: 0, behavior: motionStore.reduced ? "instant" : "smooth" });
   }
 </script>

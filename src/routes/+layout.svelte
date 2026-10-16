@@ -11,6 +11,7 @@
   import LevelChip from "$lib/components/ui/LevelChip.svelte";
   import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
   import ReminderToast from "$lib/components/planner/ReminderToast.svelte";
+  import ManualEntrySheet from "$lib/components/library/ManualEntrySheet.svelte";
   import StartupProblem from "$lib/components/ui/StartupProblem.svelte";
   import { startupStatus } from "$lib/api/startup";
   import type { StartupProblem as Problem } from "$lib/types/startup";
@@ -151,6 +152,7 @@
     onlater={() => reminderStore.later()}
     onclose={() => reminderStore.dismiss()}
   />
+  <ManualEntrySheet />
 {/if}
 
 <style lang="scss">

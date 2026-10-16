@@ -40,6 +40,31 @@ describe("detailSource", () => {
     ).toEqual({ kind: "error", message: "offline" });
   });
 
+  it("shows a hand-made item from the library, never the provider", () => {
+    const own = { key: "manual:book:1", snapshot: { media_type: "book" } } as LibraryEntry;
+    expect(
+      detailSource({
+        loading: false,
+        detail: null,
+        error: "Invalid ID.",
+        entry: own,
+        manual: true,
+      }),
+    ).toEqual({ kind: "saved", entry: own });
+  });
+
+  it("says a removed hand-made item is gone instead of a provider error", () => {
+    expect(
+      detailSource({
+        loading: false,
+        detail: null,
+        error: "Invalid ID.",
+        entry: undefined,
+        manual: true,
+      }),
+    ).toEqual({ kind: "error", message: "This item isn't in your library anymore." });
+  });
+
   it("is loading while the fetch runs", () => {
     expect(detailSource({ loading: true, detail: null, error: "", entry: saved })).toEqual({
       kind: "loading",

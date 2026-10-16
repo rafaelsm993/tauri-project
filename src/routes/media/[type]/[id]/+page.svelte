@@ -6,6 +6,7 @@
   import { toMediaItem, type MediaDetail, type MediaType } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
   import { detailSource, entryForRoute, snapshotItem } from "$lib/domain/detailView";
+  import { isManualId } from "$lib/domain/manual";
   import { posterSources } from "$lib/domain/poster";
   import { posterKey as toPosterKey } from "$lib/utils/transition";
   import { onReconnect } from "$lib/stores/online.svelte";
@@ -41,8 +42,17 @@
   const routeEntry = $derived(
     entryForRoute(libraryStore.entries, page.params.type ?? "", page.params.id ?? ""),
   );
+  const manual = $derived(isManualId(page.params.id ?? ""));
   const savedEntry = $derived(detail ? libraryStore.get(detail.media_key) : routeEntry);
-  const source = $derived(detailSource({ loading, detail, error, entry: routeEntry }));
+  const source = $derived(
+    detailSource({
+      loading: manual ? !libraryStore.ready : loading,
+      detail,
+      error,
+      entry: routeEntry,
+      manual,
+    }),
+  );
   const mediaType = $derived<MediaType>(
     detail?.media_type ?? savedEntry?.snapshot.media_type ?? "movie",
   );
@@ -74,12 +84,19 @@
   const retry = () => fetchDetail(page.params.type ?? "", page.params.id ?? "");
 
   onReconnect(() => {
-    if (!detail) retry();
+    if (!detail && !manual) retry();
   });
 
-  // IPC side effect on route param change.
+  // IPC side effect on route param change; hand-made items have no provider to ask.
   $effect(() => {
     const params = page.params;
+    if (isManualId(params.id ?? "")) {
+      begin();
+      detail = null;
+      error = "";
+      loading = false;
+      return;
+    }
     fetchDetail(params.type ?? "", params.id ?? "");
   });
 </script>
@@ -113,7 +130,7 @@
   <DetailSkeleton />
 {:else if source.kind === "error"}
   <div class="detail-error">
-    <ErrorNote message={source.message} onretry={retry}>
+    <ErrorNote message={source.message} onretry={manual ? undefined : retry}>
       <button type="button" onclick={back}><span aria-hidden="true">←</span> Back</button>
     </ErrorNote>
   </div>

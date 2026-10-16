@@ -3,6 +3,8 @@
   import type { MediaItem } from "$lib/types/media";
   import MediaCard from "$lib/components/media/MediaCard.svelte";
   import Skeleton from "$lib/components/ui/Skeleton.svelte";
+  import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
+  import type { MediaType } from "$lib/types/media";
 
   let {
     items,
@@ -10,6 +12,8 @@
     appending,
     hasMore,
     hasError,
+    query = "",
+    type,
     onCardClick,
     onLoadMore,
   }: {
@@ -18,6 +22,9 @@
     appending: boolean;
     hasMore: boolean;
     hasError: boolean;
+    // A search that found nothing offers to add it by hand, prefilled with these.
+    query?: string;
+    type?: MediaType;
     onCardClick: (item: MediaItem) => void;
     onLoadMore: () => void;
   } = $props();
@@ -46,7 +53,12 @@
     {/each}
   </div>
 {:else if !hasError && items.length === 0}
-  <p class="page-empty">No results found.</p>
+  <div class="page-empty">
+    <p>No results found.</p>
+    {#if query.trim()}
+      <AddManuallyButton {type} title={query.trim()} variant="link" label="Add it yourself" />
+    {/if}
+  </div>
 {:else}
   <div class="grid">
     {#each items as item (item.media_key)}
@@ -72,6 +84,13 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: $spacing-lg $spacing-md;
+  }
+
+  .page-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $spacing-sm;
   }
 
   .page-empty,

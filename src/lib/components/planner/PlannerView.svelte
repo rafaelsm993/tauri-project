@@ -3,6 +3,7 @@
   import { untrack } from "svelte";
   import PlanDialog from "./PlanDialog.svelte";
   import WeekTimeline from "./WeekTimeline.svelte";
+  import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import { addDays, weekStart } from "$lib/domain/calendar";
   import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
   import { LENGTH_LABELS } from "$lib/domain/length";
@@ -35,7 +36,10 @@
 </script>
 
 <main class="planner">
-  <h1 class="planner-title">Planner</h1>
+  <div class="planner-titlebar">
+    <h1 class="planner-title">Planner</h1>
+    <AddManuallyButton after="stay" variant="icon" />
+  </div>
 
   {#if library.ready && empty}
     <p class="planner-empty">
@@ -124,6 +128,14 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
+  }
+
+  // The button sits by the title: the top-right corner belongs to the level chip on desktop.
+  .planner-titlebar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+    min-width: 0;
   }
 
   .planner-title {

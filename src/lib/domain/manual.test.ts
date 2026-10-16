@@ -4,6 +4,7 @@ import {
   applyDraft,
   duplicateOf,
   isManual,
+  isManualId,
   normalizeTitle,
   placeholderOf,
   splitTags,
@@ -115,6 +116,10 @@ describe("placeholderOf", () => {
   it("falls back to a neutral mark when there is nothing to show", () => {
     expect(placeholderOf("  ", "game").initial).toBe("?");
   });
+
+  it("survives a provider answer without a title instead of breaking the page", () => {
+    expect(placeholderOf(undefined, "movie")).toEqual({ initial: "?", family: "screen" });
+  });
 });
 
 describe("CREATOR_LABEL", () => {
@@ -178,5 +183,15 @@ describe("applyDraft", () => {
     const book = { ...before, media_type: "book" as const };
     const after = applyDraft(book, { media_type: "book", title: "X", platforms: ["PC"] });
     expect(after.platforms).toEqual([]);
+  });
+});
+
+describe("isManualId", () => {
+  it("knows the id Rust makes for hand-made items", () => {
+    expect(isManualId("3669e23d-a725-43c4-8bb4-35faa8dc8c64")).toBe(true);
+  });
+
+  it("never mistakes a provider id for one", () => {
+    for (const id of ["550", "1396", "a:b", "romance", ""]) expect(isManualId(id)).toBe(false);
   });
 });

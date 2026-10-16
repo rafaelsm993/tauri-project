@@ -20,13 +20,21 @@ export function entryForRoute(
   });
 }
 
+export const GONE = "This item isn't in your library anymore.";
+
 // What the detail page can show: the provider's answer, else your saved copy, else the error.
+// A hand-made item (`manual`) has no provider, so it is your copy or gone.
 export function detailSource(state: {
   loading: boolean;
   detail: MediaDetail | null;
   error: string;
   entry: LibraryEntry | undefined;
+  manual?: boolean;
 }): DetailSource {
+  if (state.manual) {
+    if (state.entry) return { kind: "saved", entry: state.entry };
+    return state.loading ? { kind: "loading" } : { kind: "error", message: GONE };
+  }
   if (state.loading) return { kind: "loading" };
   if (state.detail) return { kind: "detail", detail: state.detail };
   if (state.entry) return { kind: "saved", entry: state.entry };

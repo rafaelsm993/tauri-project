@@ -76,6 +76,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
             draft?: Record<string, unknown>;
             user?: Record<string, unknown>;
             event?: { at_utc: string };
+            id?: string;
           },
         ) => {
           calls.push({ cmd, args });
@@ -120,6 +121,13 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
             Object.assign(entry.user, args?.patch);
             return structuredClone(entry);
           }
+          if (cmd === "library_remove") {
+            const at_i = library.findIndex((e) => e.key === args?.key);
+            if (at_i >= 0) library.splice(at_i, 1);
+            return at_i >= 0;
+          }
+          // Like Rust: a provider can't parse the UUID of a hand-made item.
+          if (cmd === "catalog_detail" && String(args?.id).includes("-")) throw "Invalid ID.";
           if (cmd === "library_events") return structuredClone(events);
           if (cmd === "startup_status") return null;
           if (cmd === "library_poster_dir") return "/nonexistent/posters";

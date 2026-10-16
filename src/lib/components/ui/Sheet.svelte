@@ -5,8 +5,20 @@
   import { dismissesSheet } from "$lib/utils/swipe";
 
   // A modal form: Escape, Back, the backdrop and a swipe down ask `onclose`; the parent unmounts it.
-  let { label, onclose, children }: { label: string; onclose: () => void; children: Snippet } =
-    $props();
+  // `onclosed` runs once its history entry is gone, so navigating then can't be undone by it.
+  let {
+    label,
+    onclose,
+    onclosed,
+    size = "fit",
+    children,
+  }: {
+    label: string;
+    onclose: () => void;
+    onclosed?: () => void;
+    size?: "fit" | "full";
+    children: Snippet;
+  } = $props();
 
   let dragY = $state(0);
 
@@ -29,7 +41,13 @@
     return () => {
       viewport?.removeEventListener("resize", fit);
       removeEventListener("popstate", back);
-      if (page.state.sheet) history.back();
+      const done = untrack(() => onclosed);
+      if (page.state.sheet) {
+        if (done) addEventListener("popstate", done, { once: true });
+        history.back();
+      } else {
+        done?.();
+      }
       opener?.focus();
     };
   }
@@ -69,6 +87,7 @@
 
 <dialog
   class="sheet"
+  class:full={size === "full"}
   aria-label={label}
   style:--sheet-drag="{dragY}px"
   {@attach modal}
@@ -110,6 +129,18 @@
       background: var(--clr-surface);
       transform: translateY(var(--sheet-drag, 0px));
       animation: sheet-up $dur-normal ease-out;
+    }
+  }
+
+  // Long forms: wider on desktop, the whole height on a phone.
+  .sheet.full {
+    width: min(40rem, 100%);
+
+    @include respond-to(md) {
+      inset-block-start: env(safe-area-inset-top, 0px);
+      height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--sheet-covered, 0px));
+      max-height: none;
+      border-radius: 0;
     }
   }
 

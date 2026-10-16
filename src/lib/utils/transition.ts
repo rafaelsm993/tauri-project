@@ -92,20 +92,40 @@ async function arrival(doc: Doc, key: string): Promise<HTMLElement | null> {
 }
 
 let running: { skipTransition(): void } | null = null;
+// Settles once the morphing navigation has rendered or been aborted (capped, never hangs).
+let settling: Promise<void> | null = null;
+const SETTLE_CAP_MS = 2000;
 
 // Morphs the poster between a card and the detail page, both ways, when the engine can and motion is on.
 export function startTransition(
   navigation: Navigation,
   { motion, doc }: { motion: boolean; doc: Doc },
 ): Promise<void> | undefined {
+  // The engine may run a skipped morph's update late; a navigation must not render before it.
+  const before = settling;
   running?.skipTransition();
   running = null;
+  settling = null;
+  const morph = begin(navigation, { motion, doc });
+  if (!before) return morph;
+  return before.then(() => morph);
+}
+
+function begin(navigation: Navigation, { motion, doc }: { motion: boolean; doc: Doc }) {
   const key = morphKey(navigation);
   if (!motion || !doc.startViewTransition || !key) return;
   let held = find(doc, key);
   if (!held) return;
   hold(held);
-  return new Promise((resolve) => {
+  const done = Promise.race([
+    navigation.complete.catch(() => {}),
+    new Promise<void>((resolve) => setTimeout(resolve, SETTLE_CAP_MS)),
+  ]);
+  settling = done;
+  void done.then(() => {
+    if (settling === done) settling = null;
+  });
+  return new Promise<void>((resolve) => {
     const transition = doc.startViewTransition!(async () => {
       resolve();
       await navigation.complete;

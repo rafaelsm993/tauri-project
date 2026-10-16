@@ -14,6 +14,10 @@ export const CREATOR_LABEL: Record<MediaType, string> = {
 
 export const isManual = (key: MediaKey): boolean => key.startsWith("manual:");
 
+// The id part of a manual key: Rust makes it a UUID, which no provider id looks like.
+export const isManualId = (id: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 const blankToNone = (s: string | null | undefined): string | undefined => s?.trim() || undefined;
 
 // Trimmed, blanks dropped, first spelling kept on case-insensitive repeats (as Rust does).
@@ -56,8 +60,11 @@ export function duplicateOf(
 }
 
 // A drawn poster for items without one: the title's first letter or digit on the family hue.
-export function placeholderOf(title: string, type: MediaType): { initial: string; family: Family } {
-  const first = title.match(/[\p{L}\p{N}]/u)?.[0];
+export function placeholderOf(
+  title: string | undefined,
+  type: MediaType,
+): { initial: string; family: Family } {
+  const first = title?.match(/[\p{L}\p{N}]/u)?.[0];
   return { initial: first ? first.toUpperCase() : "?", family: familyOf(type) };
 }
 

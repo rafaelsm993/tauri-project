@@ -63,7 +63,7 @@
     &.danger {
       background: var(--clr-error);
       border-color: transparent;
-      color: var(--clr-on-primary);
+      color: var(--clr-text-inv);
       font-weight: 600;
     }
 

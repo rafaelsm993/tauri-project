@@ -264,6 +264,15 @@ describe("streaks", () => {
     expect(activeDays(events)).toEqual(["2026-09-01"]);
   });
 
+  it("editing a manual item's details earns no XP and is not an active day", () => {
+    const events = [
+      add(MOVIE, null, "2026-09-01"),
+      ev("library_edit", MOVIE, { title: "New title" }, "2026-09-02"),
+    ];
+    expect(xpOf(events)).toBe(xpOf([events[0]]));
+    expect(activeDays(events)).toEqual(["2026-09-01"]);
+  });
+
   it("counts add and update days once each, not removes", () => {
     const events = [
       add(MOVIE, null, "2026-09-01"),

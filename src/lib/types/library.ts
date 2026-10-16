@@ -13,6 +13,11 @@ export interface MediaSnapshot {
   // File name inside the poster cache folder; null until downloaded.
   poster_file: string | null;
   year: string | null;
+  // Rust writes these only when filled: manual items, and a provider book's author.
+  creator?: string;
+  overview?: string;
+  genres?: string[];
+  platforms?: string[];
 }
 
 // The user's own length data; only the planner requires it.
@@ -58,6 +63,7 @@ export const EVENT_KINDS = [
   "library_update",
   "library_plan",
   "library_remove",
+  "library_edit",
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 

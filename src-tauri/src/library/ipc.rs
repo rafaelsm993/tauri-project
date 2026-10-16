@@ -1,4 +1,5 @@
 use super::commands::{self, LibraryFile, LibraryState, UserPatch, MIGRATIONS};
+use super::manual::ManualDraft;
 use super::posters;
 use super::types::{Event, LibraryEntry, UserData};
 use crate::api::types::MediaItem;
@@ -45,6 +46,28 @@ pub async fn library_add(
     let entry = commands::add(&state, &item, user.unwrap_or_default(), event).await?;
     tauri::async_runtime::spawn(posters::fill(state.inner().clone()));
     Ok(entry)
+}
+
+// The key's id is made here, so two items with the same title never collide.
+#[tauri::command]
+pub async fn library_add_manual(
+    state: State<'_, LibraryState>,
+    draft: ManualDraft,
+    user: Option<UserData>,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    let id = uuid::Uuid::new_v4().to_string();
+    commands::add_manual(&state, &id, &draft, user.unwrap_or_default(), event).await
+}
+
+#[tauri::command]
+pub async fn library_edit_manual(
+    state: State<'_, LibraryState>,
+    key: String,
+    draft: ManualDraft,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    commands::edit_manual(&state, &key, &draft, event).await
 }
 
 #[tauri::command]

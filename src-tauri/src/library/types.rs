@@ -26,6 +26,15 @@ pub struct MediaSnapshot {
     pub poster_file: Option<String>,
     #[serde(default)]
     pub year: Option<String>,
+    // The rest are only filled for manual items, except a provider book's author.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creator: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overview: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub genres: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub platforms: Vec<String>,
 }
 
 impl MediaSnapshot {
@@ -44,6 +53,15 @@ impl MediaSnapshot {
             year: date
                 .map(|d| d.chars().take(4).collect::<String>())
                 .filter(|y| y.len() == 4),
+            creator: item
+                .author
+                .as_deref()
+                .map(str::trim)
+                .filter(|a| !a.is_empty())
+                .map(String::from),
+            overview: None,
+            genres: Vec::new(),
+            platforms: Vec::new(),
         }
     }
 }
@@ -114,14 +132,16 @@ pub enum EventKind {
     LibraryUpdate,
     LibraryPlan,
     LibraryRemove,
+    LibraryEdit,
 }
 
 impl EventKind {
-    pub const ALL: [EventKind; 4] = [
+    pub const ALL: [EventKind; 5] = [
         EventKind::LibraryAdd,
         EventKind::LibraryUpdate,
         EventKind::LibraryPlan,
         EventKind::LibraryRemove,
+        EventKind::LibraryEdit,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -130,6 +150,7 @@ impl EventKind {
             EventKind::LibraryUpdate => "library_update",
             EventKind::LibraryPlan => "library_plan",
             EventKind::LibraryRemove => "library_remove",
+            EventKind::LibraryEdit => "library_edit",
         }
     }
 }
@@ -220,6 +241,53 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_book_snapshot_keeps_its_author_as_creator() {
+        let book = MediaItem {
+            author: Some("Frank Herbert".into()),
+            ..MediaItem::new(
+                Id::Num(1),
+                "Dune".into(),
+                MediaType::Book,
+                ProviderId::Itunes,
+            )
+        };
+        let s = MediaSnapshot::from_item(&book);
+        assert_eq!(s.creator.as_deref(), Some("Frank Herbert"));
+        assert_eq!(s.overview, None);
+        assert!(s.genres.is_empty() && s.platforms.is_empty());
+    }
+
+    #[test]
+    fn a_blank_author_is_no_creator() {
+        let book = MediaItem {
+            author: Some("  ".into()),
+            ..MediaItem::new(
+                Id::Num(1),
+                "Dune".into(),
+                MediaType::Book,
+                ProviderId::Itunes,
+            )
+        };
+        assert_eq!(MediaSnapshot::from_item(&book).creator, None);
+    }
+
+    #[test]
+    fn empty_extra_fields_are_left_out_of_the_saved_json() {
+        let v = serde_json::to_value(MediaSnapshot::from_item(&item())).unwrap();
+        for k in ["creator", "overview", "genres", "platforms"] {
+            assert!(v.get(k).is_none(), "{k} should not be written when empty");
+        }
+    }
+
+    #[test]
+    fn the_extra_fields_round_trip() {
+        let s = manual_snapshot();
+        let back: MediaSnapshot =
+            serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        assert_eq!(back, s);
+    }
+
+    #[test]
     fn snapshot_has_no_year_without_a_date() {
         let bare = MediaItem::new(Id::Num(1), "X".into(), MediaType::Game, ProviderId::Rawg);
         assert_eq!(MediaSnapshot::from_item(&bare).year, None);
@@ -276,9 +344,30 @@ pub(crate) mod tests {
         assert_eq!(back.length.pages, Some(350));
     }
 
+    pub(crate) fn manual_snapshot() -> MediaSnapshot {
+        MediaSnapshot {
+            media_key: "manual:game:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69".into(),
+            provider: ProviderId::Manual,
+            media_type: MediaType::Game,
+            title: "Home-made Quest".into(),
+            poster_path: None,
+            poster_file: None,
+            year: Some("1998".into()),
+            creator: Some("Small Studio".into()),
+            overview: Some("A game only I remember.".into()),
+            genres: vec!["RPG".into(), "Puzzle".into()],
+            platforms: vec!["PC".into()],
+        }
+    }
+
     fn contract() -> Value {
         let kinds: Vec<_> = EventKind::ALL.iter().map(|k| k.as_str()).collect();
-        json!({ "entry": entry(), "event": event("e1"), "event_kinds": kinds })
+        json!({
+            "entry": entry(),
+            "manual_snapshot": manual_snapshot(),
+            "event": event("e1"),
+            "event_kinds": kinds
+        })
     }
 
     #[test]

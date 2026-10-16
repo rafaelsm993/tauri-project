@@ -19,7 +19,14 @@ const SNAPSHOT_KEYS = {
   poster_path: 0,
   poster_file: 0,
   year: 0,
+  creator: 0,
+  overview: 0,
+  genres: 0,
+  platforms: 0,
 } satisfies Record<keyof MediaSnapshot, 0>;
+
+// Rust leaves these out of the JSON when empty, so they are optional in TS.
+const SNAPSHOT_OPTIONAL = ["creator", "genres", "overview", "platforms"];
 
 const USER_KEYS = {
   status: 0,
@@ -57,10 +64,19 @@ const keys = (o: object) => Object.keys(o).sort();
 describe("library contract (Rust library types ↔ library.ts)", () => {
   it("LibraryEntry and its parts have exactly the Rust fields", () => {
     expect(keys(fixture.entry)).toEqual(keys(ENTRY_KEYS));
-    expect(keys(fixture.entry.snapshot)).toEqual(keys(SNAPSHOT_KEYS));
+    expect(keys(fixture.entry.snapshot)).toEqual(
+      keys(SNAPSHOT_KEYS).filter((k) => !SNAPSHOT_OPTIONAL.includes(k)),
+    );
     expect(keys(fixture.entry.user)).toEqual(keys(USER_KEYS));
     expect(keys(fixture.entry.user.length)).toEqual(keys(LENGTH_KEYS));
     expect(keys(fixture.entry.user.plan)).toEqual(keys(PLAN_KEYS));
+  });
+
+  it("a manual snapshot carries every optional field too", () => {
+    expect(keys(fixture.manual_snapshot)).toEqual(keys(SNAPSHOT_KEYS));
+    const manual: MediaSnapshot = fixture.manual_snapshot as MediaSnapshot;
+    expect(manual.provider).toBe("manual");
+    expect(manual.genres).toEqual(["RPG", "Puzzle"]);
   });
 
   it("LibraryEvent has exactly the Rust fields", () => {

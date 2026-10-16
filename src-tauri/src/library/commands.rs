@@ -1,7 +1,8 @@
 use super::events::{append_event, read_events};
+use super::manual::{self, ManualDraft};
 use super::posters;
 use super::types::{Event, EventKind, Length, LibraryEntry, MediaSnapshot, Plan, Status, UserData};
-use crate::api::types::{MediaItem, MediaType};
+use crate::api::types::{MediaItem, MediaKey, MediaType, ProviderId};
 use crate::store::writer::StoreHandle;
 use crate::store::{current_version, Migration};
 use serde::{Deserialize, Serialize};
@@ -191,12 +192,42 @@ pub async fn add(
 ) -> Result<LibraryEntry, String> {
     validate_user_data(item.media_type, &user)?;
     let snapshot = MediaSnapshot::from_item(item);
-    let key = snapshot.media_key.clone();
-    check_event(&event, &key, &[EventKind::LibraryAdd])?;
-    let at = event.at_utc.clone();
-    if let Some(existing) = state.store.read(|f| f.entries.get(&key).cloned()).await {
+    check_event(&event, &snapshot.media_key, &[EventKind::LibraryAdd])?;
+    if let Some(existing) = state
+        .store
+        .read(|f| f.entries.get(&snapshot.media_key).cloned())
+        .await
+    {
         return Ok(existing);
     }
+    insert(state, snapshot, user, event).await
+}
+
+/// Adds a hand-made item under `manual:<type>:<id>`; the event arrives without a key and gets it.
+pub async fn add_manual(
+    state: &LibraryState,
+    id: &str,
+    draft: &ManualDraft,
+    user: UserData,
+    mut event: Event,
+) -> Result<LibraryEntry, String> {
+    let key = manual::manual_key(draft.media_type, id);
+    let snapshot = manual::snapshot(draft, &key)?;
+    validate_user_data(draft.media_type, &user)?;
+    event.media_key = key.clone();
+    check_event(&event, &key, &[EventKind::LibraryAdd])?;
+    insert(state, snapshot, user, event).await
+}
+
+// Commits a new entry and logs its add; an entry already under the key wins.
+async fn insert(
+    state: &LibraryState,
+    snapshot: MediaSnapshot,
+    user: UserData,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    let key = snapshot.media_key.clone();
+    let at = event.at_utc.clone();
     let (entry, inserted) = state
         .store
         .commit(|f| {
@@ -217,6 +248,41 @@ pub async fn add(
     if inserted {
         log_event(state, event).await;
     }
+    Ok(entry)
+}
+
+/// Rewrites a manual item's text fields; its type, poster and user data stay.
+pub async fn edit_manual(
+    state: &LibraryState,
+    key: &str,
+    draft: &ManualDraft,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    check_event(&event, key, &[EventKind::LibraryEdit])?;
+    let parsed = MediaKey::parse(key)?;
+    if parsed.provider != ProviderId::Manual {
+        return Err("only manual items can be edited".into());
+    }
+    if parsed.media_type != draft.media_type {
+        return Err("a manual item's type can't change".into());
+    }
+    let mut snapshot = manual::snapshot(draft, key)?;
+    let at = event.at_utc.clone();
+    let entry = state
+        .store
+        .commit(|f| {
+            let entry = f
+                .entries
+                .get_mut(key)
+                .ok_or_else(|| format!("{key} is not in the library"))?;
+            snapshot.poster_path = entry.snapshot.poster_path.take();
+            snapshot.poster_file = entry.snapshot.poster_file.take();
+            entry.snapshot = snapshot;
+            entry.updated_at = at;
+            Ok(entry.clone())
+        })
+        .await?;
+    log_event(state, event).await;
     Ok(entry)
 }
 
@@ -303,7 +369,8 @@ pub async fn poster_files(state: &LibraryState) -> BTreeSet<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::types::{Id, ProviderId};
+    use crate::api::types::Id;
+    use crate::library::manual::ManualDraft;
     use crate::store::file::read_with_recovery;
     use crate::store::file::tests::scratch;
     use crate::store::file::Versioned;
@@ -942,6 +1009,239 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].user.rating, Some(10));
         assert_eq!(entries[0].user.status, Status::Completed);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    const ID: &str = "0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+    const BOOK_KEY: &str = "manual:book:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+
+    fn dune() -> ManualDraft {
+        ManualDraft {
+            creator: Some("Frank Herbert".into()),
+            genres: vec!["Sci-fi".into()],
+            ..crate::library::manual::tests::draft(MediaType::Book, "Dune")
+        }
+    }
+
+    // The frontend can't know the new key, so it sends the event without one.
+    fn unkeyed(kind: &str, id: &str, at: &str) -> Event {
+        ev(kind, "", id, at)
+    }
+
+    #[tokio::test]
+    async fn add_manual_stores_the_draft_under_a_manual_key_and_logs_an_add() {
+        let dir = scratch("f1-add-manual");
+        let state = state_in(&dir);
+        let user = UserData {
+            status: Status::InProgress,
+            ..UserData::default()
+        };
+        let entry = add_manual(&state, ID, &dune(), user, unkeyed("library_add", "a", "t1"))
+            .await
+            .unwrap();
+        assert_eq!(entry.key, BOOK_KEY);
+        assert_eq!(entry.snapshot.provider, ProviderId::Manual);
+        assert_eq!(entry.snapshot.creator.as_deref(), Some("Frank Herbert"));
+        assert_eq!(entry.user.status, Status::InProgress);
+        assert_eq!(entry.created_at, "t1");
+        assert_eq!(saved(&dir).entries[BOOK_KEY], entry);
+        let log = events_in(&dir);
+        assert_eq!(log.len(), 1);
+        assert_eq!(
+            (log[0].kind.as_str(), log[0].media_key.as_str()),
+            ("library_add", BOOK_KEY)
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn two_manual_adds_with_the_same_title_are_two_entries() {
+        let dir = scratch("f1-add-twice");
+        let state = state_in(&dir);
+        for (id, ev_id) in [(ID, "a"), ("1c2d3e4f-0000-4000-8000-000000000000", "b")] {
+            add_manual(
+                &state,
+                id,
+                &dune(),
+                UserData::default(),
+                unkeyed("library_add", ev_id, "t1"),
+            )
+            .await
+            .unwrap();
+        }
+        assert_eq!(load(&state).await.len(), 2);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_invalid_manual_draft_or_event_writes_nothing() {
+        let dir = scratch("f1-add-invalid");
+        let state = state_in(&dir);
+        let blank = crate::library::manual::tests::draft(MediaType::Book, " ");
+        let no_title = add_manual(
+            &state,
+            ID,
+            &blank,
+            UserData::default(),
+            unkeyed("library_add", "a", "t1"),
+        )
+        .await;
+        assert!(no_title.unwrap_err().contains("title"));
+        let wrong_kind = add_manual(
+            &state,
+            ID,
+            &dune(),
+            UserData::default(),
+            unkeyed("library_update", "a", "t1"),
+        )
+        .await;
+        assert!(wrong_kind.is_err());
+        let bad_user = UserData {
+            rating: Some(11),
+            ..UserData::default()
+        };
+        assert!(add_manual(
+            &state,
+            ID,
+            &dune(),
+            bad_user,
+            unkeyed("library_add", "a", "t1")
+        )
+        .await
+        .is_err());
+        assert!(load(&state).await.is_empty());
+        assert!(events(&state).unwrap().is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn edit_manual_replaces_the_text_and_keeps_poster_and_user_data() {
+        let dir = scratch("f1-edit");
+        let state = state_in(&dir);
+        let user = UserData {
+            progress: 40,
+            ..UserData::default()
+        };
+        add_manual(&state, ID, &dune(), user, unkeyed("library_add", "a", "t1"))
+            .await
+            .unwrap();
+        attach_poster(&state, BOOK_KEY, "mine.jpg").await;
+        let changed = ManualDraft {
+            year: Some("1965".into()),
+            genres: vec![],
+            ..crate::library::manual::tests::draft(MediaType::Book, "Dune Messiah")
+        };
+        let entry = edit_manual(
+            &state,
+            BOOK_KEY,
+            &changed,
+            ev("library_edit", BOOK_KEY, "e", "t2"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(entry.snapshot.title, "Dune Messiah");
+        assert_eq!(entry.snapshot.year.as_deref(), Some("1965"));
+        assert_eq!(entry.snapshot.creator, None);
+        assert!(entry.snapshot.genres.is_empty());
+        assert_eq!(entry.snapshot.poster_file.as_deref(), Some("mine.jpg"));
+        assert_eq!(entry.user.progress, 40);
+        assert_eq!(
+            (entry.created_at.as_str(), entry.updated_at.as_str()),
+            ("t1", "t2")
+        );
+        assert_eq!(saved(&dir).entries[BOOK_KEY], entry);
+        assert_eq!(
+            events_in(&dir).last().map(|e| e.kind.as_str()),
+            Some("library_edit")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn edit_manual_refuses_provider_items_type_changes_and_missing_keys() {
+        let dir = scratch("f1-edit-refused");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            event("p"),
+        )
+        .await
+        .unwrap();
+        add_manual(
+            &state,
+            ID,
+            &dune(),
+            UserData::default(),
+            unkeyed("library_add", "a", "t1"),
+        )
+        .await
+        .unwrap();
+        let before = saved(&dir);
+        let provider = crate::library::manual::tests::draft(MediaType::Tv, "Hacked");
+        let err = edit_manual(
+            &state,
+            "tmdb:tv:7",
+            &provider,
+            ev("library_edit", "tmdb:tv:7", "e1", "t2"),
+        )
+        .await;
+        assert!(err.unwrap_err().contains("only manual"));
+        let as_movie = crate::library::manual::tests::draft(MediaType::Movie, "Dune");
+        let err = edit_manual(
+            &state,
+            BOOK_KEY,
+            &as_movie,
+            ev("library_edit", BOOK_KEY, "e2", "t2"),
+        )
+        .await;
+        assert!(err.unwrap_err().contains("type"));
+        let gone = "manual:book:ffffffff-ffff-4fff-8fff-ffffffffffff";
+        let err = edit_manual(&state, gone, &dune(), ev("library_edit", gone, "e3", "t2")).await;
+        assert!(err.unwrap_err().contains("not in the library"));
+        let blank = crate::library::manual::tests::draft(MediaType::Book, "");
+        assert!(edit_manual(
+            &state,
+            BOOK_KEY,
+            &blank,
+            ev("library_edit", BOOK_KEY, "e4", "t2")
+        )
+        .await
+        .is_err());
+        let wrong_kind = edit_manual(
+            &state,
+            BOOK_KEY,
+            &dune(),
+            ev("library_update", BOOK_KEY, "e5", "t2"),
+        )
+        .await;
+        assert!(wrong_kind.is_err());
+        assert_eq!(saved(&dir), before);
+        assert_eq!(events_in(&dir).len(), 2, "only the two adds are logged");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn update_does_not_accept_an_edit_event() {
+        let dir = scratch("f1-update-no-edit");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            event("p"),
+        )
+        .await
+        .unwrap();
+        let r = update(
+            &state,
+            "tmdb:tv:7",
+            UserPatch::default(),
+            ev("library_edit", "tmdb:tv:7", "u", "t2"),
+        )
+        .await;
+        assert!(r.is_err());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

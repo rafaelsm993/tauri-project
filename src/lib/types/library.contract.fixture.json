@@ -44,5 +44,24 @@
       "to": "in_progress"
     }
   },
-  "event_kinds": ["library_add", "library_update", "library_plan", "library_remove"]
+  "event_kinds": [
+    "library_add",
+    "library_update",
+    "library_plan",
+    "library_remove",
+    "library_edit"
+  ],
+  "manual_snapshot": {
+    "creator": "Small Studio",
+    "genres": ["RPG", "Puzzle"],
+    "media_key": "manual:game:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69",
+    "media_type": "game",
+    "overview": "A game only I remember.",
+    "platforms": ["PC"],
+    "poster_file": null,
+    "poster_path": null,
+    "provider": "manual",
+    "title": "Home-made Quest",
+    "year": "1998"
+  }
 }

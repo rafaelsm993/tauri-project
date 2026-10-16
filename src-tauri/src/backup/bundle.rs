@@ -391,6 +391,18 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_manual_item_survives_a_backup_with_all_its_fields() {
+        let mut b = sample();
+        let manual = crate::library::types::tests::manual_snapshot();
+        let mut e = entry(3, "2026-09-22T10:00:00.000Z");
+        e.key = manual.media_key.clone();
+        e.snapshot = manual;
+        b.library.entries.insert(e.key.clone(), e.clone());
+        let back = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap();
+        assert_eq!(back.library.entries[&e.key], e);
+    }
+
+    #[test]
     fn a_minimal_bundle_gets_default_prefs_and_no_events() {
         let b = read(&minimal(vec![]), &Limits::DEFAULT).unwrap();
         assert_eq!(b.prefs, Prefs::default());

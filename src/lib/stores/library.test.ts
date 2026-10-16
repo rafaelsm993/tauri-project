@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { LibraryStore, type LibraryClient } from "./library.svelte";
 import { emptyLength } from "$lib/domain/length";
-import type { LibraryEntry, Plan, UserData } from "$lib/types/library";
+import type { LibraryEntry, ManualDraft, Plan, UserData } from "$lib/types/library";
 import type { MediaItem } from "$lib/types/media";
 
 const ITEM = {
@@ -58,6 +58,8 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
     ),
     posterDir: vi.fn(async () => "/data/posters"),
     retryPosters: vi.fn(async () => {}),
+    addManual: vi.fn(async () => entry()),
+    editManual: vi.fn(async () => entry()),
     ...over,
   };
 }
@@ -153,6 +155,84 @@ describe("optimistic add", () => {
     const store = new LibraryStore(client);
     await store.add(ITEM, { status: "in_progress" });
     expect(client.add).toHaveBeenCalledWith(ITEM, { status: "in_progress" });
+  });
+});
+
+describe("manual items", () => {
+  const KEY = "manual:book:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+  const fail = vi.fn(async () => {
+    throw new Error("nope");
+  });
+  const DRAFT: ManualDraft = { media_type: "book", title: "Dune", creator: "Frank Herbert" };
+  const manual = (over: Partial<LibraryEntry["snapshot"]> = {}) =>
+    entry({
+      key: KEY,
+      snapshot: {
+        media_key: KEY,
+        provider: "manual",
+        media_type: "book",
+        title: "Dune",
+        poster_path: null,
+        poster_file: "mine.jpg",
+        year: null,
+        creator: "Frank Herbert",
+        ...over,
+      },
+    });
+
+  it("addManual waits for the backend, which makes the key, then holds the entry", async () => {
+    let resolve!: (e: LibraryEntry) => void;
+    const addManual = vi.fn(() => new Promise<LibraryEntry>((r) => (resolve = r)));
+    const store = new LibraryStore(fakeClient({ addManual }));
+    const pending = store.addManual(DRAFT, { status: "in_progress" });
+    expect(store.entries).toHaveLength(0);
+    resolve(manual());
+    expect(await pending).toEqual(manual());
+    expect(addManual).toHaveBeenCalledWith(DRAFT, { status: "in_progress" });
+    expect(store.get(KEY)).toEqual(manual());
+  });
+
+  it("addManual resolves null and says why when the backend refuses", async () => {
+    const store = new LibraryStore(fakeClient({ addManual: fail }));
+    expect(await store.addManual(DRAFT)).toBeNull();
+    expect(store.error).toContain("nope");
+    expect(store.entries).toHaveLength(0);
+  });
+
+  it("editManual shows the new text at once and keeps the poster", async () => {
+    let resolve!: (e: LibraryEntry) => void;
+    const editManual = vi.fn(() => new Promise<LibraryEntry>((r) => (resolve = r)));
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [manual()]), editManual }));
+    await store.hydrate();
+    const changed: ManualDraft = { media_type: "book", title: "Dune Messiah", genres: ["Sci-fi"] };
+    const pending = store.editManual(KEY, changed);
+    const shown = store.get(KEY)!.snapshot;
+    expect(shown.title).toBe("Dune Messiah");
+    expect(shown.creator).toBeUndefined();
+    expect(shown.genres).toEqual(["Sci-fi"]);
+    expect(shown.poster_file).toBe("mine.jpg");
+    expect(store.isPending(KEY)).toBe(true);
+    resolve(manual({ title: "Dune Messiah", creator: undefined, genres: ["Sci-fi"] }));
+    expect(await pending).toBe(true);
+    expect(editManual).toHaveBeenCalledWith(KEY, changed);
+    expect(store.isPending(KEY)).toBe(false);
+  });
+
+  it("editManual puts the old entry back and says why when refused", async () => {
+    const store = new LibraryStore(
+      fakeClient({ load: vi.fn(async () => [manual()]), editManual: fail }),
+    );
+    await store.hydrate();
+    expect(await store.editManual(KEY, { media_type: "book", title: "X" })).toBe(false);
+    expect(store.get(KEY)).toEqual(manual());
+    expect(store.error).toContain("nope");
+  });
+
+  it("editManual does nothing for a key it does not hold", async () => {
+    const client = fakeClient();
+    const store = new LibraryStore(client);
+    expect(await store.editManual(KEY, DRAFT)).toBe(false);
+    expect(client.editManual).not.toHaveBeenCalled();
   });
 });
 

@@ -202,7 +202,7 @@ test.describe("touch devices", () => {
     const card = page.locator(".card").first();
     await expect(card.locator(".card__overview, .card__overlay-title")).toHaveCount(0);
     await expect(card.locator(".card__score")).toHaveText("★ 7.4");
-    await expect(card.locator(".card__no-poster span")).toBeVisible();
+    await expect(card.locator(".card__no-poster .placeholder__caption")).toBeVisible();
   });
 });
 

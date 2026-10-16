@@ -78,12 +78,15 @@ describe("LibraryCard", () => {
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "33");
   });
 
-  it("falls back to a text placeholder without a poster", () => {
+  it("falls back to the drawn placeholder without a poster, keyed for the morph", () => {
     const e = entry();
     e.snapshot.poster_path = null;
-    render(LibraryCard, { entry: e });
+    const { container } = render(LibraryCard, { entry: e });
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(screen.getByText("No poster")).toBeInTheDocument();
+    const placeholder = container.querySelector(".placeholder");
+    expect(placeholder).toHaveClass("hue-screen");
+    expect(placeholder).toHaveTextContent(/^A$/);
+    expect(placeholder).toHaveAttribute("data-poster");
   });
 });
 
@@ -101,6 +104,6 @@ describe("LibraryCard poster", () => {
     expect(img()?.getAttribute("src")).toBe("https://image.tmdb.org/p.jpg");
     await fireEvent.error(img()!);
     expect(img()).toBeNull();
-    expect(screen.getByText("No poster")).toBeInTheDocument();
+    expect(container.querySelector(".placeholder")).toHaveTextContent(/^A$/);
   });
 });

@@ -1,7 +1,11 @@
 <script lang="ts">
+  import PosterPlaceholder from "$lib/components/media/PosterPlaceholder.svelte";
+  import type { MediaType } from "$lib/types/media";
+
   // Backdrop image with the poster, title, tagline and the back button.
   let {
     title,
+    type,
     tagline,
     backdropUrl,
     posterUrl = null,
@@ -9,6 +13,8 @@
     onBack,
   }: {
     title: string;
+    // Without a poster the hero draws the type's placeholder instead.
+    type: MediaType;
     tagline: string;
     backdropUrl: string | null;
     posterUrl?: string | null;
@@ -30,6 +36,8 @@
     <div class="hero-row">
       {#if posterUrl}
         <img class="hero-poster" src={posterUrl} alt="" data-poster={posterKey} />
+      {:else}
+        <div class="hero-poster"><PosterPlaceholder {title} {type} {posterKey} /></div>
       {/if}
       <div class="hero-text">
         <h1 class="hero-title">{title}</h1>
@@ -129,6 +137,7 @@
     aspect-ratio: 2 / 3;
     object-fit: cover;
     border-radius: $radius-md;
+    overflow: hidden;
     box-shadow: 0 8px 30px rgb(var(--clr-shade-rgb) / 0.5);
     transform: translateY(15%);
 

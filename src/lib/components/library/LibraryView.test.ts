@@ -36,6 +36,8 @@ async function storeWith(list: LibraryEntry[]) {
     remove: vi.fn(),
     posterDir: vi.fn(async () => "/data/posters"),
     retryPosters: vi.fn(async () => {}),
+    addManual: vi.fn(),
+    editManual: vi.fn(),
   });
   await store.hydrate();
   return store;

@@ -121,6 +121,7 @@
   {@const d = source.detail}
   <DetailHero
     title={d.title}
+    type={d.media_type}
     tagline={d.tagline}
     backdropUrl={d.backdrop_path ?? null}
     posterUrl={d.poster_path ?? null}
@@ -168,6 +169,7 @@
   {@const entry = source.entry}
   <DetailHero
     title={entry.snapshot.title}
+    type={entry.snapshot.media_type}
     tagline=""
     backdropUrl={null}
     posterUrl={posterSources(entry.snapshot, libraryStore.posterDir)[0] ?? null}

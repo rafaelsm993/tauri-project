@@ -2,6 +2,7 @@
   import type { MediaItem, MediaType } from "$lib/types/media";
   import { getPosterUrl, getYear, getRating, MEDIA_LABELS } from "$lib/types/media";
   import { posterKey } from "$lib/utils/transition";
+  import PosterPlaceholder from "./PosterPlaceholder.svelte";
   import { pauseOffscreen } from "$lib/attachments/pauseOffscreen";
   import { libraryStore, type LibraryStore } from "$lib/stores/library.svelte";
 
@@ -50,19 +51,13 @@
     {/if}
 
     {#if !poster || errored}
-      <div class="card__no-poster" aria-hidden="true">
-        <svg
-          width="32"
-          height="32"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-        >
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <path d="m8 21 4-4 4 4" /><path d="M10 9l4 4" />
-        </svg>
-        <span>{item.title}</span>
+      <div class="card__no-poster">
+        <PosterPlaceholder
+          title={item.title}
+          type={item.media_type}
+          posterKey={posterKey(item.media_type, String(item.id))}
+          caption
+        />
       </div>
     {/if}
 
@@ -184,25 +179,6 @@
   .card__no-poster {
     position: absolute;
     inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    padding: $spacing-md;
-    background: linear-gradient(160deg, var(--clr-surface) 0%, var(--clr-bg) 100%);
-    color: var(--clr-text-3);
-
-    span {
-      font-size: 0.7rem;
-      text-align: center;
-      line-height: 1.4;
-      overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      line-clamp: 3;
-      -webkit-box-orient: vertical;
-    }
 
     @include hover-capable {
       .card:hover & {

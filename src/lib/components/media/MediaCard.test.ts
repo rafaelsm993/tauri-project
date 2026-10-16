@@ -19,6 +19,14 @@ const manga: MediaItem = {
 };
 
 describe("MediaCard", () => {
+  it("without a poster draws the family placeholder and keeps the title on it", () => {
+    const { container } = render(MediaCard, { item: manga });
+    const placeholder = container.querySelector(".card__no-poster .placeholder");
+    expect(placeholder).toHaveClass("hue-manga");
+    expect(placeholder).toHaveAttribute("data-poster");
+    expect(placeholder?.querySelector(".placeholder__caption")).toHaveTextContent("One Piece");
+  });
+
   it("keeps the poster clean: type and rating only, no description or title", () => {
     render(MediaCard, {
       item: {

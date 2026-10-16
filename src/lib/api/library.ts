@@ -1,5 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { EventKind, LibraryEntry, LibraryEvent, Plan, UserData } from "$lib/types/library";
+import type {
+  EventKind,
+  LibraryEntry,
+  LibraryEvent,
+  ManualDraft,
+  Plan,
+  UserData,
+} from "$lib/types/library";
 
 import type { MediaItem, MediaKey } from "$lib/types/media";
 
@@ -60,6 +67,19 @@ function add(item: MediaItem, user?: UserPatch): Promise<LibraryEntry> {
   );
 }
 
+// Rust makes the key, so the event goes out keyless and listeners get the stamped copy.
+async function addManual(draft: ManualDraft, user?: UserPatch): Promise<LibraryEntry> {
+  const event = stamp("library_add", "", user ?? null);
+  const entry = await invoke<LibraryEntry>("library_add_manual", { draft, user, event });
+  return saved({ ...event, media_key: entry.key }, Promise.resolve(entry));
+}
+
+// Logged as `library_edit`, which earns no XP.
+function editManual(key: MediaKey, draft: ManualDraft): Promise<LibraryEntry> {
+  const event = stamp("library_edit", key, draft);
+  return saved(event, invoke<LibraryEntry>("library_edit_manual", { key, draft, event }));
+}
+
 function update(key: MediaKey, patch: UserPatch): Promise<LibraryEntry> {
   const event = stamp("library_update", key, patch);
   return saved(event, invoke<LibraryEntry>("library_update", { key, patch, event }));
@@ -99,6 +119,8 @@ function events(): Promise<LibraryEvent[]> {
 export const library = {
   load,
   add,
+  addManual,
+  editManual,
   update,
   plan,
   remove,

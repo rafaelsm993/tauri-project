@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
+  import PosterPlaceholder from "$lib/components/media/PosterPlaceholder.svelte";
   import { detailPath } from "$lib/domain/libraryView";
   import { posterKey } from "$lib/utils/transition";
   import { resolveTotal } from "$lib/domain/length";
@@ -43,7 +44,11 @@
           onerror={() => failed++}
         />
       {:else}
-        <div class="lib-card__no-poster" aria-hidden="true">No poster</div>
+        <PosterPlaceholder
+          title={entry.snapshot.title}
+          {type}
+          posterKey={posterKey(path.type, path.id)}
+        />
       {/if}
       <span class="lib-card__type">{MEDIA_LABELS[type]}</span>
     </div>
@@ -155,14 +160,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-
-  .lib-card__no-poster {
-    display: grid;
-    place-items: center;
-    height: 100%;
-    font-size: 0.75rem;
-    color: var(--clr-text-3);
   }
 
   .lib-card__type {

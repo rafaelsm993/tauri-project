@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { library } from "./library";
+import type { ManualDraft } from "$lib/types/library";
 import type { MediaItem } from "$lib/types/media";
 
 afterEach(() => {
@@ -106,6 +107,61 @@ describe("library client", () => {
     const calls = record(log);
     expect(await library.events()).toEqual(log);
     expect(calls).toEqual([{ cmd: "library_events", args: {} }]);
+  });
+});
+
+describe("manual items", () => {
+  const DRAFT: ManualDraft = { media_type: "book", title: "Dune", genres: ["Sci-fi"] };
+  const KEY = "manual:book:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+
+  it("addManual sends the draft with a keyless library_add event; Rust makes the key", async () => {
+    const calls = record({ key: KEY });
+    const entry = await library.addManual(DRAFT, { status: "in_progress" });
+    expect(entry).toEqual({ key: KEY });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].cmd).toBe("library_add_manual");
+    expect(calls[0].args.draft).toEqual(DRAFT);
+    expect(calls[0].args.user).toEqual({ status: "in_progress" });
+    const event = calls[0].args.event as { kind: string; media_key: string; payload: unknown };
+    expect(event.kind).toBe("library_add");
+    expect(event.media_key).toBe("");
+    expect(event.payload).toEqual({ status: "in_progress" });
+  });
+
+  it("addManual tells listeners the key Rust made", async () => {
+    record({ key: KEY });
+    const seen: { kind: string; media_key: string }[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    await library.addManual(DRAFT);
+    stop();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ kind: "library_add", media_key: KEY });
+  });
+
+  it("editManual sends the key and draft with a library_edit event", async () => {
+    const calls = record({ key: KEY });
+    const seen: unknown[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    await library.editManual(KEY, DRAFT);
+    stop();
+    expect(calls[0].cmd).toBe("library_edit_manual");
+    expect(calls[0].args.key).toBe(KEY);
+    expect(calls[0].args.draft).toEqual(DRAFT);
+    const event = calls[0].args.event as { kind: string; media_key: string; payload: unknown };
+    expect(event).toMatchObject({ kind: "library_edit", media_key: KEY, payload: DRAFT });
+    expect(seen).toEqual([event]);
+  });
+
+  it("a refused manual save tells no listener", async () => {
+    mockIPC(() => {
+      throw new Error("a title is required");
+    });
+    const seen: unknown[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    await expect(library.addManual({ media_type: "book", title: "" })).rejects.toThrow("title");
+    await expect(library.editManual(KEY, DRAFT)).rejects.toThrow("title");
+    stop();
+    expect(seen).toEqual([]);
   });
 });
 

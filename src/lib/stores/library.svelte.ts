@@ -2,7 +2,8 @@ import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { library as defaultClient } from "$lib/api/library";
 import { emptyLength } from "$lib/domain/length";
 import { errorMessage } from "$lib/utils/errors";
-import type { LibraryEntry, LibraryStatus, Plan, UserData } from "$lib/types/library";
+import { applyDraft } from "$lib/domain/manual";
+import type { LibraryEntry, LibraryStatus, ManualDraft, Plan, UserData } from "$lib/types/library";
 import type { MediaItem, MediaKey } from "$lib/types/media";
 
 export type LibraryClient = {
@@ -13,6 +14,8 @@ export type LibraryClient = {
   remove: (key: MediaKey) => Promise<boolean>;
   posterDir: () => Promise<string>;
   retryPosters: () => Promise<void>;
+  addManual: (draft: ManualDraft, user?: Partial<UserData>) => Promise<LibraryEntry>;
+  editManual: (key: MediaKey, draft: ManualDraft) => Promise<LibraryEntry>;
 };
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
@@ -133,24 +136,53 @@ export class LibraryStore {
     }
   }
 
+  // Not optimistic: the key comes from Rust. Resolves the saved entry, or null with `error` set.
+  async addManual(draft: ManualDraft, user: Partial<UserData> = {}): Promise<LibraryEntry | null> {
+    this.error = "";
+    try {
+      const saved = await this.client.addManual(draft, user);
+      this.write(saved.key, saved);
+      return saved;
+    } catch (e) {
+      this.error = errorMessage(e, "Failed to save this item.");
+      return null;
+    }
+  }
+
   update(key: MediaKey, patch: Partial<UserData>): Promise<boolean> {
     return this.patch(key, patch, () => this.client.update(key, patch));
+  }
+
+  editManual(key: MediaKey, draft: ManualDraft): Promise<boolean> {
+    return this.change(
+      key,
+      (e) => ({ ...e, snapshot: applyDraft(e.snapshot, draft) }),
+      () => this.client.editManual(key, draft),
+    );
   }
 
   plan(key: MediaKey, plan: Plan | null): Promise<boolean> {
     return this.patch(key, { plan }, () => this.client.plan(key, plan));
   }
 
-  // Shows the change at once, keeps the backend's answer, or puts the old entry back.
-  private async patch(
+  private patch(
     key: MediaKey,
     patch: Partial<UserData>,
+    save: () => Promise<LibraryEntry>,
+  ): Promise<boolean> {
+    return this.change(key, (e) => ({ ...e, user: { ...e.user, ...patch } }), save);
+  }
+
+  // Shows the change at once, keeps the backend's answer, or puts the old entry back.
+  private async change(
+    key: MediaKey,
+    next: (before: LibraryEntry) => LibraryEntry,
     save: () => Promise<LibraryEntry>,
   ): Promise<boolean> {
     const before = this.map.get(key);
     if (!before) return false;
     this.error = "";
-    this.write(key, { ...before, user: { ...before.user, ...patch } });
+    this.write(key, next(before));
     this.mark(key, true);
     try {
       this.write(key, await save());

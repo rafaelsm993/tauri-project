@@ -20,6 +20,17 @@ export interface MediaSnapshot {
   platforms?: string[];
 }
 
+// What the add/edit form sends; Rust trims, checks and stores it (library::manual).
+export interface ManualDraft {
+  media_type: MediaType;
+  title: string;
+  year?: string | null;
+  creator?: string | null;
+  overview?: string | null;
+  genres?: string[];
+  platforms?: string[];
+}
+
 // The user's own length data; only the planner requires it.
 export interface Length {
   runtime_minutes: number | null;

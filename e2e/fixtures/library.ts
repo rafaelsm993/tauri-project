@@ -80,6 +80,10 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
           },
         ) => {
           calls.push({ cmd, args });
+          // Tests set window.__offline to make every provider call fail.
+          if ((window as { __offline?: boolean }).__offline && cmd.startsWith("catalog_")) {
+            throw "offline: network unreachable";
+          }
           if (cmd === "library_load") return structuredClone(library);
           // Manual saves: the fake makes a counted key and stores the draft as the snapshot.
           if (cmd === "library_add_manual" || cmd === "library_edit_manual") {

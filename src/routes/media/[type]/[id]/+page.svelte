@@ -6,7 +6,7 @@
   import { toMediaItem, type MediaDetail, type MediaType } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
   import { detailSource, entryForRoute, snapshotItem } from "$lib/domain/detailView";
-  import { isManualId } from "$lib/domain/manual";
+  import { isManualId, manualDetail } from "$lib/domain/manual";
   import { posterSources } from "$lib/domain/poster";
   import { posterKey as toPosterKey } from "$lib/utils/transition";
   import { onReconnect } from "$lib/stores/online.svelte";
@@ -25,6 +25,7 @@
   import ScreenshotStrip from "$lib/components/detail/ScreenshotStrip.svelte";
   import CastRow from "$lib/components/detail/CastRow.svelte";
   import SaveToLibrary from "$lib/components/library/SaveToLibrary.svelte";
+  import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import ProgressEditor from "$lib/components/library/ProgressEditor.svelte";
   import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
   import { localDay } from "$lib/domain/calendar";
@@ -180,6 +181,35 @@
       {#if savedEntry}
         <div class="detail-controls">{@render controls(savedEntry)}</div>
       {/if}
+    </div>
+  </div>
+{:else if manual}
+  {@const entry = source.entry}
+  {@const d = manualDetail(entry.snapshot)}
+  <DetailHero
+    title={d.title}
+    type={d.media_type}
+    tagline=""
+    backdropUrl={null}
+    posterUrl={posterSources(entry.snapshot, libraryStore.posterDir)[0] ?? null}
+    {posterKey}
+    onBack={back}
+  />
+
+  <div class="detail-body">
+    <div class="detail-info">
+      <DetailMeta detail={d} />
+      {#if d.overview}
+        <Overview text={d.overview} />
+      {/if}
+      <AddManuallyButton edit={entry.key} after="stay" label="Edit" />
+    </div>
+
+    <div class="detail-actions">
+      <div class="detail-status">
+        <SaveToLibrary item={snapshotItem(entry.snapshot)} bind:editing={editingLength} />
+      </div>
+      <div class="detail-controls">{@render controls(entry)}</div>
     </div>
   </div>
 {:else}

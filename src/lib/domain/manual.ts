@@ -1,6 +1,6 @@
 import { familyOf, type Family } from "./dashboard";
 import type { LibraryEntry, ManualDraft, MediaSnapshot } from "$lib/types/library";
-import type { MediaKey, MediaType } from "$lib/types/media";
+import type { MediaDetail, MediaKey, MediaType } from "$lib/types/media";
 
 // What the creator field is called for each type.
 export const CREATOR_LABEL: Record<MediaType, string> = {
@@ -78,5 +78,29 @@ export function applyDraft(snapshot: MediaSnapshot, draft: ManualDraft): MediaSn
     overview: blankToNone(draft.overview),
     genres: uniqueTags(draft.genres ?? []),
     platforms: snapshot.media_type === "game" ? uniqueTags(draft.platforms ?? []) : [],
+  };
+}
+
+// A hand-made item in the detail page's shape, so it draws with the same meta and overview.
+export function manualDetail(snapshot: MediaSnapshot): MediaDetail {
+  return {
+    id: snapshot.media_key.split(":").slice(2).join(":"),
+    provider: snapshot.provider,
+    media_key: snapshot.media_key,
+    media_type: snapshot.media_type,
+    title: snapshot.title,
+    tagline: "",
+    overview: snapshot.overview ?? "",
+    poster_path: snapshot.poster_path,
+    backdrop_path: null,
+    vote_average: 0,
+    vote_count: 0,
+    release_date: snapshot.year ?? "",
+    runtime: null,
+    genres: (snapshot.genres ?? []).map((name) => ({ id: name, name })),
+    cast: [],
+    videos: [],
+    author: snapshot.creator,
+    platforms: snapshot.platforms?.length ? snapshot.platforms : undefined,
   };
 }

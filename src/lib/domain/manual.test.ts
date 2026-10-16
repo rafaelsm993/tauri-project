@@ -5,6 +5,7 @@ import {
   duplicateOf,
   isManual,
   isManualId,
+  manualDetail,
   normalizeTitle,
   placeholderOf,
   splitTags,
@@ -193,5 +194,53 @@ describe("isManualId", () => {
 
   it("never mistakes a provider id for one", () => {
     for (const id of ["550", "1396", "a:b", "romance", ""]) expect(isManualId(id)).toBe(false);
+  });
+});
+
+describe("manualDetail", () => {
+  const snap: MediaSnapshot = {
+    media_key: "manual:game:1",
+    provider: "manual",
+    media_type: "game",
+    title: "Hades",
+    poster_path: null,
+    poster_file: null,
+    year: "2020",
+    creator: "Supergiant Games",
+    overview: "Escape the underworld.",
+    genres: ["Roguelike", "Action"],
+    platforms: ["PC", "Switch"],
+  };
+
+  it("shows what you typed in the detail page's own fields", () => {
+    const d = manualDetail(snap);
+    expect(d).toMatchObject({
+      media_key: "manual:game:1",
+      media_type: "game",
+      title: "Hades",
+      overview: "Escape the underworld.",
+      release_date: "2020",
+      author: "Supergiant Games",
+      platforms: ["PC", "Switch"],
+    });
+    expect(d.genres.map((g) => g.name)).toEqual(["Roguelike", "Action"]);
+    expect(new Set(d.genres.map((g) => g.id)).size).toBe(2);
+  });
+
+  it("leaves out what you left blank, so nothing empty is drawn", () => {
+    const d = manualDetail({
+      ...snap,
+      year: null,
+      creator: undefined,
+      overview: undefined,
+      genres: undefined,
+      platforms: undefined,
+    });
+    expect(d.release_date).toBe("");
+    expect(d.author).toBeUndefined();
+    expect(d.overview).toBe("");
+    expect(d.genres).toEqual([]);
+    expect(d.platforms).toBeUndefined();
+    expect(d.vote_average).toBe(0);
   });
 });

@@ -48,7 +48,7 @@ Aevum lets you browse movies, TV series, anime, manga, books and games. Today it
 
 ### Identity
 
-Every item carries `provider` and `media_key` (`provider:media_type:id`, e.g. `anilist:anime:16498`). Lists are keyed and de-duplicated by `media_key`; it will be the library's primary key in S2. `ProviderId::Manual` is reserved for user-created entries.
+Every item carries `provider` and `media_key` (`provider:media_type:id`, e.g. `anilist:anime:16498`). Lists are keyed and de-duplicated by `media_key`; it will be the library's primary key in S2. `ProviderId::Manual` marks user-created entries: their key is `manual:<type>:<uuid>`, made in Rust, and the detail page never asks a provider for one (a UUID id is enough to tell), it draws the saved snapshot instead.
 
 ### Logging
 

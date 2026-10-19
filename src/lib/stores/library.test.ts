@@ -458,6 +458,32 @@ describe("merge", () => {
   });
 });
 
+describe("preview", () => {
+  const MANUAL = "manual:tv:m1";
+
+  it("returns what a merge would save", async () => {
+    const mergePreview = vi.fn(async () => ({ entry: entry(), combined: true }));
+    const store = new LibraryStore(fakeClient({ mergePreview }));
+    expect(await store.preview(MANUAL, ITEM, emptyLength())).toEqual({
+      ok: true,
+      preview: { entry: entry(), combined: true },
+    });
+    expect(mergePreview).toHaveBeenCalledWith(MANUAL, ITEM, emptyLength());
+  });
+
+  it("returns the backend's reason when it would be refused, without touching `error`", async () => {
+    const mergePreview = vi.fn(async () => {
+      throw "Your progress (380 pages) is past this match's length (320).";
+    });
+    const store = new LibraryStore(fakeClient({ mergePreview }));
+    expect(await store.preview(MANUAL, ITEM, emptyLength())).toEqual({
+      ok: false,
+      reason: "Your progress (380 pages) is past this match's length (320).",
+    });
+    expect(store.error).toBe("");
+  });
+});
+
 describe("unmerge", () => {
   const MANUAL = "manual:tv:m1";
   const manual = entry({ key: MANUAL, snapshot: { ...entry().snapshot, media_key: MANUAL } });

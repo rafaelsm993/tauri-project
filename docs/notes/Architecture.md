@@ -108,6 +108,10 @@ MediaCard click → goto(`/media/${type}/${encodeURIComponent(id)}`)
 | `libraryFilters` | `src/lib/stores/libraryFilters.svelte.ts` | Library status, type and search filters, kept for the session so they survive opening a card. |
 | `motionStore` | `src/lib/stores/motion.svelte.ts` | `on`: may decorative motion run (the saved `motion` setting, overruled by the system's reduce-motion). `reduced`: the system asked for less motion. Every animating component reads this; none checks `matchMedia` itself. |
 
+### Merged items (`library.json` v2)
+
+`library.json` is `{ schema_version: 2, entries, merged }`. `merged` maps each manual key that was matched to the catalog to a `Tombstone { into, entry, existing, at }`: the catalog key it became, the manual entry as it was, and the catalog entry before a combine (`null` if there was none). It is written in the same atomic save as the entries, so Undo and the XP link survive a failed event write. v1 files upgrade on load (`add_merged` in `MIGRATIONS`); an older app refuses a v2 file and asks to update. Backups carry `merged`: a merge import never brings back a manual item that was merged here, adds the backup's merges except for a manual key still saved here, and refuses a backup whose merge record names a non-manual key or one that is also a saved entry.
+
 ## Background system
 
 | Layer | z-index | Source |

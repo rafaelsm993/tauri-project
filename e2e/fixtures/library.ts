@@ -50,6 +50,8 @@ export function item(id: number, type: string, title: string, length: object, pl
 
 export interface LibraryFake {
   events?: object[];
+  // What catalog_page answers; empty by default.
+  results?: object[];
   seenLevel?: number;
   now?: string;
 }
@@ -58,7 +60,7 @@ export interface LibraryFake {
 export async function mockLibrary(page: Page, entries: object[], fake: LibraryFake = {}) {
   await page.clock.setFixedTime(new Date(fake.now ?? "2026-10-01T10:00:00"));
   await page.addInitScript(
-    ({ list, events, seenLevel, emptyLength }) => {
+    ({ list, events, seenLevel, emptyLength, results }) => {
       const library = structuredClone(list) as {
         key: string;
         user: Record<string, unknown>;
@@ -69,103 +71,164 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         seen_level: seenLevel,
         reading_pages_per_hour: null,
       };
+      type Hit = { media_key: string; media_type: string; title: string; provider: string };
       const calls: { cmd: string; args: unknown }[] = [];
-      Object.assign(window, { __ipcCalls: calls });
-      (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
-        invoke: async (
-          cmd: string,
-          args?: {
-            key?: string;
-            patch?: Record<string, unknown>;
-            draft?: Record<string, unknown>;
-            user?: Record<string, unknown>;
-            event?: { at_utc: string };
-            id?: string;
-            media_type?: string;
+      // Like Rust's tombstones: what a merge replaced, so Undo can put it back.
+      const merged = new Map<string, { manual: unknown; into: string; catalog: unknown }>();
+      const mergedEntry = (key: string, item: Hit) => {
+        const mine = library.find((e) => e.key === key)!;
+        return {
+          ...structuredClone(mine),
+          key: item.media_key,
+          snapshot: {
+            media_key: item.media_key,
+            provider: item.provider,
+            media_type: item.media_type,
+            title: item.title,
+            poster_path: null,
+            poster_file: null,
+            year: "2020",
           },
-        ) => {
-          calls.push({ cmd, args });
-          // Tests set window.__offline to make every provider call fail.
-          if ((window as { __offline?: boolean }).__offline && cmd.startsWith("catalog_")) {
-            throw "offline: network unreachable";
-          }
-          if (cmd === "library_load") return structuredClone(library);
-          // Manual saves: the fake makes a counted key and stores the draft as the snapshot.
-          if (cmd === "library_add_manual" || cmd === "library_edit_manual") {
-            const draft = args!.draft!;
-            const at = args!.event!.at_utc;
-            const key =
-              args?.key ??
-              `manual:${draft.media_type}:00000000-0000-4000-8000-${String(library.length).padStart(12, "0")}`;
-            const old = library.find((e) => e.key === key) as Record<string, unknown> | undefined;
-            const entry = {
-              key,
-              snapshot: {
-                media_key: key,
-                provider: "manual",
-                poster_path: null,
-                poster_file: null,
-                ...draft,
-                year: (draft.year as string) || null,
-              },
-              user: old?.user ?? {
-                status: "planning",
-                progress: 0,
-                rating: null,
-                review: null,
-                length: emptyLength,
-                plan: null,
-                ...args?.user,
-              },
-              created_at: old?.created_at ?? at,
-              updated_at: at,
-            };
-            const at_i = library.findIndex((e) => e.key === key);
-            if (at_i >= 0) library.splice(at_i, 1);
-            library.push(entry as unknown as (typeof library)[number]);
-            return structuredClone(entry);
-          }
-          if (cmd === "library_update") {
-            const entry = library.find((e) => e.key === args?.key)!;
-            Object.assign(entry.user, args?.patch);
-            return structuredClone(entry);
-          }
-          if (cmd === "library_remove") {
-            const at_i = library.findIndex((e) => e.key === args?.key);
-            if (at_i >= 0) library.splice(at_i, 1);
-            return at_i >= 0;
-          }
-          // Like Rust: a provider can't parse the UUID of a hand-made item.
-          if (cmd === "catalog_detail" && String(args?.id).includes("-")) throw "Invalid ID.";
-          if (cmd === "catalog_detail") {
-            const saved = library.find((e) => e.key.endsWith(`:${args?.media_type}:${args?.id}`));
-            const s = saved?.snapshot;
-            return {
-              id: Number(args?.id),
-              provider: s?.provider ?? "tmdb",
-              media_key: saved?.key ?? `tmdb:${args?.media_type}:${args?.id}`,
-              media_type: args?.media_type,
-              title: s?.title ?? "Untitled",
-              tagline: "",
-              overview: "",
-              poster_path: null,
-              backdrop_path: null,
-              vote_average: 0,
-              vote_count: 0,
-              release_date: "",
-              runtime: null,
-              genres: [],
-              cast: [],
-              videos: [],
-            };
-          }
-          if (cmd === "library_events") return structuredClone(events);
-          if (cmd === "startup_status") return null;
-          if (cmd === "library_poster_dir") return "/nonexistent/posters";
-          if (cmd === "prefs_load") return { ...prefs };
-          if (cmd === "prefs_update") return Object.assign(prefs, args?.patch);
-          return { page: 1, total_pages: 1, total_results: 0, results: [], genres: [] };
+        };
+      };
+      Object.assign(window, { __ipcCalls: calls });
+      const invoke = async (
+        cmd: string,
+        args?: {
+          key?: string;
+          patch?: Record<string, unknown>;
+          draft?: Record<string, unknown>;
+          user?: Record<string, unknown>;
+          event?: { at_utc: string };
+          id?: string;
+          media_type?: string;
+          item?: Hit;
         },
+      ) => {
+        calls.push({ cmd, args });
+        // Tests set window.__offline to make every provider call fail.
+        if ((window as { __offline?: boolean }).__offline && cmd.startsWith("catalog_")) {
+          throw "offline: network unreachable";
+        }
+        if (cmd === "library_load") return structuredClone(library);
+        // Manual saves: the fake makes a counted key and stores the draft as the snapshot.
+        if (cmd === "library_add_manual" || cmd === "library_edit_manual") {
+          const draft = args!.draft!;
+          const at = args!.event!.at_utc;
+          const key =
+            args?.key ??
+            `manual:${draft.media_type}:00000000-0000-4000-8000-${String(library.length).padStart(12, "0")}`;
+          const old = library.find((e) => e.key === key) as Record<string, unknown> | undefined;
+          const entry = {
+            key,
+            snapshot: {
+              media_key: key,
+              provider: "manual",
+              poster_path: null,
+              poster_file: null,
+              ...draft,
+              year: (draft.year as string) || null,
+            },
+            user: old?.user ?? {
+              status: "planning",
+              progress: 0,
+              rating: null,
+              review: null,
+              length: emptyLength,
+              plan: null,
+              ...args?.user,
+            },
+            created_at: old?.created_at ?? at,
+            updated_at: at,
+          };
+          const at_i = library.findIndex((e) => e.key === key);
+          if (at_i >= 0) library.splice(at_i, 1);
+          library.push(entry as unknown as (typeof library)[number]);
+          return structuredClone(entry);
+        }
+        if (cmd === "library_update") {
+          const entry = library.find((e) => e.key === args?.key)!;
+          Object.assign(entry.user, args?.patch);
+          return structuredClone(entry);
+        }
+        if (cmd === "library_remove") {
+          const at_i = library.findIndex((e) => e.key === args?.key);
+          if (at_i >= 0) library.splice(at_i, 1);
+          return at_i >= 0;
+        }
+        // Like Rust: a provider can't parse the UUID of a hand-made item.
+        if (cmd === "catalog_detail" && String(args?.id).includes("-")) throw "Invalid ID.";
+        if (cmd === "catalog_detail") {
+          const saved = library.find((e) => e.key.endsWith(`:${args?.media_type}:${args?.id}`));
+          const s = saved?.snapshot;
+          return {
+            id: Number(args?.id),
+            provider: s?.provider ?? "tmdb",
+            media_key: saved?.key ?? `tmdb:${args?.media_type}:${args?.id}`,
+            media_type: args?.media_type,
+            title: s?.title ?? "Untitled",
+            tagline: "",
+            overview: "",
+            poster_path: null,
+            backdrop_path: null,
+            vote_average: 0,
+            vote_count: 0,
+            release_date: "",
+            runtime: null,
+            genres: [],
+            cast: [],
+            videos: [],
+          };
+        }
+        if (cmd === "library_events") return structuredClone(events);
+        if (cmd === "startup_status") return null;
+        if (cmd === "library_poster_dir") return "/nonexistent/posters";
+        if (cmd === "prefs_load") return { ...prefs };
+        if (cmd === "prefs_update") return Object.assign(prefs, args?.patch);
+        if (cmd === "library_merge_preview") {
+          const combined = library.some((e) => e.key === args!.item.media_key);
+          return { entry: mergedEntry(args!.key!, args!.item!), combined };
+        }
+        if (cmd === "library_merge") {
+          const entry = mergedEntry(args!.key!, args!.item!);
+          const at_m = library.findIndex((e) => e.key === args!.key);
+          const at_c = library.findIndex((e) => e.key === entry.key);
+          merged.set(args!.key!, {
+            manual: library[at_m],
+            into: entry.key,
+            catalog: at_c >= 0 ? library[at_c] : null,
+          });
+          library.splice(at_m, 1);
+          if (at_c >= 0)
+            library.splice(
+              library.findIndex((e) => e.key === entry.key),
+              1,
+            );
+          library.push(entry);
+          return structuredClone(entry);
+        }
+        if (cmd === "library_unmerge") {
+          const t = merged.get(args!.key!);
+          if (!t) throw "this item was not matched";
+          merged.delete(args!.key!);
+          library.splice(
+            library.findIndex((e) => e.key === t.into),
+            1,
+          );
+          library.push(t.manual as (typeof library)[number]);
+          if (t.catalog) library.push(t.catalog as (typeof library)[number]);
+          return structuredClone(t);
+        }
+        if (cmd === "library_aliases") {
+          return Object.fromEntries([...merged].map(([k, t]) => [k, t.into]));
+        }
+        if (cmd === "catalog_page") {
+          return { page: 1, total_pages: 1, total_results: results.length, results, genres: [] };
+        }
+        return { page: 1, total_pages: 1, total_results: 0, results: [], genres: [] };
+      };
+      (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
+        invoke,
         transformCallback: () => 0,
         convertFileSrc: (path: string) => `/missing-asset/${encodeURIComponent(path)}`,
         metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
@@ -176,6 +239,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
       events: fake.events ?? [],
       seenLevel: fake.seenLevel ?? 0,
       emptyLength: LENGTH,
+      results: fake.results ?? [],
     },
   );
 }

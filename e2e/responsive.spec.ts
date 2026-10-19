@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures/tauri-ipc";
+import { manualItem, mockLibrary } from "./fixtures/library";
 
 const SCREENS = [
   { name: "home", path: "/" },
@@ -247,6 +248,71 @@ test.describe("add manually", () => {
     const viewport = page.viewportSize()!;
     expect(save.y + save.height).toBeLessThanOrEqual(viewport.height - 300 + 1);
     expect(save.y).toBeGreaterThanOrEqual(0);
+  });
+});
+
+test.describe("find a match", () => {
+  test("the button, the sheet and its compare step fit and are touch-sized", async ({
+    page,
+    isMobile,
+  }) => {
+    const hit = {
+      id: 42,
+      provider: "itunes",
+      media_key: "itunes:book:42",
+      title: "A very long catalog title that has to wrap inside a 360 px sheet",
+      overview: "",
+      poster_path: null,
+      backdrop_path: null,
+      vote_average: 0,
+      vote_count: 0,
+      release_date: "2020-09-15",
+      media_type: "book",
+    };
+    await mockLibrary(page, [manualItem("book", "Piranesi")], {
+      results: [hit, hit].map((h, i) => ({ ...h, id: 42 + i, media_key: `itunes:book:${42 + i}` })),
+    });
+    await page.goto("/media/book/0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69");
+    const open = page.getByRole("button", { name: "Find a match" });
+    if (isMobile) expect((await open.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await open.click();
+    const sheet = page.getByRole("dialog", { name: "Find a match for Piranesi" });
+    const small = () =>
+      sheet.locator("input, button").evaluateAll((els) =>
+        els
+          .filter((e) => (e as HTMLElement).offsetParent && !e.closest(".card"))
+          .map((e) => ({
+            name: e.getAttribute("aria-label") ?? e.textContent?.trim(),
+            h: e.getBoundingClientRect().height,
+          }))
+          .filter((x) => x.h < 44),
+      );
+    const overflow = () => sheet.evaluate((el) => el.scrollWidth - el.clientWidth);
+    await expect(sheet.getByRole("listitem")).toHaveCount(2);
+    expect(await overflow(), "results wider than the sheet").toBeLessThanOrEqual(0);
+    if (isMobile) expect(await small(), "result step controls under 44 px").toEqual([]);
+
+    await sheet.getByRole("listitem").first().getByRole("button").click();
+    await expect(sheet.getByRole("button", { name: "Use this" })).toBeVisible();
+    expect(await overflow(), "compare step wider than the sheet").toBeLessThanOrEqual(0);
+    if (isMobile) expect(await small(), "compare step controls under 44 px").toEqual([]);
+    const split = await sheet
+      .getByRole("region", { name: "Yours, kept" })
+      .locator("dd")
+      .evaluateAll((dds) =>
+        dds
+          .filter((dd) => {
+            const range = document.createRange();
+            const text = dd.firstChild!;
+            const word = dd.textContent!.trim().split(" ")[0];
+            const at = dd.textContent!.indexOf(word);
+            range.setStart(text, at);
+            range.setEnd(text, at + word.length);
+            return range.getClientRects().length > 1;
+          })
+          .map((dd) => dd.textContent),
+      );
+    expect(split, "a kept value broken inside a word").toEqual([]);
   });
 });
 

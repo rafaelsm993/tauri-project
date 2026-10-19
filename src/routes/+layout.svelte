@@ -12,6 +12,7 @@
   import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
   import ReminderToast from "$lib/components/planner/ReminderToast.svelte";
   import ManualEntrySheet from "$lib/components/library/ManualEntrySheet.svelte";
+  import MatchSheet from "$lib/components/reconcile/MatchSheet.svelte";
   import StartupProblem from "$lib/components/ui/StartupProblem.svelte";
   import { startupStatus } from "$lib/api/startup";
   import type { StartupProblem as Problem } from "$lib/types/startup";
@@ -153,6 +154,7 @@
     onclose={() => reminderStore.dismiss()}
   />
   <ManualEntrySheet />
+  <MatchSheet />
 {/if}
 
 <style lang="scss">

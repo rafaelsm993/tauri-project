@@ -32,6 +32,8 @@ export type LibraryClient = {
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
 
+export type PreviewResult = { ok: true; preview: MergePreview } | { ok: false; reason: string };
+
 // Neutral wording for every media type (GOALS-QA L1).
 export const STATUS_LABELS: Record<LibraryStatus, string> = {
   planning: "Planning",
@@ -223,6 +225,15 @@ export class LibraryStore {
       return false;
     } finally {
       this.mark(key, false);
+    }
+  }
+
+  // A refusal is an answer here, not a failure: the sheet shows the reason in place of "Use this".
+  async preview(key: MediaKey, item: MediaItem, length: Length): Promise<PreviewResult> {
+    try {
+      return { ok: true, preview: await this.client.mergePreview(key, item, length) };
+    } catch (e) {
+      return { ok: false, reason: errorMessage(e, "This match can't be used.") };
     }
   }
 

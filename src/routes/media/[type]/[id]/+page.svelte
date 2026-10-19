@@ -9,7 +9,8 @@
   import { isManualId, manualDetail } from "$lib/domain/manual";
   import { posterSources } from "$lib/domain/poster";
   import { posterKey as toPosterKey } from "$lib/utils/transition";
-  import { onReconnect } from "$lib/stores/online.svelte";
+  import { onlineStore, onReconnect } from "$lib/stores/online.svelte";
+  import { match } from "$lib/stores/match.svelte";
   import { emptyLength, isPlannable, resolveTotal } from "$lib/domain/length";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { errorMessage } from "$lib/utils/errors";
@@ -202,7 +203,20 @@
       {#if d.overview}
         <Overview text={d.overview} />
       {/if}
-      <AddManuallyButton edit={entry.key} after="stay" label="Edit" />
+      <div class="manual-actions">
+        <AddManuallyButton edit={entry.key} after="stay" label="Edit" />
+        {#if onlineStore.online}
+          <button
+            type="button"
+            class="match-btn"
+            aria-haspopup="dialog"
+            aria-expanded={match.current !== null}
+            onclick={() => match.open(entry)}
+          >
+            Find a match
+          </button>
+        {/if}
+      </div>
     </div>
 
     <div class="detail-actions">
@@ -328,8 +342,18 @@
     margin: 0 0 $spacing-md;
   }
 
+  .manual-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+
   .plan-btn {
     margin-bottom: $spacing-md;
+  }
+
+  .plan-btn,
+  .match-btn {
     background: none;
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
     color: var(--clr-text);

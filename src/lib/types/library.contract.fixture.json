@@ -49,7 +49,9 @@
     "library_update",
     "library_plan",
     "library_remove",
-    "library_edit"
+    "library_edit",
+    "library_merge",
+    "library_unmerge"
   ],
   "manual_snapshot": {
     "creator": "Small Studio",

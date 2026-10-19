@@ -1,6 +1,7 @@
 use super::events::{append_event, read_events};
 use super::manual::{self, ManualDraft};
 use super::posters;
+use super::reconcile;
 use super::types::{
     Event, EventKind, Length, LibraryEntry, MediaSnapshot, Plan, Status, Tombstone, UserData,
 };
@@ -345,6 +346,73 @@ pub async fn remove(state: &LibraryState, key: &str, event: Event) -> Result<boo
     Ok(true)
 }
 
+// What a merge would save, for the side-by-side step; writes nothing.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MergePreview {
+    pub entry: LibraryEntry,
+    pub combined: bool,
+}
+
+pub async fn merge_preview(
+    state: &LibraryState,
+    key: &str,
+    item: &MediaItem,
+    catalog: &Length,
+) -> Result<MergePreview, String> {
+    state
+        .store
+        .read(|f| {
+            let plan = reconcile::plan_merge(f, key, item, catalog, "")?;
+            Ok(MergePreview {
+                combined: plan.tombstone.existing.is_some(),
+                entry: plan.entry,
+            })
+        })
+        .await
+}
+
+/// Replaces a manual item with its catalog match in one write, then logs `library_merge`.
+pub async fn merge(
+    state: &LibraryState,
+    key: &str,
+    item: &MediaItem,
+    catalog: &Length,
+    mut event: Event,
+) -> Result<LibraryEntry, String> {
+    check_event(&event, key, &[EventKind::LibraryMerge])?;
+    let at = event.at_utc.clone();
+    let entry = state
+        .store
+        .commit(|f| {
+            let plan = reconcile::plan_merge(f, key, item, catalog, &at)?;
+            let entry = plan.entry.clone();
+            reconcile::apply_merge(f, key, plan);
+            Ok(entry)
+        })
+        .await?;
+    event.payload = serde_json::json!({ "into": entry.key });
+    log_event(state, event).await;
+    Ok(entry)
+}
+
+/// Undoes a merge in one write, then logs `library_unmerge`; returns the manual entry.
+pub async fn unmerge(
+    state: &LibraryState,
+    key: &str,
+    mut event: Event,
+) -> Result<LibraryEntry, String> {
+    check_event(&event, key, &[EventKind::LibraryUnmerge])?;
+    let t = state.store.commit(|f| reconcile::unmerge(f, key)).await?;
+    event.payload = serde_json::json!({ "into": t.into });
+    log_event(state, event).await;
+    Ok(t.entry)
+}
+
+/// Manual key → catalog key for every merge saved in the library file.
+pub async fn aliases(state: &LibraryState) -> BTreeMap<String, String> {
+    state.store.read(reconcile::aliases).await
+}
+
 /// Records a downloaded poster; false when the entry was removed meanwhile.
 pub async fn attach_poster(state: &LibraryState, key: &str, file: &str) -> bool {
     let attached = state
@@ -533,6 +601,182 @@ mod tests {
             Ok(true)
         );
         assert!(saved(&dir).entries.is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    const PIRANESI: &str = "itunes:book:42";
+
+    fn piranesi() -> MediaItem {
+        MediaItem::new(
+            Id::Num(42),
+            "Piranesi".into(),
+            MediaType::Book,
+            ProviderId::Itunes,
+        )
+    }
+
+    fn pages(n: u32) -> Length {
+        Length {
+            pages: Some(n),
+            ..Length::default()
+        }
+    }
+
+    async fn manual_book(state: &LibraryState, progress: u32) -> String {
+        let draft = ManualDraft {
+            media_type: MediaType::Book,
+            title: "piranesi".into(),
+            creator: None,
+            year: None,
+            overview: None,
+            genres: Vec::new(),
+            platforms: Vec::new(),
+        };
+        let user = UserData {
+            status: Status::InProgress,
+            progress,
+            ..UserData::default()
+        };
+        add_manual(
+            state,
+            "m1",
+            &draft,
+            user,
+            ev("library_add", "", "add", "t1"),
+        )
+        .await
+        .unwrap()
+        .key
+    }
+
+    #[tokio::test]
+    async fn merge_saves_the_swap_and_logs_one_event_naming_both_keys() {
+        let dir = scratch("f3-merge");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 30).await;
+        let entry = merge(
+            &state,
+            &key,
+            &piranesi(),
+            &pages(320),
+            ev("library_merge", &key, "m", "t2"),
+        )
+        .await
+        .unwrap();
+        assert_eq!((entry.key.as_str(), entry.user.progress), (PIRANESI, 30));
+        let file = saved(&dir);
+        assert_eq!(file.entries.keys().collect::<Vec<_>>(), [PIRANESI]);
+        assert_eq!(file.merged[&key].into, PIRANESI);
+        let log = events_in(&dir);
+        assert_eq!(log.last().map(|e| e.kind.as_str()), Some("library_merge"));
+        assert_eq!(
+            log.last().unwrap().payload,
+            serde_json::json!({ "into": PIRANESI })
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_refused_merge_writes_nothing_and_logs_nothing() {
+        let dir = scratch("f3-refused");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 380).await;
+        let before = saved(&dir);
+        let err = merge(
+            &state,
+            &key,
+            &piranesi(),
+            &pages(320),
+            ev("library_merge", &key, "m", "t2"),
+        )
+        .await
+        .unwrap_err();
+        assert!(err.starts_with("Your progress (380 pages)"), "{err}");
+        assert_eq!(saved(&dir), before);
+        assert_eq!(events_in(&dir).len(), 1, "only the add");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_merge_whose_event_is_lost_still_links_the_two_keys() {
+        let dir = scratch("f3-log-fails");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 30).await;
+        std::fs::remove_file(&state.events).unwrap();
+        std::fs::create_dir_all(&state.events).unwrap();
+        let merged = merge(
+            &state,
+            &key,
+            &piranesi(),
+            &pages(320),
+            ev("library_merge", &key, "m", "t2"),
+        )
+        .await;
+        assert!(merged.is_ok(), "{merged:?}");
+        assert_eq!(
+            aliases(&state).await,
+            [(key.clone(), PIRANESI.to_string())].into()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn preview_shows_the_result_and_writes_nothing() {
+        let dir = scratch("f3-preview");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 30).await;
+        let before = saved(&dir);
+        let p = merge_preview(&state, &key, &piranesi(), &pages(320))
+            .await
+            .unwrap();
+        assert_eq!((p.entry.key.as_str(), p.combined), (PIRANESI, false));
+        assert_eq!(p.entry.user.length.pages, Some(320));
+        assert_eq!(saved(&dir), before);
+        assert_eq!(load(&state).await.len(), 1);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn unmerge_brings_the_manual_item_back_and_logs_it() {
+        let dir = scratch("f3-unmerge");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 30).await;
+        let before = saved(&dir);
+        merge(
+            &state,
+            &key,
+            &piranesi(),
+            &pages(320),
+            ev("library_merge", &key, "m", "t2"),
+        )
+        .await
+        .unwrap();
+        let back = unmerge(&state, &key, ev("library_unmerge", &key, "u", "t3"))
+            .await
+            .unwrap();
+        assert_eq!(back.key, key);
+        assert_eq!(saved(&dir), before);
+        assert!(aliases(&state).await.is_empty());
+        let log = events_in(&dir);
+        assert_eq!(log.last().map(|e| e.kind.as_str()), Some("library_unmerge"));
+        assert_eq!(
+            log.last().unwrap().payload,
+            serde_json::json!({ "into": PIRANESI })
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn merge_and_unmerge_only_accept_their_own_event() {
+        let dir = scratch("f3-events");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 0).await;
+        let wrong = ev("library_update", &key, "x", "t2");
+        assert!(merge(&state, &key, &piranesi(), &pages(1), wrong.clone())
+            .await
+            .is_err());
+        assert!(unmerge(&state, &key, wrong).await.is_err());
+        assert_eq!(saved(&dir).entries.len(), 1);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

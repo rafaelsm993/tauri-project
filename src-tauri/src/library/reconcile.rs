@@ -1,6 +1,7 @@
 use super::commands::{validate_user_data, LibraryFile};
 use super::types::{Length, LibraryEntry, MediaSnapshot, Status, Tombstone, UserData};
 use crate::api::types::{MediaItem, MediaKey, MediaType, ProviderId};
+use std::collections::BTreeMap;
 
 // The library change a merge makes, built before anything is written.
 #[derive(Debug, Clone, PartialEq)]
@@ -156,6 +157,43 @@ fn side(entry: &LibraryEntry) -> Side<'_> {
         user: &entry.user,
         updated_at: &entry.updated_at,
     }
+}
+
+// Swaps the manual entry for the merged one and keeps the tombstone, in one in-memory step.
+pub fn apply_merge(file: &mut LibraryFile, from: &str, plan: MergePlan) {
+    file.entries.remove(from);
+    file.entries.insert(plan.entry.key.clone(), plan.entry);
+    file.merged.insert(from.to_string(), plan.tombstone);
+}
+
+// Puts the manual item (and a combined catalog entry) back; refused once the merged entry moved on.
+pub fn unmerge(file: &mut LibraryFile, from: &str) -> Result<Tombstone, String> {
+    let t = file.merged.get(from).ok_or("this item was not matched")?;
+    let now = file
+        .entries
+        .get(&t.into)
+        .ok_or("the matched item is no longer in the library")?;
+    if now.updated_at != t.at {
+        return Err("it changed after the match, so the match can't be undone".into());
+    }
+    let t = file
+        .merged
+        .remove(from)
+        .ok_or("this item was not matched")?;
+    file.entries.remove(&t.into);
+    if let Some(before) = &t.existing {
+        file.entries.insert(t.into.clone(), before.clone());
+    }
+    file.entries.insert(from.to_string(), t.entry.clone());
+    Ok(t)
+}
+
+// Manual key → the catalog key it became, straight from the tombstones.
+pub fn aliases(file: &LibraryFile) -> BTreeMap<String, String> {
+    file.merged
+        .iter()
+        .map(|(from, t)| (from.clone(), t.into.clone()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -537,6 +575,75 @@ mod tests {
                 want,
                 "{from}"
             );
+        }
+    }
+
+    fn merged(file: &LibraryFile, at: &str) -> LibraryFile {
+        let mut out = file.clone();
+        let plan = plan_merge(file, MANUAL, &book(), &pages(320), at).unwrap();
+        apply_merge(&mut out, MANUAL, plan);
+        out
+    }
+
+    #[test]
+    fn applying_a_merge_swaps_the_entries_and_keeps_the_tombstone() {
+        let file = library(vec![manual_entry(user(Status::InProgress, 3), "t1")]);
+        let out = merged(&file, "t2");
+        assert_eq!(out.entries.keys().collect::<Vec<_>>(), ["itunes:book:42"]);
+        assert_eq!(out.merged[MANUAL].entry, file.entries[MANUAL]);
+        assert_eq!(
+            aliases(&out),
+            [(MANUAL.to_string(), "itunes:book:42".to_string())].into()
+        );
+    }
+
+    #[test]
+    fn undoing_a_plain_merge_restores_the_file_exactly() {
+        let file = library(vec![manual_entry(user(Status::InProgress, 3), "t1")]);
+        let mut out = merged(&file, "t2");
+        let t = unmerge(&mut out, MANUAL).unwrap();
+        assert_eq!(t.into, "itunes:book:42");
+        assert_eq!(out, file);
+    }
+
+    #[test]
+    fn undoing_a_combine_puts_the_saved_catalog_entry_back_too() {
+        let saved = LibraryEntry {
+            key: "itunes:book:42".into(),
+            snapshot: MediaSnapshot::from_item(&book()),
+            user: user(Status::Completed, 0),
+            created_at: "t0".into(),
+            updated_at: "t0".into(),
+        };
+        let file = library(vec![manual_entry(user(Status::InProgress, 3), "t1"), saved]);
+        let mut out = merged(&file, "t2");
+        assert_eq!(out.entries.len(), 1);
+        unmerge(&mut out, MANUAL).unwrap();
+        assert_eq!(out, file);
+    }
+
+    #[test]
+    fn undo_is_refused_once_the_catalog_entry_changed_or_left() {
+        let file = library(vec![manual_entry(user(Status::InProgress, 3), "t1")]);
+        let mut changed = merged(&file, "t2");
+        changed
+            .entries
+            .get_mut("itunes:book:42")
+            .unwrap()
+            .updated_at = "t3".into();
+        let mut gone = merged(&file, "t2");
+        gone.entries.clear();
+        for (mut f, want) in [
+            (
+                changed,
+                "it changed after the match, so the match can't be undone",
+            ),
+            (gone, "the matched item is no longer in the library"),
+            (file.clone(), "this item was not matched"),
+        ] {
+            let before = f.clone();
+            assert_eq!(unmerge(&mut f, MANUAL).unwrap_err(), want);
+            assert_eq!(f, before, "a refused undo changes nothing");
         }
     }
 }

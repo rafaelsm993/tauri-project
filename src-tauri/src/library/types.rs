@@ -144,15 +144,19 @@ pub enum EventKind {
     LibraryPlan,
     LibraryRemove,
     LibraryEdit,
+    LibraryMerge,
+    LibraryUnmerge,
 }
 
 impl EventKind {
-    pub const ALL: [EventKind; 5] = [
+    pub const ALL: [EventKind; 7] = [
         EventKind::LibraryAdd,
         EventKind::LibraryUpdate,
         EventKind::LibraryPlan,
         EventKind::LibraryRemove,
         EventKind::LibraryEdit,
+        EventKind::LibraryMerge,
+        EventKind::LibraryUnmerge,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -162,6 +166,8 @@ impl EventKind {
             EventKind::LibraryPlan => "library_plan",
             EventKind::LibraryRemove => "library_remove",
             EventKind::LibraryEdit => "library_edit",
+            EventKind::LibraryMerge => "library_merge",
+            EventKind::LibraryUnmerge => "library_unmerge",
         }
     }
 }

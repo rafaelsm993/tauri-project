@@ -29,11 +29,16 @@ pub struct ImportReport {
 pub const SAFETY_COPY: &str = "pre-import-backup.zip";
 
 // Newer `updated_at` wins per entry (ISO strings compare in time order); nothing is deleted.
+// A key merged away here stays merged; the backup's merges join ours unless that key is saved here.
 pub fn merge(current: &LibraryFile, incoming: &LibraryFile) -> (LibraryFile, ImportReport) {
     let mut out = current.clone();
     let mut report = ImportReport::default();
     for (key, theirs) in &incoming.entries {
         match out.entries.get(key) {
+            _ if current.merged.contains_key(key) => {
+                report.kept += 1;
+                continue;
+            }
             None => report.added += 1,
             Some(ours) if theirs.updated_at > ours.updated_at => report.updated += 1,
             Some(_) => {
@@ -42,6 +47,11 @@ pub fn merge(current: &LibraryFile, incoming: &LibraryFile) -> (LibraryFile, Imp
             }
         }
         out.entries.insert(key.clone(), theirs.clone());
+    }
+    for (key, t) in &incoming.merged {
+        if !out.entries.contains_key(key) && !out.merged.contains_key(key) {
+            out.merged.insert(key.clone(), t.clone());
+        }
     }
     (out, report)
 }
@@ -162,7 +172,7 @@ mod tests {
     use crate::backup::bundle::tests::{entry, library, sample, PNG};
     use crate::library::commands::{load, update, UserPatch, MIGRATIONS};
     use crate::library::types::tests::{event, stamped};
-    use crate::library::types::EventKind;
+    use crate::library::types::{EventKind, LibraryEntry, Tombstone};
     use crate::prefs::{Prefs, SCHEMA_VERSION as PREFS_SCHEMA};
     use crate::store::file::tests::scratch;
     use crate::store::writer::StoreHandle;
@@ -200,6 +210,81 @@ mod tests {
     fn merge_never_deletes_entries_missing_from_the_backup() {
         let (out, _) = merge(&library(vec![entry(9, "t")]), &library(vec![]));
         assert!(out.entries.contains_key("tmdb:movie:9"));
+    }
+
+    fn tombstone(from: &LibraryEntry, into: &str, at: &str) -> Tombstone {
+        Tombstone {
+            into: into.into(),
+            entry: from.clone(),
+            existing: None,
+            at: at.into(),
+        }
+    }
+
+    #[test]
+    fn an_old_backup_does_not_bring_back_a_merged_manual_item() {
+        let mut manual = entry(5, "2026-09-01");
+        manual.key = "manual:movie:m1".into();
+        manual.snapshot.media_key = manual.key.clone();
+        let mut current = library(vec![entry(1, "2026-09-02")]);
+        current.merged.insert(
+            manual.key.clone(),
+            tombstone(&manual, "tmdb:movie:1", "2026-09-02"),
+        );
+        let mut newer = manual.clone();
+        newer.updated_at = "2026-12-31".into();
+        let (out, r) = merge(&current, &library(vec![newer]));
+        assert!(!out.entries.contains_key("manual:movie:m1"));
+        assert_eq!((r.added, r.updated, r.kept), (0, 0, 1));
+        assert_eq!(out.merged, current.merged);
+    }
+
+    #[test]
+    fn merging_a_backup_adds_its_merges_and_keeps_ours_on_a_clash() {
+        let mut theirs_only = entry(6, "t1");
+        theirs_only.key = "manual:movie:m6".into();
+        let mut ours_manual = entry(5, "t1");
+        ours_manual.key = "manual:movie:m5".into();
+        let mut current = library(vec![]);
+        current.merged.insert(
+            ours_manual.key.clone(),
+            tombstone(&ours_manual, "tmdb:movie:1", "ours"),
+        );
+        let mut incoming = library(vec![]);
+        incoming.merged.insert(
+            ours_manual.key.clone(),
+            tombstone(&ours_manual, "tmdb:movie:2", "theirs"),
+        );
+        incoming.merged.insert(
+            theirs_only.key.clone(),
+            tombstone(&theirs_only, "tmdb:movie:6", "theirs"),
+        );
+        let (out, _) = merge(&current, &incoming);
+        assert_eq!(out.merged["manual:movie:m5"].at, "ours");
+        assert_eq!(out.merged["manual:movie:m6"].into, "tmdb:movie:6");
+    }
+
+    #[test]
+    fn a_backup_merge_keeps_our_manual_item_over_the_backups_merge_of_it() {
+        let mut manual = entry(5, "2026-09-01");
+        manual.key = "manual:movie:m5".into();
+        manual.snapshot.media_key = manual.key.clone();
+        let current = library(vec![manual.clone()]);
+        let mut incoming = library(vec![entry(1, "2026-09-02")]);
+        incoming.merged.insert(
+            manual.key.clone(),
+            tombstone(&manual, "tmdb:movie:1", "2026-09-02"),
+        );
+        let (out, _) = merge(&current, &incoming);
+        assert!(
+            out.entries.contains_key("manual:movie:m5"),
+            "nothing is deleted"
+        );
+        assert!(out.entries.contains_key("tmdb:movie:1"));
+        assert!(
+            out.merged.is_empty(),
+            "a key is never both saved and merged"
+        );
     }
 
     #[test]

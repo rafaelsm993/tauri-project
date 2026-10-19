@@ -75,6 +75,8 @@ export const EVENT_KINDS = [
   "library_plan",
   "library_remove",
   "library_edit",
+  "library_merge",
+  "library_unmerge",
 ] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 

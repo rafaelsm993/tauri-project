@@ -1,9 +1,10 @@
-use super::commands::{self, LibraryFile, LibraryState, UserPatch, MIGRATIONS};
+use super::commands::{self, LibraryFile, LibraryState, MergePreview, UserPatch, MIGRATIONS};
 use super::manual::ManualDraft;
 use super::posters;
-use super::types::{Event, LibraryEntry, UserData};
+use super::types::{Event, Length, LibraryEntry, UserData};
 use crate::api::types::MediaItem;
 use crate::store;
+use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::Duration;
 use tauri::State;
@@ -93,6 +94,47 @@ pub async fn library_remove(
 #[tauri::command]
 pub async fn library_events(state: State<'_, LibraryState>) -> Result<Vec<Event>, String> {
     commands::events(&state)
+}
+
+// A dry run of `library_merge`, so the UI shows exactly what would be saved.
+#[tauri::command]
+pub async fn library_merge_preview(
+    state: State<'_, LibraryState>,
+    key: String,
+    item: MediaItem,
+    catalog_length: Length,
+) -> Result<MergePreview, String> {
+    commands::merge_preview(&state, &key, &item, &catalog_length).await
+}
+
+#[tauri::command]
+pub async fn library_merge(
+    state: State<'_, LibraryState>,
+    key: String,
+    item: MediaItem,
+    catalog_length: Length,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    let entry = commands::merge(&state, &key, &item, &catalog_length, event).await?;
+    tauri::async_runtime::spawn(posters::fill(state.inner().clone()));
+    Ok(entry)
+}
+
+#[tauri::command]
+pub async fn library_unmerge(
+    state: State<'_, LibraryState>,
+    key: String,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    commands::unmerge(&state, &key, event).await
+}
+
+// Manual key → catalog key; read beside the events so XP follows a merged item.
+#[tauri::command]
+pub async fn library_aliases(
+    state: State<'_, LibraryState>,
+) -> Result<BTreeMap<String, String>, String> {
+    Ok(commands::aliases(&state).await)
 }
 
 // Called on reconnect: every missing poster is tried again right away.

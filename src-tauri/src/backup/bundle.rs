@@ -1,3 +1,4 @@
+use crate::api::types::{MediaKey, ProviderId};
 use crate::library::commands::{
     validate_user_data, LibraryFile, MIGRATIONS as LIBRARY_MIGRATIONS,
     SCHEMA_VERSION as LIBRARY_SCHEMA,
@@ -225,7 +226,8 @@ fn versioned<T: DeserializeOwned>(
     })
 }
 
-// Every entry is keyed by its own media key and holds valid user data.
+// Every entry is keyed by its own media key and holds valid user data; every merge record
+// names a manual key that is not also a saved entry.
 fn validate(library: &LibraryFile) -> Result<(), String> {
     for (key, e) in &library.entries {
         if *key != e.key || e.key != e.snapshot.media_key {
@@ -233,6 +235,12 @@ fn validate(library: &LibraryFile) -> Result<(), String> {
         }
         validate_user_data(e.snapshot.media_type, &e.user)
             .map_err(|err| format!("the backup has an invalid entry {key}: {err}"))?;
+    }
+    for (key, t) in &library.merged {
+        let manual = MediaKey::parse(key).is_ok_and(|k| k.provider == ProviderId::Manual);
+        if !manual || t.entry.key != *key || library.entries.contains_key(key) {
+            return Err(format!("the backup has a broken merge record: {key}"));
+        }
     }
     Ok(())
 }
@@ -401,6 +409,62 @@ pub(crate) mod tests {
         b.library.entries.insert(e.key.clone(), e.clone());
         let back = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap();
         assert_eq!(back.library.entries[&e.key], e);
+    }
+
+    #[test]
+    fn a_merged_away_item_survives_a_backup() {
+        let mut b = sample();
+        let mut gone = entry(3, "2026-09-22T10:00:00.000Z");
+        gone.key = "manual:movie:m3".into();
+        gone.snapshot.media_key = gone.key.clone();
+        b.library.merged.insert(
+            "manual:movie:m3".into(),
+            crate::library::types::Tombstone {
+                into: "tmdb:movie:1".into(),
+                entry: gone,
+                existing: None,
+                at: "2026-09-23T10:00:00.000Z".into(),
+            },
+        );
+        let back = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap();
+        assert_eq!(back.library.merged, b.library.merged);
+    }
+
+    #[test]
+    fn a_backup_with_a_broken_merge_record_is_refused() {
+        let mut manual = entry(3, "t1");
+        manual.key = "manual:movie:m3".into();
+        manual.snapshot.media_key = manual.key.clone();
+        let ok = crate::library::types::Tombstone {
+            into: "tmdb:movie:1".into(),
+            entry: manual.clone(),
+            existing: None,
+            at: "t2".into(),
+        };
+        let mut wrong_key = sample();
+        wrong_key
+            .library
+            .merged
+            .insert("manual:movie:other".into(), ok.clone());
+        let mut not_manual = sample();
+        let mut provider = ok.clone();
+        provider.entry = entry(4, "t1");
+        not_manual
+            .library
+            .merged
+            .insert("tmdb:movie:4".into(), provider);
+        let mut both = sample();
+        both.library
+            .entries
+            .insert(manual.key.clone(), manual.clone());
+        both.library.merged.insert(manual.key.clone(), ok);
+        for b in [wrong_key, not_manual, both] {
+            let err = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap_err();
+            assert!(
+                err.starts_with("the backup has a broken merge record"),
+                "{err}"
+            );
+        }
     }
 
     #[test]

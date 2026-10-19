@@ -15,6 +15,7 @@ import {
   TITLES,
   XP,
 } from "./gamification";
+import { rekey } from "./reconcile";
 import type { Length, LibraryEvent } from "$lib/types/library";
 
 let seq = 0;
@@ -49,6 +50,31 @@ const MOVIE = "tmdb:movie:1";
 const ANIME = "anilist:anime:2";
 const xpOf = (events: LibraryEvent[]) => totalXp(awards(events));
 const reasons = (events: LibraryEvent[]) => awards(events).map((a) => a.reason);
+
+describe("a manual item matched to the catalog", () => {
+  const MANUAL = "manual:movie:m1";
+  const merged = { [MANUAL]: MOVIE };
+  const history = [
+    add(MANUAL, null, "2026-09-18"),
+    upd(MANUAL, { status: "completed", rating: 8 }, "2026-09-19"),
+  ];
+
+  it("keeps its XP and active days across the merge", () => {
+    const after = rekey([...history, ev("library_merge", MANUAL, { into: MOVIE })], merged);
+    expect(xpOf(after)).toBe(xpOf(history));
+    expect(activeDays(after)).toEqual(activeDays(history));
+    expect(awards(after).every((a) => a.media_key === MOVIE)).toBe(true);
+  });
+
+  it("loses all of it, the manual history too, when the catalog item is removed", () => {
+    expect(xpOf(rekey([...history, del(MOVIE)], merged))).toBe(0);
+  });
+
+  it("pays as one item when combined with a catalog entry it already had", () => {
+    const both = [add(MOVIE, { status: "completed", rating: 6 }), ...history];
+    expect(xpOf(rekey(both, merged))).toBe(XP.add + XP.rating + XP.completion);
+  });
+});
 
 describe("awards", () => {
   it("pays for an add once per item while it stays in the library", () => {

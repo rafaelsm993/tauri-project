@@ -395,17 +395,29 @@ pub async fn merge(
     Ok(entry)
 }
 
-/// Undoes a merge in one write, then logs `library_unmerge`; returns the manual entry.
+// What an undo put back: the manual entry, and the catalog entry as it was before a combine.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Unmerged {
+    pub manual: LibraryEntry,
+    pub into: String,
+    pub catalog: Option<LibraryEntry>,
+}
+
+/// Undoes a merge in one write, then logs `library_unmerge`.
 pub async fn unmerge(
     state: &LibraryState,
     key: &str,
     mut event: Event,
-) -> Result<LibraryEntry, String> {
+) -> Result<Unmerged, String> {
     check_event(&event, key, &[EventKind::LibraryUnmerge])?;
     let t = state.store.commit(|f| reconcile::unmerge(f, key)).await?;
     event.payload = serde_json::json!({ "into": t.into });
     log_event(state, event).await;
-    Ok(t.entry)
+    Ok(Unmerged {
+        manual: t.entry,
+        into: t.into,
+        catalog: t.existing,
+    })
 }
 
 /// Manual key → catalog key for every merge saved in the library file.
@@ -754,7 +766,9 @@ mod tests {
         let back = unmerge(&state, &key, ev("library_unmerge", &key, "u", "t3"))
             .await
             .unwrap();
-        assert_eq!(back.key, key);
+        assert_eq!(back.manual.key, key);
+        assert_eq!(back.into, PIRANESI);
+        assert_eq!(back.catalog, None);
         assert_eq!(saved(&dir), before);
         assert!(aliases(&state).await.is_empty());
         let log = events_in(&dir);
@@ -763,6 +777,35 @@ mod tests {
             log.last().unwrap().payload,
             serde_json::json!({ "into": PIRANESI })
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn undoing_a_combine_hands_back_the_catalog_entry_as_it_was() {
+        let dir = scratch("f3-unmerge-combine");
+        let state = state_in(&dir);
+        let key = manual_book(&state, 30).await;
+        let had = add(
+            &state,
+            &piranesi(),
+            UserData::default(),
+            ev("library_add", PIRANESI, "a", "t1"),
+        )
+        .await
+        .unwrap();
+        merge(
+            &state,
+            &key,
+            &piranesi(),
+            &pages(320),
+            ev("library_merge", &key, "m", "t2"),
+        )
+        .await
+        .unwrap();
+        let back = unmerge(&state, &key, ev("library_unmerge", &key, "u", "t3"))
+            .await
+            .unwrap();
+        assert_eq!(back.catalog, Some(had));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -42,6 +42,9 @@ async function setup(over: Partial<LibraryClient> = {}) {
     retryPosters: vi.fn(async () => {}),
     addManual: vi.fn(),
     editManual: vi.fn(),
+    mergePreview: vi.fn(),
+    merge: vi.fn(),
+    unmerge: vi.fn(),
     ...over,
   };
   const library = new LibraryStore(client);
@@ -108,6 +111,9 @@ describe("PlanDialog", () => {
       retryPosters: vi.fn(async () => {}),
       addManual: vi.fn(),
       editManual: vi.fn(),
+      mergePreview: vi.fn(),
+      merge: vi.fn(),
+      unmerge: vi.fn(),
     };
     const library = new LibraryStore(client);
     await library.hydrate();
@@ -137,6 +143,9 @@ describe("PlanDialog", () => {
       retryPosters: vi.fn(async () => {}),
       addManual: vi.fn(),
       editManual: vi.fn(),
+      mergePreview: vi.fn(),
+      merge: vi.fn(),
+      unmerge: vi.fn(),
     });
     await library.hydrate();
     const prefs = new PrefsStore({

@@ -80,6 +80,9 @@ async function stores(list: LibraryEntry[]) {
     retryPosters: vi.fn(async () => {}),
     addManual: vi.fn(),
     editManual: vi.fn(),
+    mergePreview: vi.fn(),
+    merge: vi.fn(),
+    unmerge: vi.fn(),
   };
   const library = new LibraryStore(client);
   await library.hydrate();

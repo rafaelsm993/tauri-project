@@ -20,7 +20,7 @@ export interface ReminderDeps {
     error: string;
     plan: (key: MediaKey, plan: Plan | null) => Promise<boolean>;
   };
-  game: { events: LibraryEvent[]; ready: boolean; moment: unknown };
+  game: { history: LibraryEvent[]; ready: boolean; moment: unknown };
   pace: () => number;
   log: (message: string) => void;
 }
@@ -50,7 +50,7 @@ export class ReminderStore {
   ) {
     this.today = localDay(clock());
     this.data = $derived(
-      todaySessions(deps.library.entries, deps.game.events, this.today, deps.pace()),
+      todaySessions(deps.library.entries, deps.game.history, this.today, deps.pace()),
     );
   }
 

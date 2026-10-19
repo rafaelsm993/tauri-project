@@ -2,9 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   EventKind,
   LibraryEntry,
+  Length,
   LibraryEvent,
   ManualDraft,
+  MergePreview,
   Plan,
+  Unmerged,
   UserData,
 } from "$lib/types/library";
 
@@ -116,6 +119,34 @@ function events(): Promise<LibraryEvent[]> {
   return invoke<LibraryEvent[]>("library_events");
 }
 
+// A dry run of `merge`: what would be saved, or the reason it would be refused.
+function mergePreview(key: MediaKey, item: MediaItem, length: Length): Promise<MergePreview> {
+  return invoke<MergePreview>("library_merge_preview", { key, item, catalogLength: length });
+}
+
+// Rust fills the payload with the catalog key, so listeners get the event as it was logged.
+async function merge(key: MediaKey, item: MediaItem, length: Length): Promise<LibraryEntry> {
+  const event = stamp("library_merge", key);
+  const entry = await invoke<LibraryEntry>("library_merge", {
+    key,
+    item,
+    catalogLength: length,
+    event,
+  });
+  return saved({ ...event, payload: { into: entry.key } }, Promise.resolve(entry));
+}
+
+async function unmerge(key: MediaKey): Promise<Unmerged> {
+  const event = stamp("library_unmerge", key);
+  const back = await invoke<Unmerged>("library_unmerge", { key, event });
+  return saved({ ...event, payload: { into: back.into } }, Promise.resolve(back));
+}
+
+// Manual key → catalog key, so a merged item's history keeps counting.
+function aliases(): Promise<Record<MediaKey, MediaKey>> {
+  return invoke<Record<MediaKey, MediaKey>>("library_aliases");
+}
+
 export const library = {
   load,
   add,
@@ -128,5 +159,9 @@ export const library = {
   retryPosters,
   events,
   onEvent,
+  mergePreview,
+  merge,
+  unmerge,
+  aliases,
 };
 export type Library = typeof library;

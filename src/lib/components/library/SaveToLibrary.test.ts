@@ -54,6 +54,9 @@ function storeWith(over: Partial<LibraryClient> = {}) {
     retryPosters: vi.fn(async () => {}),
     addManual: vi.fn(),
     editManual: vi.fn(),
+    mergePreview: vi.fn(),
+    merge: vi.fn(),
+    unmerge: vi.fn(),
     ...over,
   };
   return { store: new LibraryStore(client), client };

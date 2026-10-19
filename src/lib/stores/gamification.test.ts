@@ -329,3 +329,66 @@ describe("level-up moment", () => {
     expect(store.moment).toBeNull();
   });
 });
+
+describe("a merged manual item", () => {
+  const MANUAL = "manual:movie:m1";
+  const CATALOG = "tmdb:movie:1";
+  const history: LibraryEvent[] = [
+    { ...ev("a", null), media_key: MANUAL },
+    { ...ev("b", { status: "completed" }), kind: "library_update", media_key: MANUAL },
+  ];
+  const remove: LibraryEvent = { ...ev("r", null), kind: "library_remove", media_key: CATALOG };
+  const merge: LibraryEvent = {
+    ...ev("m", { into: CATALOG }),
+    kind: "library_merge",
+    media_key: MANUAL,
+  };
+
+  it("files its saved history under the catalog key, so removing that takes it all", async () => {
+    const aliases = vi.fn(async () => ({ [MANUAL]: CATALOG }));
+    const store = new GamificationStore(
+      { events: async () => [...history, remove], aliases },
+      () => [],
+      () => "2026-09-20",
+    );
+    await store.load();
+    expect(aliases).toHaveBeenCalled();
+    expect(store.xp).toBe(0);
+  });
+
+  it("follows a merge heard while the app runs", async () => {
+    let emit: (e: LibraryEvent) => void = () => {};
+    const store = new GamificationStore(
+      {
+        events: async () => history,
+        aliases: async () => ({}),
+        onEvent: (fn) => ((emit = fn), () => {}),
+      },
+      () => [],
+      () => "2026-09-20",
+    );
+    await store.load();
+    const before = store.xp;
+    emit(merge);
+    expect(store.xp).toBe(before);
+    expect(store.awards.every((a) => a.media_key === CATALOG)).toBe(true);
+    emit(remove);
+    expect(store.xp).toBe(0);
+  });
+
+  it("still counts XP when the aliases can't be read", async () => {
+    const store = new GamificationStore(
+      {
+        events: async () => history,
+        aliases: async () => {
+          throw new Error("nope");
+        },
+      },
+      () => [],
+      () => "2026-09-20",
+    );
+    await store.load();
+    expect(store.ready).toBe(true);
+    expect(store.xp).toBe(XP.add + XP.completion);
+  });
+});

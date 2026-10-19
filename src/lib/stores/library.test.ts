@@ -60,6 +60,9 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
     retryPosters: vi.fn(async () => {}),
     addManual: vi.fn(async () => entry()),
     editManual: vi.fn(async () => entry()),
+    mergePreview: vi.fn(async () => ({ entry: entry(), combined: false })),
+    merge: vi.fn(async () => entry()),
+    unmerge: vi.fn(async () => ({ manual: entry(), into: "tmdb:tv:7", catalog: null })),
     ...over,
   };
 }
@@ -419,5 +422,72 @@ describe("saves say whether they worked", () => {
     expect(await store.update("tmdb:tv:999", { progress: 1 })).toBe(false);
     expect(await store.plan("tmdb:tv:999", null)).toBe(false);
     expect(await store.remove("tmdb:tv:999")).toBe(false);
+  });
+});
+
+describe("merge", () => {
+  const MANUAL = "manual:tv:m1";
+  const manual = entry({ key: MANUAL, snapshot: { ...entry().snapshot, media_key: MANUAL } });
+
+  it("swaps the manual entry for the saved catalog one", async () => {
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [manual]) }));
+    await store.hydrate();
+    expect(await store.merge(MANUAL, ITEM, emptyLength())).toEqual(entry());
+    expect(store.has(MANUAL)).toBe(false);
+    expect(store.get("tmdb:tv:7")).toEqual(entry());
+  });
+
+  it("changes nothing and says why when the backend refuses", async () => {
+    const merge = vi.fn(async () => {
+      throw "your progress is past this match's length";
+    });
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [manual]), merge }));
+    await store.hydrate();
+    expect(await store.merge(MANUAL, ITEM, emptyLength())).toBeNull();
+    expect(store.get(MANUAL)).toEqual(manual);
+    expect(store.has("tmdb:tv:7")).toBe(false);
+    expect(store.error).toMatch(/past this match/);
+  });
+
+  it("refuses an item that is not in the library without asking the backend", async () => {
+    const client = fakeClient();
+    const store = new LibraryStore(client);
+    await store.hydrate();
+    expect(await store.merge(MANUAL, ITEM, emptyLength())).toBeNull();
+    expect(client.merge).not.toHaveBeenCalled();
+  });
+});
+
+describe("unmerge", () => {
+  const MANUAL = "manual:tv:m1";
+  const manual = entry({ key: MANUAL, snapshot: { ...entry().snapshot, media_key: MANUAL } });
+
+  it("brings the manual entry back and drops the catalog one", async () => {
+    const unmerge = vi.fn(async () => ({ manual, into: "tmdb:tv:7", catalog: null }));
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [entry()]), unmerge }));
+    await store.hydrate();
+    expect(await store.unmerge(MANUAL)).toEqual(manual);
+    expect(store.get(MANUAL)).toEqual(manual);
+    expect(store.has("tmdb:tv:7")).toBe(false);
+  });
+
+  it("puts back the catalog entry it was combined with", async () => {
+    const had = entry({ updated_at: "2026-01-01T00:00:00Z" });
+    const unmerge = vi.fn(async () => ({ manual, into: "tmdb:tv:7", catalog: had }));
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [entry()]), unmerge }));
+    await store.hydrate();
+    await store.unmerge(MANUAL);
+    expect(store.get("tmdb:tv:7")).toEqual(had);
+  });
+
+  it("keeps everything and says why when the undo is refused", async () => {
+    const unmerge = vi.fn(async () => {
+      throw "it changed after the match";
+    });
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [entry()]), unmerge }));
+    await store.hydrate();
+    expect(await store.unmerge(MANUAL)).toBeNull();
+    expect(store.has("tmdb:tv:7")).toBe(true);
+    expect(store.error).toMatch(/changed after the match/);
   });
 });

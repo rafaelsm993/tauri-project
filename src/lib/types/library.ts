@@ -68,6 +68,19 @@ export interface LibraryEntry {
   updated_at: string;
 }
 
+// What `library_merge` would save; `combined` when the catalog item was already in the library.
+export interface MergePreview {
+  entry: LibraryEntry;
+  combined: boolean;
+}
+
+// What an undo put back: the manual entry, and the catalog entry as it was before a combine.
+export interface Unmerged {
+  manual: LibraryEntry;
+  into: MediaKey;
+  catalog: LibraryEntry | null;
+}
+
 // The kinds the library commands accept, pinned to Rust's `EventKind` by the contract test.
 export const EVENT_KINDS = [
   "library_add",

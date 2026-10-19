@@ -3,7 +3,16 @@ import { library as defaultClient } from "$lib/api/library";
 import { emptyLength } from "$lib/domain/length";
 import { errorMessage } from "$lib/utils/errors";
 import { applyDraft } from "$lib/domain/manual";
-import type { LibraryEntry, LibraryStatus, ManualDraft, Plan, UserData } from "$lib/types/library";
+import type {
+  Length,
+  LibraryEntry,
+  LibraryStatus,
+  ManualDraft,
+  MergePreview,
+  Plan,
+  Unmerged,
+  UserData,
+} from "$lib/types/library";
 import type { MediaItem, MediaKey } from "$lib/types/media";
 
 export type LibraryClient = {
@@ -16,6 +25,9 @@ export type LibraryClient = {
   retryPosters: () => Promise<void>;
   addManual: (draft: ManualDraft, user?: Partial<UserData>) => Promise<LibraryEntry>;
   editManual: (key: MediaKey, draft: ManualDraft) => Promise<LibraryEntry>;
+  mergePreview: (key: MediaKey, item: MediaItem, length: Length) => Promise<MergePreview>;
+  merge: (key: MediaKey, item: MediaItem, length: Length) => Promise<LibraryEntry>;
+  unmerge: (key: MediaKey) => Promise<Unmerged>;
 };
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
@@ -211,6 +223,39 @@ export class LibraryStore {
       return false;
     } finally {
       this.mark(key, false);
+    }
+  }
+
+  // Not optimistic: the merged entry comes from Rust. Resolves it, or null with `error` set.
+  async merge(key: MediaKey, item: MediaItem, length: Length): Promise<LibraryEntry | null> {
+    if (!this.map.has(key)) return null;
+    this.error = "";
+    this.mark(key, true);
+    try {
+      const saved = await this.client.merge(key, item, length);
+      this.drop(key);
+      this.write(saved.key, saved);
+      return saved;
+    } catch (e) {
+      this.error = errorMessage(e, "Failed to use this match.");
+      return null;
+    } finally {
+      this.mark(key, false);
+    }
+  }
+
+  // Resolves the manual entry that came back, or null with `error` set.
+  async unmerge(key: MediaKey): Promise<LibraryEntry | null> {
+    this.error = "";
+    try {
+      const back = await this.client.unmerge(key);
+      if (back.catalog) this.write(back.into, back.catalog);
+      else this.drop(back.into);
+      this.write(back.manual.key, back.manual);
+      return back.manual;
+    } catch (e) {
+      this.error = errorMessage(e, "Failed to undo the match.");
+      return null;
     }
   }
 

@@ -21,6 +21,7 @@ import {
   statusCounts,
   xpByWeek,
 } from "$lib/domain/dashboard";
+import { asAliases, rekey, withAliasEvents, type Aliases } from "$lib/domain/reconcile";
 import { libraryStore } from "$lib/stores/library.svelte";
 import { prefsStore } from "$lib/stores/prefs.svelte";
 import { errorMessage } from "$lib/utils/errors";
@@ -28,6 +29,7 @@ import type { LibraryEntry, LibraryEvent } from "$lib/types/library";
 
 export type EventsClient = {
   events: () => Promise<LibraryEvent[]>;
+  aliases?: () => Promise<unknown>;
   onEvent?: (fn: (event: LibraryEvent) => void) => () => void;
 };
 
@@ -63,6 +65,8 @@ export class GamificationStore {
   private celebrated = 0;
 
   events = $state<LibraryEvent[]>([]);
+  // Read with the log; merges heard later are added from the events themselves.
+  private saved = $state<Aliases>({});
   moment = $state<Moment | null>(null);
   burst = $state(false);
   today = $state("");
@@ -70,7 +74,10 @@ export class GamificationStore {
   error = $state("");
 
   entries = $derived.by(() => this.entriesOf());
-  awards = $derived(awards(this.events, savedLengths(this.entries)));
+  aliases = $derived(withAliasEvents(this.saved, this.events));
+  // A merged item's history is filed under its catalog key, so it keeps (or loses) its XP.
+  history = $derived(rekey(this.events, this.aliases));
+  awards = $derived(awards(this.history, savedLengths(this.entries)));
   xp = $derived(totalXp(this.awards));
   level = $derived(levelOf(this.xp));
   title = $derived(titleFor(this.level.level));
@@ -142,6 +149,16 @@ export class GamificationStore {
     if (day !== this.today) this.today = day;
   }
 
+  // Without them a merged item's old XP just stays under its manual key; never fail the log.
+  private async readAliases(): Promise<Aliases> {
+    try {
+      return asAliases(await this.client.aliases?.());
+    } catch (e) {
+      console.warn("[gamification] could not read merged items", e);
+      return {};
+    }
+  }
+
   // Read on every visit: cheap, and an import or a save elsewhere is always reflected.
   async load({ quiet = false }: { quiet?: boolean } = {}): Promise<void> {
     this.error = "";
@@ -150,9 +167,10 @@ export class GamificationStore {
     const heard: LibraryEvent[] = [];
     this.queues.push(heard);
     try {
-      const log = asLog(await this.client.events());
+      const [log, saved] = await Promise.all([this.client.events(), this.readAliases()]);
       if (id !== this.loads) return;
-      this.events = mergeById(log, heard);
+      this.saved = saved;
+      this.events = mergeById(asLog(log), heard);
       this.ready = true;
     } catch (e) {
       if (id !== this.loads) return;

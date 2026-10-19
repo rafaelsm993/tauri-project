@@ -1,4 +1,6 @@
-use super::commands::{self, LibraryFile, LibraryState, MergePreview, UserPatch, MIGRATIONS};
+use super::commands::{
+    self, LibraryFile, LibraryState, MergePreview, Unmerged, UserPatch, MIGRATIONS,
+};
 use super::manual::ManualDraft;
 use super::posters;
 use super::types::{Event, Length, LibraryEntry, UserData};
@@ -125,7 +127,7 @@ pub async fn library_unmerge(
     state: State<'_, LibraryState>,
     key: String,
     event: Event,
-) -> Result<LibraryEntry, String> {
+) -> Result<Unmerged, String> {
     commands::unmerge(&state, &key, event).await
 }
 

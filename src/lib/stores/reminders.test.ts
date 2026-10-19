@@ -51,7 +51,7 @@ function setup(entries: LibraryEntry[] = [entry(1, "Dune")], ready = true) {
   let now = new Date(2026, 9, 1, 10, 0);
   const deps = {
     library: { entries, ready, error: "", plan: vi.fn(async () => true) },
-    game: { events: [] as LibraryEvent[], ready, moment: null as unknown },
+    game: { history: [] as LibraryEvent[], ready, moment: null as unknown },
     pace: () => 40,
     log: vi.fn(),
   } satisfies ReminderDeps;
@@ -76,6 +76,21 @@ describe("ReminderStore", () => {
     const { store } = setup([entry(1, "Dune")], false);
     store.check();
     expect(store.toast).toBeNull();
+  });
+
+  it("counts a session from the history it is given, where a merged item's log is rekeyed", () => {
+    const { store, deps } = setup();
+    deps.game.history = [
+      {
+        id: "s",
+        kind: "library_update",
+        media_key: "tmdb:tv:1",
+        at_utc: "",
+        local_date: "2026-10-01",
+        payload: { progress: 1 },
+      },
+    ];
+    expect(store.data.due).toHaveLength(0);
   });
 
   it("shows today's session on check and logs it", () => {

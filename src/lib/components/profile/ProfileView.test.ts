@@ -119,7 +119,9 @@ describe("ProfileView", () => {
   it("shows the level, title and XP in the level card", async () => {
     render(ProfileView, { store: storeWith(LOG) });
     const card = await screen.findByRole("region", { name: "Level" });
-    expect(within(card).getByRole("img", { name: /Level 1, 130 of 141 XP/ })).toBeInTheDocument();
+    expect(
+      await within(card).findByRole("img", { name: /Level 1, 130 of 141 XP/ }),
+    ).toBeInTheDocument();
     expect(within(card).getByText("Newcomer")).toBeInTheDocument();
     expect(within(card).getByText(/11 XP to level 2/)).toBeInTheDocument();
     expect(within(card).getByText(/Next title: Curious Mind at level 3/)).toBeInTheDocument();

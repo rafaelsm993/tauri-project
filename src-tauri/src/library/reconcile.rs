@@ -1,0 +1,542 @@
+use super::commands::{validate_user_data, LibraryFile};
+use super::types::{Length, LibraryEntry, MediaSnapshot, Status, Tombstone, UserData};
+use crate::api::types::{MediaItem, MediaKey, MediaType, ProviderId};
+
+// The library change a merge makes, built before anything is written.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MergePlan {
+    pub entry: LibraryEntry,
+    pub tombstone: Tombstone,
+}
+
+// One side of a merge: the user's data and when it last changed.
+#[derive(Debug, Clone, Copy)]
+pub struct Side<'a> {
+    pub user: &'a UserData,
+    pub updated_at: &'a str,
+}
+
+// The user's data after a merge; catalog length only fills what nobody typed.
+pub fn merge_user(
+    media_type: MediaType,
+    manual: Side,
+    existing: Option<Side>,
+    catalog: &Length,
+) -> Result<UserData, String> {
+    let (newer, older) = match existing {
+        Some(e) if e.updated_at > manual.updated_at => (e, Some(manual)),
+        Some(e) => (manual, Some(e)),
+        None => (manual, None),
+    };
+    let old = older.map(|s| s.user);
+    let typed = match old {
+        Some(o) => fill(&newer.user.length, &o.length),
+        None => newer.user.length,
+    };
+    let user = UserData {
+        status: old.map_or(newer.user.status, |o| status(newer.user.status, o.status)),
+        progress: old.map_or(0, |o| o.progress).max(newer.user.progress),
+        rating: newer.user.rating.or(old.and_then(|o| o.rating)),
+        review: newer
+            .user
+            .review
+            .clone()
+            .or(old.and_then(|o| o.review.clone())),
+        length: fill(&typed, catalog),
+        plan: newer.user.plan.clone().or(old.and_then(|o| o.plan.clone())),
+    };
+    check_progress(media_type, &user, &typed)?;
+    Ok(user)
+}
+
+// Each length field the first side has, else the second's.
+fn fill(first: &Length, second: &Length) -> Length {
+    Length {
+        runtime_minutes: first.runtime_minutes.or(second.runtime_minutes),
+        episodes: first.episodes.or(second.episodes),
+        episode_minutes: first.episode_minutes.or(second.episode_minutes),
+        chapters: first.chapters.or(second.chapters),
+        chapter_minutes: first.chapter_minutes.or(second.chapter_minutes),
+        pages: first.pages.or(second.pages),
+        hours: first.hours.or(second.hours),
+    }
+}
+
+// Further along wins; Dropped loses to an active status and ties Planning, where the newer side wins.
+fn status(newer: Status, older: Status) -> Status {
+    let rank = |s: Status| match s {
+        Status::Planning | Status::Dropped => 0,
+        Status::InProgress => 1,
+        Status::Completed => 2,
+    };
+    if rank(older) > rank(newer) {
+        older
+    } else {
+        newer
+    }
+}
+
+// The length field progress counts against, with its unit; a movie is only watched or not.
+fn total(media_type: MediaType, length: &Length) -> Option<(Option<u32>, &'static str)> {
+    match media_type {
+        MediaType::Movie => None,
+        MediaType::Tv | MediaType::Anime => Some((length.episodes, "episodes")),
+        MediaType::Manga => Some((length.chapters, "chapters")),
+        MediaType::Book => Some((length.pages, "pages")),
+        MediaType::Game => Some((length.hours, "hours")),
+    }
+}
+
+// Only a catalog length can cut progress short; a length the user typed is theirs to keep.
+fn check_progress(media_type: MediaType, user: &UserData, typed: &Length) -> Result<(), String> {
+    if total(media_type, typed).is_some_and(|(n, _)| n.is_some()) {
+        return Ok(());
+    }
+    match total(media_type, &user.length) {
+        Some((Some(n), unit)) if user.progress > n => Err(format!(
+            "Your progress ({} {unit}) is past this match's length ({n}). \
+             Add the length first, or pick another match.",
+            user.progress
+        )),
+        _ => Ok(()),
+    }
+}
+
+// Checks a manual item can become `item` and builds the merged entry plus its tombstone.
+pub fn plan_merge(
+    file: &LibraryFile,
+    from: &str,
+    item: &MediaItem,
+    catalog: &Length,
+    at: &str,
+) -> Result<MergePlan, String> {
+    let key = MediaKey::parse(from)?;
+    if key.provider != ProviderId::Manual {
+        return Err("only a manual item can be matched".into());
+    }
+    if file.merged.contains_key(from) {
+        return Err("this item was already matched".into());
+    }
+    let manual = file
+        .entries
+        .get(from)
+        .ok_or_else(|| format!("{from} is not in the library"))?;
+    if item.provider == ProviderId::Manual {
+        return Err("a match must come from a catalog".into());
+    }
+    if item.media_type != key.media_type {
+        return Err("a match must be the same type".into());
+    }
+    let existing = file.entries.get(&item.media_key);
+    let user = merge_user(key.media_type, side(manual), existing.map(side), catalog)?;
+    validate_user_data(key.media_type, &user)?;
+    let created_at = existing
+        .map_or(&manual.created_at, |e| {
+            (&e.created_at).min(&manual.created_at)
+        })
+        .clone();
+    let entry = LibraryEntry {
+        key: item.media_key.clone(),
+        snapshot: existing.map_or_else(|| MediaSnapshot::from_item(item), |e| e.snapshot.clone()),
+        user,
+        created_at,
+        updated_at: at.to_string(),
+    };
+    let tombstone = Tombstone {
+        into: item.media_key.clone(),
+        entry: manual.clone(),
+        existing: existing.cloned(),
+        at: at.to_string(),
+    };
+    Ok(MergePlan { entry, tombstone })
+}
+
+fn side(entry: &LibraryEntry) -> Side<'_> {
+    Side {
+        user: &entry.user,
+        updated_at: &entry.updated_at,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::types::Id;
+    use crate::library::types::Plan;
+
+    const MANUAL: &str = "manual:book:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+
+    fn user(status: Status, progress: u32) -> UserData {
+        UserData {
+            status,
+            progress,
+            ..UserData::default()
+        }
+    }
+
+    fn pages(n: u32) -> Length {
+        Length {
+            pages: Some(n),
+            ..Length::default()
+        }
+    }
+
+    fn plan(since: &str) -> Plan {
+        Plan {
+            days: vec![0],
+            max_session_minutes: 30,
+            since: since.into(),
+        }
+    }
+
+    fn side<'a>(user: &'a UserData, at: &'a str) -> Side<'a> {
+        Side {
+            user,
+            updated_at: at,
+        }
+    }
+
+    fn book() -> MediaItem {
+        MediaItem {
+            release_date: Some("2020-09-15".into()),
+            poster_path: Some("https://example.com/piranesi.jpg".into()),
+            ..MediaItem::new(
+                Id::Num(42),
+                "Piranesi".into(),
+                MediaType::Book,
+                ProviderId::Itunes,
+            )
+        }
+    }
+
+    fn manual_entry(user: UserData, updated_at: &str) -> LibraryEntry {
+        LibraryEntry {
+            key: MANUAL.into(),
+            snapshot: MediaSnapshot {
+                media_key: MANUAL.into(),
+                provider: ProviderId::Manual,
+                media_type: MediaType::Book,
+                title: "piranesi (typo)".into(),
+                poster_path: None,
+                poster_file: None,
+                year: None,
+                creator: Some("S. Clarke".into()),
+                overview: Some("My own notes".into()),
+                genres: vec!["Fantasy".into()],
+                platforms: Vec::new(),
+            },
+            user,
+            created_at: "2026-10-01T10:00:00Z".into(),
+            updated_at: updated_at.into(),
+        }
+    }
+
+    fn library(entries: Vec<LibraryEntry>) -> LibraryFile {
+        LibraryFile {
+            entries: entries.into_iter().map(|e| (e.key.clone(), e)).collect(),
+            ..LibraryFile::default()
+        }
+    }
+
+    #[test]
+    fn a_typed_length_stays_and_empty_fields_take_the_catalogs() {
+        let mine = UserData {
+            length: Length {
+                pages: Some(400),
+                ..Length::default()
+            },
+            ..user(Status::InProgress, 10)
+        };
+        let catalog = Length {
+            pages: Some(320),
+            hours: Some(9),
+            ..Length::default()
+        };
+        let out = merge_user(MediaType::Book, side(&mine, "t1"), None, &catalog).unwrap();
+        assert_eq!(out.length.pages, Some(400));
+        assert_eq!(out.length.hours, Some(9));
+    }
+
+    #[test]
+    fn the_users_own_fields_survive_a_plain_merge() {
+        let mine = UserData {
+            rating: Some(8),
+            review: Some("Loved the house".into()),
+            plan: Some(plan("2026-10-01")),
+            ..user(Status::InProgress, 120)
+        };
+        let out = merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).unwrap();
+        assert_eq!(
+            out,
+            UserData {
+                length: pages(320),
+                ..mine
+            }
+        );
+    }
+
+    #[test]
+    fn progress_past_the_catalogs_length_is_refused() {
+        let mine = user(Status::InProgress, 380);
+        let err = merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).unwrap_err();
+        assert_eq!(
+            err,
+            "Your progress (380 pages) is past this match's length (320). \
+             Add the length first, or pick another match."
+        );
+    }
+
+    #[test]
+    fn progress_past_a_length_the_user_typed_is_not_the_catalogs_problem() {
+        let mine = UserData {
+            length: pages(300),
+            ..user(Status::InProgress, 380)
+        };
+        assert!(merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).is_ok());
+    }
+
+    #[test]
+    fn combining_keeps_the_most_advanced_status_and_progress() {
+        let mine = user(Status::InProgress, 50);
+        let theirs = user(Status::Completed, 20);
+        let out = merge_user(
+            MediaType::Book,
+            side(&mine, "t2"),
+            Some(side(&theirs, "t1")),
+            &Length::default(),
+        )
+        .unwrap();
+        assert_eq!((out.status, out.progress), (Status::Completed, 50));
+    }
+
+    #[test]
+    fn combining_keeps_the_older_sides_progress_when_it_is_further() {
+        let mine = user(Status::InProgress, 10);
+        let theirs = user(Status::InProgress, 90);
+        let out = merge_user(
+            MediaType::Book,
+            side(&mine, "t2"),
+            Some(side(&theirs, "t1")),
+            &Length::default(),
+        )
+        .unwrap();
+        assert_eq!(out.progress, 90);
+    }
+
+    #[test]
+    fn dropped_loses_to_an_active_status_whichever_side_is_newer() {
+        for (a, b) in [
+            (Status::Dropped, Status::InProgress),
+            (Status::InProgress, Status::Dropped),
+        ] {
+            let (mine, theirs) = (user(a, 0), user(b, 0));
+            let out = merge_user(
+                MediaType::Book,
+                side(&mine, "t9"),
+                Some(side(&theirs, "t1")),
+                &Length::default(),
+            )
+            .unwrap();
+            assert_eq!(out.status, Status::InProgress, "{a:?} + {b:?}");
+        }
+    }
+
+    #[test]
+    fn dropped_against_planning_follows_the_newer_side() {
+        let (dropped, planning) = (user(Status::Dropped, 0), user(Status::Planning, 0));
+        let newer_dropped = merge_user(
+            MediaType::Book,
+            side(&dropped, "t2"),
+            Some(side(&planning, "t1")),
+            &Length::default(),
+        )
+        .unwrap();
+        assert_eq!(newer_dropped.status, Status::Dropped);
+        let newer_planning = merge_user(
+            MediaType::Book,
+            side(&dropped, "t1"),
+            Some(side(&planning, "t2")),
+            &Length::default(),
+        )
+        .unwrap();
+        assert_eq!(newer_planning.status, Status::Planning);
+    }
+
+    #[test]
+    fn combining_keeps_a_rating_only_one_side_has() {
+        let mine = user(Status::Planning, 0);
+        let theirs = UserData {
+            rating: Some(7),
+            ..user(Status::Planning, 0)
+        };
+        let out = merge_user(
+            MediaType::Book,
+            side(&mine, "t9"),
+            Some(side(&theirs, "t1")),
+            &Length::default(),
+        )
+        .unwrap();
+        assert_eq!(out.rating, Some(7));
+    }
+
+    #[test]
+    fn combining_takes_the_newer_sides_rating_review_and_plan() {
+        let old = UserData {
+            rating: Some(4),
+            review: Some("old".into()),
+            plan: Some(plan("2026-01-01")),
+            ..user(Status::Planning, 0)
+        };
+        let new = UserData {
+            rating: Some(9),
+            review: Some("new".into()),
+            plan: Some(plan("2026-10-01")),
+            ..user(Status::Planning, 0)
+        };
+        for (mine, mine_at, theirs, theirs_at) in
+            [(&new, "t2", &old, "t1"), (&old, "t1", &new, "t2")]
+        {
+            let out = merge_user(
+                MediaType::Book,
+                side(mine, mine_at),
+                Some(side(theirs, theirs_at)),
+                &Length::default(),
+            )
+            .unwrap();
+            assert_eq!(out.rating, Some(9));
+            assert_eq!(out.review.as_deref(), Some("new"));
+            assert_eq!(out.plan, Some(plan("2026-10-01")));
+        }
+    }
+
+    #[test]
+    fn combining_keeps_a_length_either_side_typed_before_the_catalogs() {
+        let mine = user(Status::Planning, 0);
+        let theirs = UserData {
+            length: pages(410),
+            ..user(Status::Planning, 0)
+        };
+        let out = merge_user(
+            MediaType::Book,
+            side(&mine, "t2"),
+            Some(side(&theirs, "t1")),
+            &pages(320),
+        )
+        .unwrap();
+        assert_eq!(out.length.pages, Some(410));
+    }
+
+    #[test]
+    fn a_plain_merge_moves_the_item_under_the_catalog_key() {
+        let mine = UserData {
+            rating: Some(8),
+            ..user(Status::InProgress, 120)
+        };
+        let file = library(vec![manual_entry(mine.clone(), "2026-10-02T09:00:00Z")]);
+        let plan = plan_merge(&file, MANUAL, &book(), &pages(320), "2026-10-19T12:00:00Z").unwrap();
+        assert_eq!(plan.entry.key, "itunes:book:42");
+        assert_eq!(plan.entry.snapshot, MediaSnapshot::from_item(&book()));
+        assert_eq!(
+            plan.entry.user,
+            UserData {
+                length: pages(320),
+                ..mine
+            }
+        );
+        assert_eq!(plan.entry.created_at, "2026-10-01T10:00:00Z");
+        assert_eq!(plan.entry.updated_at, "2026-10-19T12:00:00Z");
+        assert_eq!(
+            plan.tombstone,
+            Tombstone {
+                into: "itunes:book:42".into(),
+                entry: file.entries[MANUAL].clone(),
+                existing: None,
+                at: "2026-10-19T12:00:00Z".into(),
+            }
+        );
+    }
+
+    #[test]
+    fn a_combine_keeps_the_saved_catalog_entry_and_remembers_it() {
+        let saved = LibraryEntry {
+            key: "itunes:book:42".into(),
+            snapshot: MediaSnapshot {
+                poster_file: Some("itunes_book_42.jpg".into()),
+                ..MediaSnapshot::from_item(&book())
+            },
+            user: user(Status::Completed, 0),
+            created_at: "2026-09-01T08:00:00Z".into(),
+            updated_at: "2026-09-02T08:00:00Z".into(),
+        };
+        let file = library(vec![
+            manual_entry(user(Status::InProgress, 30), "2026-10-02T09:00:00Z"),
+            saved.clone(),
+        ]);
+        let plan = plan_merge(&file, MANUAL, &book(), &Length::default(), "t9").unwrap();
+        assert_eq!(plan.entry.snapshot, saved.snapshot);
+        assert_eq!(
+            (plan.entry.user.status, plan.entry.user.progress),
+            (Status::Completed, 30)
+        );
+        assert_eq!(plan.entry.created_at, "2026-09-01T08:00:00Z");
+        assert_eq!(plan.tombstone.existing, Some(saved));
+    }
+
+    #[test]
+    fn a_merge_is_refused_for_anything_but_a_saved_manual_item_of_the_same_type() {
+        let file = library(vec![manual_entry(UserData::default(), "t1")]);
+        let mut done = file.clone();
+        done.entries.clear();
+        done.merged.insert(
+            MANUAL.into(),
+            Tombstone {
+                into: "itunes:book:42".into(),
+                entry: file.entries[MANUAL].clone(),
+                existing: None,
+                at: "t2".into(),
+            },
+        );
+        let movie = MediaItem::new(
+            Id::Num(1),
+            "Piranesi".into(),
+            MediaType::Movie,
+            ProviderId::Tmdb,
+        );
+        let manual_match = MediaItem::new(
+            Id::Str("x".into()),
+            "Piranesi".into(),
+            MediaType::Book,
+            ProviderId::Manual,
+        );
+        let none = Length::default();
+        let cases: [(&LibraryFile, &str, &MediaItem, &str); 5] = [
+            (
+                &file,
+                "itunes:book:42",
+                &book(),
+                "only a manual item can be matched",
+            ),
+            (
+                &file,
+                "manual:book:missing",
+                &book(),
+                "manual:book:missing is not in the library",
+            ),
+            (&done, MANUAL, &book(), "this item was already matched"),
+            (&file, MANUAL, &movie, "a match must be the same type"),
+            (
+                &file,
+                MANUAL,
+                &manual_match,
+                "a match must come from a catalog",
+            ),
+        ];
+        for (f, from, item, want) in cases {
+            assert_eq!(
+                plan_merge(f, from, item, &none, "t3").unwrap_err(),
+                want,
+                "{from}"
+            );
+        }
+    }
+}

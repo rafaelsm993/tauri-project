@@ -307,6 +307,7 @@ pub(crate) mod tests {
     pub(crate) fn library(entries: Vec<LibraryEntry>) -> LibraryFile {
         LibraryFile {
             entries: entries.into_iter().map(|e| (e.key.clone(), e)).collect(),
+            ..LibraryFile::default()
         }
     }
 

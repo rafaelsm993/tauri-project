@@ -166,4 +166,27 @@ mod tests {
         assert_eq!(std::fs::read(&path).unwrap(), before);
         std::fs::remove_dir_all(&dir).unwrap();
     }
+
+    #[tokio::test]
+    async fn a_v1_library_loads_with_no_merges_and_is_saved_again_as_v2() {
+        let dir = scratch("ipc-v1");
+        let path = dir.join("library.json");
+        std::fs::write(
+            &path,
+            br#"{"schema_version":1,"data":{"entries":{"tmdb:tv:7":{"key":"tmdb:tv:7","snapshot":{"media_key":"tmdb:tv:7","provider":"tmdb","media_type":"tv","title":"Arcane"}}}}}"#,
+        )
+        .unwrap();
+        let state = init(&dir).unwrap();
+        assert_eq!(commands::load(&state).await.len(), 1);
+        assert!(state.store.read(|f| f.merged.is_empty()).await);
+        assert!(
+            state.store.flush().await.unwrap(),
+            "a migrated file is written again"
+        );
+        let saved: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved["schema_version"], 2);
+        assert_eq!(saved["data"]["merged"], serde_json::json!({}));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }

@@ -1,7 +1,9 @@
 use super::events::{append_event, read_events};
 use super::manual::{self, ManualDraft};
 use super::posters;
-use super::types::{Event, EventKind, Length, LibraryEntry, MediaSnapshot, Plan, Status, UserData};
+use super::types::{
+    Event, EventKind, Length, LibraryEntry, MediaSnapshot, Plan, Status, Tombstone, UserData,
+};
 use crate::api::types::{MediaItem, MediaKey, MediaType, ProviderId};
 use crate::store::writer::StoreHandle;
 use crate::store::{current_version, Migration};
@@ -12,14 +14,23 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // library.json upgrade steps, oldest first; adding one bumps SCHEMA_VERSION.
-pub const MIGRATIONS: &[Migration] = &[];
+pub const MIGRATIONS: &[Migration] = &[add_merged];
 pub const SCHEMA_VERSION: u32 = current_version(MIGRATIONS);
 
-// The whole library as one file: key → entry.
+// v1 → v2: merged-away manual items; an older app must refuse the file, not drop them on save.
+fn add_merged(mut v: serde_json::Value) -> Result<serde_json::Value, String> {
+    let map = v.as_object_mut().ok_or("library is not an object")?;
+    map.entry("merged").or_insert_with(|| serde_json::json!({}));
+    Ok(v)
+}
+
+// The whole library as one file: key → entry, plus the manual items merged away.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct LibraryFile {
     #[serde(default)]
     pub entries: BTreeMap<String, LibraryEntry>,
+    #[serde(default)]
+    pub merged: BTreeMap<String, Tombstone>,
 }
 
 // Single owner of library.json, the event log path and the poster cache folder.

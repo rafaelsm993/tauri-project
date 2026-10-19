@@ -113,6 +113,17 @@ pub struct LibraryEntry {
     pub updated_at: String,
 }
 
+// A manual item replaced by its catalog match, kept so the merge can be undone and never comes back.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Tombstone {
+    pub into: String,
+    pub entry: LibraryEntry,
+    // The catalog entry as it was before a combine; None when the merge created it.
+    #[serde(default)]
+    pub existing: Option<LibraryEntry>,
+    pub at: String,
+}
+
 // One activity-log line; ids and dates are stamped by the frontend.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Event {

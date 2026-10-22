@@ -47,6 +47,60 @@ test.describe("achievements", () => {
     await expect(page.locator(".circles li").first()).toBeAttached();
   });
 
+  test("an equipped motif really animates, with a keyframe the browser resolved", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      !!isMobile,
+      "particles are not drawn on touch: an animated full-screen layer costs 140%+ CPU there",
+    );
+    await mockLibrary(page, [ENTRY], { seenLevel: 2 });
+    await page.goto("/profile");
+    await page.getByRole("button", { name: /^Bubbles$/ }).click();
+    await expect(page.locator(".circles li").first()).toBeAttached();
+
+    // getAnimations() is empty when the animation names a keyframe that does not exist — which
+    // is what happens if the name reaches CSS through an inline style, outside Svelte's scoping.
+    const running = await page
+      .locator(".circles li")
+      .first()
+      .evaluate((li) =>
+        li.getAnimations().map((a) => ({
+          name: (a as CSSAnimation).animationName,
+          state: a.playState,
+        })),
+      );
+    expect(running.length).toBeGreaterThan(0);
+    expect(running[0].name).toContain("motif-rise");
+    expect(running[0].state).toBe("running");
+  });
+
+  test("each motif resolves its own keyframe, not one shared animation", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(
+      !!isMobile,
+      "particles are not drawn on touch: an animated full-screen layer costs 140%+ CPU there",
+    );
+    await mockLibrary(page, [ENTRY], { seenLevel: 25 });
+    await page.goto("/profile");
+
+    const nameFor = async (label: string) => {
+      await page.getByRole("button", { name: label }).click();
+      await expect(page.locator(".circles li").first()).toBeAttached();
+      return page
+        .locator(".circles li")
+        .first()
+        .evaluate((li) => (li.getAnimations()[0] as CSSAnimation | undefined)?.animationName ?? "");
+    };
+
+    expect(await nameFor("Bubbles")).toContain("motif-rise");
+    expect(await nameFor("Embers")).toContain("motif-ember");
+    expect(await nameFor("Aurora")).toContain("motif-drift");
+  });
+
   test("a locked reward is listed with the level it needs", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { seenLevel: 1 });
     await page.goto("/profile");

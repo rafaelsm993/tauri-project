@@ -68,4 +68,18 @@ describe("AchievementsSection", () => {
     render(AchievementsSection, { unlocks });
     expect(screen.getByText(/everything is unlocked/i)).toBeInTheDocument();
   });
+
+  it("says the background is desktop-only, since touch cannot afford the particles", () => {
+    const { unlocks } = stores({ seen_level: 2 });
+    render(AchievementsSection, { unlocks });
+    const group = screen.getByRole("group", { name: "Background" });
+    expect(group).toBeInTheDocument();
+    expect(screen.getByText(/only on the desktop app/i)).toBeInTheDocument();
+  });
+
+  it("does not claim desktop-only for the accent or palette slots", () => {
+    const { unlocks } = stores({ seen_level: 25 });
+    render(AchievementsSection, { unlocks });
+    expect(screen.getAllByText(/only on the desktop app/i)).toHaveLength(1);
+  });
 });

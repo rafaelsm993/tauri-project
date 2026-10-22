@@ -67,6 +67,9 @@
             </button>
           {/each}
         </div>
+        {#if slot === "motif"}
+          <p class="note">Backgrounds draw only on the desktop app; phones keep the still glow.</p>
+        {/if}
       </div>
     {/if}
   {/each}
@@ -88,6 +91,12 @@
 </section>
 
 <style lang="scss">
+  .note {
+    margin: $spacing-xs 0 0;
+    font-size: 0.75rem;
+    color: var(--clr-text-3);
+  }
+
   .achievements {
     display: flex;
     flex-direction: column;

@@ -103,17 +103,12 @@ describe("AppBackground", () => {
   });
 
   it("gives each motif its own keyframe rather than reusing one animation", () => {
-    const keyframeOf = (motif: string, level: number) => {
-      const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
-      prefs.prefs = { ...DEFAULT_PREFS, motion: true, seen_level: level, motif };
-      prefs.ready = true;
-      const { container } = render(AppBackground, { prefs });
-      return container
-        .querySelector<HTMLElement>(".circles")!
-        .style.getPropertyValue("--p-keyframe");
-    };
-    expect(keyframeOf("bubbles", 2)).not.toBe(keyframeOf("aurora", 25));
-    expect(keyframeOf("embers", 25)).not.toBe(keyframeOf("aurora", 25));
+    // A keyframe name passed through an inline style escapes Svelte's CSS scoping and silently
+    // names a keyframe that does not exist, so the animation must come from the stylesheet.
+    const { container } = render(AppBackground, { prefs: readyPrefs() });
+    const ul = container.querySelector<HTMLElement>(".circles")!;
+    expect(ul.style.getPropertyValue("--p-keyframe")).toBe("");
+    expect(ul.querySelector<HTMLElement>("li")!.style.getPropertyValue("animation-name")).toBe("");
   });
 
   it("draws nothing until the saved prefs have loaded, so no motif flashes on boot", () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import { isUnlocked } from "$lib/domain/unlocks";
-  import { motifById, particlesFor } from "$lib/domain/motifs";
+  import { particlesFor } from "$lib/domain/motifs";
 
   // The store prop exists for tests; the app uses the singleton.
   let { prefs = prefsStore }: { prefs?: PrefsStore } = $props();
@@ -18,7 +18,6 @@
 
   // The motif derivation already waits for prefs, so an unloaded store yields no particles.
   const particles = $derived(particlesFor(motif, prefs.prefs.particle_count));
-  const keyframe = $derived(motifById(motif)?.keyframe ?? "none");
 
   let hidden = $state(false);
   let blurred = $state(false);
@@ -42,7 +41,7 @@
 
 <div class="bg-layer" aria-hidden="true">
   <div class="bg-area" class:paused>
-    <ul class="circles" data-motif={motif} style:--p-keyframe={keyframe}>
+    <ul class="circles" data-motif={motif}>
       {#each particles as p, i (i)}
         <li
           style:--p-left="{p.left}%"
@@ -98,6 +97,15 @@
     animation-play-state: paused;
   }
 
+  // Measured on a Galaxy A34: one particle costs 143% CPU, twelve cost 188%, none cost 0.2%.
+  // The price is compositing an animated full-screen layer at all, not the particle count, so
+  // no count is affordable here. The glow and vignette stay.
+  @include touch {
+    .circles {
+      display: none;
+    }
+  }
+
   .circles {
     position: absolute;
     inset: 0;
@@ -116,21 +124,27 @@
     width: var(--p-size);
     height: var(--p-size);
     opacity: var(--p-opacity);
-    animation: var(--p-keyframe) var(--p-duration) linear var(--p-delay) infinite;
+    animation-duration: var(--p-duration);
+    animation-delay: var(--p-delay);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
     will-change: transform;
   }
 
   .circles[data-motif="bubbles"] li {
     background: rgb(var(--clr-primary-rgb) / 1);
+    animation-name: motif-rise;
   }
 
   .circles[data-motif="embers"] li {
+    animation-name: motif-ember;
     background: rgb(var(--clr-accent-rgb) / 1);
     border-radius: 50%;
     filter: blur(1px);
   }
 
   .circles[data-motif="aurora"] li {
+    animation-name: motif-drift;
     background: radial-gradient(
       circle,
       rgb(var(--clr-accent-rgb) / 0.9) 0%,

@@ -30,8 +30,8 @@
   ];
 </script>
 
-<section class="unlocks" aria-labelledby="unlocks-heading">
-  <h2 id="unlocks-heading">Rewards</h2>
+<section class="achievements" aria-labelledby="achievements-heading">
+  <h2 id="achievements-heading">Achievements</h2>
 
   {#if unlocks.next}
     <p class="next">
@@ -88,7 +88,7 @@
 </section>
 
 <style lang="scss">
-  .unlocks {
+  .achievements {
     display: flex;
     flex-direction: column;
     gap: $spacing-md;

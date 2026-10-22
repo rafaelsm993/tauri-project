@@ -7,7 +7,7 @@ const ENTRY = {
   snapshot: { title: "Solaris", provider: "tmdb", media_type: "movie", year: 1972 },
 };
 
-test.describe("rewards", () => {
+test.describe("achievements", () => {
   test("a new user is promised the first unlock instead of being offered it", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { seenLevel: 1 });
     await page.goto("/profile");

@@ -53,6 +53,8 @@ export interface LibraryFake {
   // What catalog_page answers; empty by default.
   results?: object[];
   seenLevel?: number;
+  // Whether the Animations setting is on; the animated reward slots need it.
+  motion?: boolean;
   now?: string;
 }
 
@@ -60,7 +62,7 @@ export interface LibraryFake {
 export async function mockLibrary(page: Page, entries: object[], fake: LibraryFake = {}) {
   await page.clock.setFixedTime(new Date(fake.now ?? "2026-10-01T10:00:00"));
   await page.addInitScript(
-    ({ list, events, seenLevel, emptyLength, results }) => {
+    ({ list, events, seenLevel, motion, emptyLength, results }) => {
       const library = structuredClone(list) as {
         key: string;
         user: Record<string, unknown>;
@@ -68,7 +70,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
       }[];
       // Established user by default; welcome.spec sets __freshInstall to be greeted instead.
       const prefs = {
-        motion: true,
+        motion,
         seen_level: seenLevel,
         reading_pages_per_hour: null,
         theme: "system",
@@ -255,6 +257,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
       list: entries,
       events: fake.events ?? [],
       seenLevel: fake.seenLevel ?? 0,
+      motion: fake.motion ?? true,
       emptyLength: LENGTH,
       results: fake.results ?? [],
     },

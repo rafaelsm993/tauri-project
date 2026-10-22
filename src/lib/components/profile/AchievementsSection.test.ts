@@ -71,7 +71,7 @@ describe("AchievementsSection", () => {
 
   it("says the background is desktop-only, since touch cannot afford the particles", () => {
     const { unlocks } = stores({ seen_level: 2 });
-    render(AchievementsSection, { unlocks });
+    render(AchievementsSection, { unlocks, motion: { on: true } });
     const group = screen.getByRole("group", { name: "Background" });
     expect(group).toBeInTheDocument();
     expect(screen.getByText(/only on the desktop app/i)).toBeInTheDocument();
@@ -79,15 +79,66 @@ describe("AchievementsSection", () => {
 
   it("claims desktop-only for the background and garden, not for colours", () => {
     const { unlocks } = stores({ seen_level: 25 });
-    render(AchievementsSection, { unlocks });
+    render(AchievementsSection, { unlocks, motion: { on: true } });
     // Background and Garden animate; Accent and Palette are just colours and work everywhere.
     expect(screen.getAllByText(/only on the desktop app/i)).toHaveLength(2);
   });
 
   it("says the garden sway is desktop-only once it is earned", () => {
     const { unlocks } = stores({ seen_level: 8 });
-    render(AchievementsSection, { unlocks });
+    render(AchievementsSection, { unlocks, motion: { on: true } });
     expect(screen.getByRole("group", { name: "Garden" })).toBeInTheDocument();
     expect(screen.getByText(/sway runs only on the desktop app/i)).toBeInTheDocument();
+  });
+
+  it("disables the background chips while animations are off", () => {
+    const { unlocks } = stores({ seen_level: 12, motion: false });
+    render(AchievementsSection, { unlocks, motion: { on: false } });
+    const group = screen.getByRole("group", { name: "Background" });
+    for (const chip of within(group).getAllByRole("button")) {
+      expect(chip).toBeDisabled();
+    }
+  });
+
+  it("blocks the garden slot too, since the sway needs motion", () => {
+    const { unlocks } = stores({ seen_level: 12, motion: false });
+    render(AchievementsSection, { unlocks, motion: { on: false } });
+    const group = screen.getByRole("group", { name: "Garden" });
+    for (const chip of within(group).getAllByRole("button")) {
+      expect(chip).toBeDisabled();
+    }
+  });
+
+  it("says why the background is unavailable and points at the setting", () => {
+    const { unlocks } = stores({ seen_level: 12, motion: false });
+    render(AchievementsSection, { unlocks, motion: { on: false } });
+    expect(screen.getAllByText(/animations are off/i)).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /settings/i })[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining("/settings"),
+    );
+  });
+
+  it("does not save a motif when the chips are blocked", async () => {
+    const { unlocks, update } = stores({ seen_level: 12, motion: false });
+    render(AchievementsSection, { unlocks, motion: { on: false } });
+    const group = screen.getByRole("group", { name: "Background" });
+    await userEvent.click(within(group).getByRole("button", { name: /^Bubbles$/ }));
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("leaves accent and palette usable while animations are off", () => {
+    const { unlocks } = stores({ seen_level: 12, motion: false });
+    render(AchievementsSection, { unlocks, motion: { on: false } });
+    const accents = screen.getByRole("group", { name: "Accent" });
+    expect(within(accents).getByRole("button", { name: /^Ember$/ })).toBeEnabled();
+  });
+
+  it("leaves the animated slots usable once motion is on", () => {
+    const { unlocks } = stores({ seen_level: 12 });
+    render(AchievementsSection, { unlocks, motion: { on: true } });
+    const group = screen.getByRole("group", { name: "Background" });
+    expect(within(group).getByRole("button", { name: /^Bubbles$/ })).toBeEnabled();
+    expect(screen.queryByText(/animations are off/i)).not.toBeInTheDocument();
   });
 });

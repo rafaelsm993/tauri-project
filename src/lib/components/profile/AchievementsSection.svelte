@@ -2,9 +2,17 @@
   import { unlocksStore, UnlocksStore, type Slot } from "$lib/stores/unlocks.svelte";
   import { ACCENTS, PACKS, offerable, type Palette } from "$lib/domain/themes";
   import type { Unlock } from "$lib/domain/unlocks";
+  import { motionStore } from "$lib/stores/motion.svelte";
+  import { resolve } from "$app/paths";
 
-  // The store prop exists for tests; the app uses the singleton.
-  let { unlocks = unlocksStore }: { unlocks?: UnlocksStore } = $props();
+  // The store props exist for tests; the app uses the singletons.
+  let {
+    unlocks = unlocksStore,
+    motion = motionStore,
+  }: { unlocks?: UnlocksStore; motion?: { on: boolean } } = $props();
+
+  // Animated slots need motion; colour slots never do.
+  const blocked = (slot: Slot) => (slot === "motif" || slot === "garden") && !motion.on;
 
   const theme = $derived(unlocks.baseTheme);
 
@@ -52,13 +60,15 @@
 
   {#each SLOTS as { slot, label } (slot)}
     {@const open = choices(slot)}
+    {@const off = blocked(slot)}
     {#if open.length > 0}
-      <div class="slot">
+      <div class="slot" class:blocked={off}>
         <h3>{label}</h3>
         <div class="row" role="group" aria-label={label}>
           <button
             type="button"
             class="chip"
+            disabled={off}
             aria-pressed={equipped(slot) === "default"}
             onclick={() => unlocks.equip(slot, "default")}
           >
@@ -68,6 +78,7 @@
             <button
               type="button"
               class="chip"
+              disabled={off}
               aria-pressed={equipped(slot) === item.id}
               onclick={() => unlocks.equip(slot, item.id)}
             >
@@ -75,9 +86,15 @@
             </button>
           {/each}
         </div>
-        {#if slot === "motif"}
+        {#if off}
+          <p class="note">
+            Animations are off — turn them on in
+            <a href={resolve("/settings")}>Settings</a> to use this.
+          </p>
+        {/if}
+        {#if !off && slot === "motif"}
           <p class="note">Backgrounds draw only on the desktop app; phones keep the still glow.</p>
-        {:else if slot === "garden"}
+        {:else if !off && slot === "garden"}
           <p class="note">The sway runs only on the desktop app; phones keep the garden still.</p>
         {/if}
       </div>
@@ -105,6 +122,18 @@
     margin: $spacing-xs 0 0;
     font-size: 0.75rem;
     color: var(--clr-text-3);
+
+    a {
+      color: var(--clr-text);
+      font-weight: 600;
+      text-decoration: underline;
+    }
+  }
+
+  // Greyed with opacity, not a grey token: a new colour would fight the equipped palette.
+  .slot.blocked h3,
+  .slot.blocked .row {
+    opacity: 0.45;
   }
 
   .achievements {
@@ -155,6 +184,10 @@
       &:hover {
         border-color: rgb(var(--clr-primary-rgb));
       }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
     }
 
     @include touch {

@@ -150,4 +150,28 @@ test.describe("achievements", () => {
     await expect(art).toBeAttached();
     expect(await art.evaluate((el) => el.getAnimations().length)).toBe(0);
   });
+
+  test("the background slot is blocked while animations are off", async ({ page }) => {
+    await mockLibrary(page, [ENTRY], { seenLevel: 12, motion: false });
+    await page.goto("/profile");
+
+    const group = page.getByRole("group", { name: "Background" });
+    await expect(group.getByRole("button", { name: /^Bubbles$/ })).toBeDisabled();
+    await expect(group.getByRole("button", { name: /^Default$/ })).toBeDisabled();
+    await expect(page.getByText(/animations are off/i).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /settings/i }).first()).toBeVisible();
+  });
+
+  test("the colour slots stay usable while animations are off", async ({ page }) => {
+    await mockLibrary(page, [ENTRY], { seenLevel: 12, motion: false });
+    await page.goto("/profile");
+
+    const accents = page.getByRole("group", { name: "Accent" });
+    await expect(accents.getByRole("button", { name: /^Ember$/ })).toBeEnabled();
+    await accents.getByRole("button", { name: /^Ember$/ }).click();
+    await expect(accents.getByRole("button", { name: /^Ember$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
 });

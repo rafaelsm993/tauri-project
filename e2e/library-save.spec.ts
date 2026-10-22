@@ -61,6 +61,17 @@ async function mockIpc(page: import("@playwright/test").Page, addFails: boolean)
           if (cmd === "catalog_detail") return structuredClone(detail);
           if (cmd === "library_load") return [];
           if (cmd === "startup_status") return null;
+          // An established user: an empty library alone must not trigger the welcome.
+          if (cmd === "prefs_load")
+            return {
+              motion: true,
+              seen_level: 0,
+              reading_pages_per_hour: null,
+              welcomed: true,
+              welcome_beat: 0,
+              taste_families: [],
+              taste_genres: [],
+            };
           if (cmd === "library_add") {
             w.__addCalls = (w.__addCalls as number) + 1;
             if (fails) throw "disk full";

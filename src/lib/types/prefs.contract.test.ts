@@ -7,6 +7,10 @@ const PREFS_KEYS = {
   seen_level: 0,
   reading_pages_per_hour: 0,
   theme: 0,
+  welcomed: 0,
+  welcome_beat: 0,
+  taste_families: 0,
+  taste_genres: 0,
 } satisfies Record<keyof Prefs, 0>;
 
 const keys = (o: object) => Object.keys(o).sort();

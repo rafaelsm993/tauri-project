@@ -1,5 +1,18 @@
 <script lang="ts">
-  import RoutePlaceholder from "$lib/components/ui/RoutePlaceholder.svelte";
+  import WelcomeFlow from "$lib/components/welcome/WelcomeFlow.svelte";
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
 </script>
 
-<RoutePlaceholder title="Welcome" />
+<main class="welcome-page">
+  <WelcomeFlow ondone={() => goto(resolve("/"))} />
+</main>
+
+<style lang="scss">
+  .welcome-page {
+    @include page-shell;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+</style>

@@ -54,7 +54,24 @@ describe("PrefsStore", () => {
       seen_level: 0,
       reading_pages_per_hour: null,
       theme: "system",
+      welcomed: false,
+      welcome_beat: 0,
+      taste_families: [],
+      taste_genres: [],
     });
+  });
+
+  it("drops a taste list that is not a list of strings", async () => {
+    const store = new PrefsStore(
+      fakeClient({
+        load: vi.fn(
+          async () => ({ taste_families: ["book", 7, null], taste_genres: "no" }) as never,
+        ),
+      }),
+    );
+    await store.hydrate();
+    expect(store.prefs.taste_families).toEqual(["book"]);
+    expect(store.prefs.taste_genres).toEqual([]);
   });
 
   it("keeps a known theme and drops an unknown one", async () => {

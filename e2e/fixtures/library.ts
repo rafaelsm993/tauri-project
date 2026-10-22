@@ -66,10 +66,16 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         user: Record<string, unknown>;
         snapshot?: { title: string; provider: string };
       }[];
+      // Established user by default; welcome.spec sets __freshInstall to be greeted instead.
       const prefs = {
         motion: true,
         seen_level: seenLevel,
         reading_pages_per_hour: null,
+        theme: "system",
+        welcomed: !(window as { __freshInstall?: boolean }).__freshInstall,
+        welcome_beat: 0,
+        taste_families: [] as string[],
+        taste_genres: [] as string[],
       };
       type Hit = { media_key: string; media_type: string; title: string; provider: string };
       const calls: { cmd: string; args: unknown }[] = [];
@@ -184,7 +190,13 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         if (cmd === "startup_status") return null;
         if (cmd === "library_poster_dir") return "/nonexistent/posters";
         if (cmd === "prefs_load") return { ...prefs };
-        if (cmd === "prefs_update") return Object.assign(prefs, args?.patch);
+        if (cmd === "prefs_update") {
+          // Rust's PrefsPatch is deny_unknown_fields; mirror it so a rejected save is not green.
+          const patch = (args?.patch ?? {}) as Record<string, unknown>;
+          const unknown = Object.keys(patch).filter((k) => !(k in prefs));
+          if (unknown.length > 0) throw `unknown field \`${unknown[0]}\``;
+          return Object.assign(prefs, patch);
+        }
         if (cmd === "library_merge_preview") {
           const combined = library.some((e) => e.key === args!.item.media_key);
           return { entry: mergedEntry(args!.key!, args!.item!), combined };

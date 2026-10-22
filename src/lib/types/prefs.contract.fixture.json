@@ -3,6 +3,10 @@
     "motion": true,
     "reading_pages_per_hour": null,
     "seen_level": 0,
-    "theme": "system"
+    "taste_families": [],
+    "taste_genres": [],
+    "theme": "system",
+    "welcome_beat": 0,
+    "welcomed": false
   }
 }

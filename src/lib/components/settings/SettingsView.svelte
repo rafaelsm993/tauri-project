@@ -6,9 +6,15 @@
   import KeysSection from "./KeysSection.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import type { Theme } from "$lib/types/prefs";
+  import { goto } from "$app/navigation";
+  import { resolve } from "$app/paths";
 
   // The store prop exists for tests; the app uses the singleton.
   let { store = prefsStore }: { store?: PrefsStore } = $props();
+
+  async function replayWelcome() {
+    if (await store.update({ welcomed: false, welcome_beat: 0 })) await goto(resolve("/welcome"));
+  }
 
   const THEME_OPTIONS: { value: Theme; label: string }[] = [
     { value: "system", label: "System" },
@@ -48,12 +54,53 @@
     <ErrorNote message={store.error} />
   {/if}
 
+  <section class="settings-row">
+    <div class="settings-text">
+      <h2 class="settings-label">Welcome</h2>
+      <p class="settings-hint">Walk through the first-run introduction again.</p>
+    </div>
+    <button type="button" class="settings-btn" disabled={!store.ready} onclick={replayWelcome}>
+      Run the welcome again
+    </button>
+  </section>
+
   <KeysSection />
 
   <BackupSection />
 </main>
 
 <style lang="scss">
+  .settings-btn {
+    padding: $spacing-xs $spacing-md;
+    border: 1px solid var(--clr-border-2);
+    border-radius: $radius-full;
+    background: none;
+    color: var(--clr-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 2px;
+    }
+
+    @include hover-capable {
+      &:hover:not(:disabled) {
+        border-color: var(--clr-accent);
+      }
+    }
+
+    @include touch {
+      min-height: $touch-target;
+    }
+  }
+
   .settings {
     @include page-shell;
     display: flex;

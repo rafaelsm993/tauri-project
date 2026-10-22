@@ -356,6 +356,7 @@ pub(crate) mod tests {
                 seen_level: 3,
                 reading_pages_per_hour: Some(40),
                 theme: crate::prefs::Theme::Light,
+                ..Prefs::default()
             },
             posters: vec![("tmdb_movie_1.png".into(), PNG.to_vec())],
         }

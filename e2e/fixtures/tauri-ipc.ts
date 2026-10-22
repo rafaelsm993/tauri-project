@@ -109,7 +109,17 @@ export const test = base.extend({
     await page.addInitScript((fixtures) => {
       const empty = { page: 1, total_pages: 1, total_results: 0, results: [] };
       const calls: string[] = [];
-      const prefs = { motion: true, seen_level: 0, reading_pages_per_hour: null };
+      // Existing tests are an established user; welcome.spec sets __freshInstall to be greeted.
+      const prefs = {
+        motion: true,
+        seen_level: 0,
+        reading_pages_per_hour: null,
+        theme: "system",
+        welcomed: !(window as { __freshInstall?: boolean }).__freshInstall,
+        welcome_beat: 0,
+        taste_families: [] as string[],
+        taste_genres: [] as string[],
+      };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
         invoke: async (
@@ -152,7 +162,12 @@ export const test = base.extend({
           }
           if (cmd === "network_check") return !(window as { __offline?: boolean }).__offline;
           if (cmd === "prefs_update") {
-            Object.assign(prefs, args?.patch);
+            // Rust's PrefsPatch is deny_unknown_fields: a field it does not know is an error,
+            // not a silent no-op. Mirror that, or a rejected save looks green here.
+            const patch = (args?.patch ?? {}) as Record<string, unknown>;
+            const unknown = Object.keys(patch).filter((k) => !(k in prefs));
+            if (unknown.length > 0) throw `unknown field \`${unknown[0]}\``;
+            Object.assign(prefs, patch);
             return { ...prefs };
           }
           // Tests set window.__dialogClosed to simulate the user closing a file dialog.

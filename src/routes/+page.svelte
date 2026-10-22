@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import type { MediaItem } from "$lib/types/media";
   import { browseStore as browse } from "$lib/stores/browse.svelte";
+  import { prefsStore as prefs } from "$lib/stores/prefs.svelte";
+  import { firstCategory } from "$lib/domain/taste";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { continueEntries } from "$lib/domain/libraryView";
   import { onReconnect } from "$lib/stores/online.svelte";
@@ -49,8 +51,14 @@
     );
   }
 
-  onMount(() => {
-    void browse.ensureLoaded();
+  // Prefs may still be loading when Home mounts, so wait for them before fetching: the saved
+  // taste decides the opening tab, and openOn only acts once, before anything is loaded.
+  $effect(() => {
+    if (!prefs.ready) return;
+    untrack(() => {
+      browse.openOn(firstCategory(prefs.prefs.taste_families));
+      void browse.ensureLoaded();
+    });
   });
 
   // Carousels or a grid that failed while offline load again once the network returns.

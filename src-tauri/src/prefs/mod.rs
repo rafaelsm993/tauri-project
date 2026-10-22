@@ -29,6 +29,13 @@ pub struct Prefs {
     // Asked the first time a book is planned; None until then.
     pub reading_pages_per_hour: Option<u32>,
     pub theme: Theme,
+    // The first run is over: shown once, then never again unless replayed from settings.
+    pub welcomed: bool,
+    // Which beat a half-finished welcome stopped on, so quitting mid-run resumes there.
+    pub welcome_beat: u8,
+    // Picked during the welcome; seeds the first discover pages, empty when skipped.
+    pub taste_families: Vec<String>,
+    pub taste_genres: Vec<String>,
 }
 
 impl Default for Prefs {
@@ -38,6 +45,10 @@ impl Default for Prefs {
             seen_level: 0,
             reading_pages_per_hour: None,
             theme: Theme::System,
+            welcomed: false,
+            welcome_beat: 0,
+            taste_families: Vec::new(),
+            taste_genres: Vec::new(),
         }
     }
 }
@@ -51,6 +62,10 @@ pub struct PrefsPatch {
     #[serde(default, deserialize_with = "crate::store::present")]
     pub reading_pages_per_hour: Option<Option<u32>>,
     pub theme: Option<Theme>,
+    pub welcomed: Option<bool>,
+    pub welcome_beat: Option<u8>,
+    pub taste_families: Option<Vec<String>>,
+    pub taste_genres: Option<Vec<String>>,
 }
 
 // v1 → v2: the background-only switch became the app-wide motion switch.
@@ -83,6 +98,18 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(theme) = patch.theme {
         prefs.theme = theme;
+    }
+    if let Some(done) = patch.welcomed {
+        prefs.welcomed = done;
+    }
+    if let Some(beat) = patch.welcome_beat {
+        prefs.welcome_beat = beat;
+    }
+    if let Some(families) = patch.taste_families {
+        prefs.taste_families = families;
+    }
+    if let Some(genres) = patch.taste_genres {
+        prefs.taste_genres = genres;
     }
 }
 
@@ -128,6 +155,70 @@ mod tests {
         let p: Prefs = serde_json::from_value(json!({ "motion": false })).unwrap();
         assert_eq!(p.seen_level, 0);
         assert!(!p.motion);
+    }
+
+    #[test]
+    fn a_file_from_before_the_welcome_has_not_been_welcomed() {
+        let p: Prefs = serde_json::from_value(json!({ "motion": true, "seen_level": 3 })).unwrap();
+        assert!(!p.welcomed);
+        assert_eq!(p.welcome_beat, 0);
+        assert!(p.taste_families.is_empty());
+    }
+
+    #[test]
+    fn finishing_the_welcome_is_recorded_without_touching_anything_else() {
+        let mut p = Prefs::default();
+        let patch: PrefsPatch =
+            serde_json::from_value(json!({ "welcomed": true, "welcome_beat": 3 })).unwrap();
+        apply_patch(&mut p, patch);
+        assert!(p.welcomed);
+        assert_eq!(p.welcome_beat, 3);
+        assert_eq!(p.theme, Theme::System);
+        assert!(p.motion);
+    }
+
+    #[test]
+    fn picked_taste_replaces_rather_than_appends() {
+        let mut p = Prefs::default();
+        let first: PrefsPatch =
+            serde_json::from_value(json!({ "taste_families": ["book", "game"] })).unwrap();
+        apply_patch(&mut p, first);
+        let second: PrefsPatch =
+            serde_json::from_value(json!({ "taste_families": ["anime"] })).unwrap();
+        apply_patch(&mut p, second);
+        assert_eq!(p.taste_families, vec!["anime".to_string()]);
+    }
+
+    // The exact JSON the welcome's last beat sends; deny_unknown_fields makes a typo fatal.
+    #[test]
+    fn the_patch_the_welcome_sends_when_it_finishes_is_accepted() {
+        let patch: PrefsPatch = serde_json::from_value(json!({
+            "welcomed": true,
+            "welcome_beat": 0,
+            "taste_families": ["book", "game"],
+        }))
+        .expect("the welcome's finish patch must deserialize");
+        let mut p = Prefs::default();
+        apply_patch(&mut p, patch);
+        assert!(p.welcomed);
+        assert_eq!(
+            p.taste_families,
+            vec!["book".to_string(), "game".to_string()]
+        );
+    }
+
+    #[test]
+    fn replaying_the_welcome_clears_the_flag_and_the_beat() {
+        let mut p = Prefs {
+            welcomed: true,
+            welcome_beat: 3,
+            ..Prefs::default()
+        };
+        let patch: PrefsPatch =
+            serde_json::from_value(json!({ "welcomed": false, "welcome_beat": 0 })).unwrap();
+        apply_patch(&mut p, patch);
+        assert!(!p.welcomed);
+        assert_eq!(p.welcome_beat, 0);
     }
 
     #[test]

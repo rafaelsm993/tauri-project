@@ -16,8 +16,18 @@ function normalize(raw: unknown): Prefs {
         ? (r.reading_pages_per_hour as number)
         : DEFAULT_PREFS.reading_pages_per_hour,
     theme: THEMES.includes(r.theme as Theme) ? (r.theme as Theme) : DEFAULT_PREFS.theme,
+    welcomed: typeof r.welcomed === "boolean" ? r.welcomed : DEFAULT_PREFS.welcomed,
+    welcome_beat:
+      Number.isInteger(r.welcome_beat) && (r.welcome_beat as number) >= 0
+        ? (r.welcome_beat as number)
+        : DEFAULT_PREFS.welcome_beat,
+    taste_families: strings(r.taste_families),
+    taste_genres: strings(r.taste_genres),
   };
 }
+
+const strings = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 
 // The user's preferences: defaults at once, the saved file once it loads.
 export class PrefsStore {

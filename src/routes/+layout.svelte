@@ -35,6 +35,7 @@
   import { inAppHistory } from "$lib/utils/history";
   import type { DueSession } from "$lib/domain/reminders";
   import { sectionOf, type Section } from "$lib/domain/navigation";
+  import { shouldWelcome } from "$lib/domain/welcome";
 
   let { children }: { children: Snippet } = $props();
 
@@ -82,6 +83,17 @@
       ? { level: gamificationStore.level, title: gamificationStore.title.name }
       : undefined,
   );
+
+  // A fresh install is greeted when it opens the app; a deep link or a library owner is not.
+  $effect(() => {
+    if (!libraryStore.ready || page.url.pathname !== resolve("/")) return;
+    const greet = shouldWelcome({
+      ready: prefsStore.ready,
+      welcomed: prefsStore.prefs.welcomed,
+      entries: libraryStore.entries.length,
+    });
+    if (greet) void goto(resolve("/welcome"));
+  });
 
   // The backend knows when a cached answer hid a failed request; the pill follows it.
   $effect(() => {

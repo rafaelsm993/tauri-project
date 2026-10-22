@@ -43,3 +43,18 @@ export function applyTheme(theme: Theme): void {
   remember(theme);
   syncSystemBars();
 }
+
+// Tokens the user equipped, as inline channel overrides on the root. Tracks what it set so a
+// removed palette restores the base one, without touching custom properties it never wrote.
+let applied: string[] = [];
+
+export function applyDecoration(tokens: Record<string, string>): void {
+  const root = document.documentElement;
+  for (const token of applied) {
+    if (!(token in tokens)) root.style.removeProperty(token);
+  }
+  for (const [token, value] of Object.entries(tokens)) {
+    root.style.setProperty(token, value);
+  }
+  applied = Object.keys(tokens);
+}

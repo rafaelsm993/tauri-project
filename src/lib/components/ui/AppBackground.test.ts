@@ -14,9 +14,10 @@ function isPaused(container: HTMLElement) {
   return container.querySelector(".bg-area")!.classList.contains("paused");
 }
 
+// Bubbles are the level-2 unlock (Q15), so a prefs set that wants them must say so.
 function readyPrefs(on = true) {
   const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
-  prefs.prefs = { ...DEFAULT_PREFS, motion: on };
+  prefs.prefs = { ...DEFAULT_PREFS, motion: on, seen_level: 2, motif: "bubbles" };
   prefs.ready = true;
   return prefs;
 }
@@ -52,7 +53,7 @@ describe("AppBackground", () => {
     const prefs = readyPrefs(false);
     const { container } = render(AppBackground, { prefs });
     expect(isPaused(container)).toBe(true);
-    prefs.prefs = { ...DEFAULT_PREFS, motion: true };
+    prefs.prefs = { ...DEFAULT_PREFS, motion: true, seen_level: 2, motif: "bubbles" };
     await tick();
     expect(isPaused(container)).toBe(false);
   });
@@ -61,8 +62,30 @@ describe("AppBackground", () => {
     const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
     const { container } = render(AppBackground, { prefs });
     expect(isPaused(container)).toBe(true);
+    prefs.prefs = { ...DEFAULT_PREFS, seen_level: 2, motif: "bubbles" };
     prefs.ready = true;
     await tick();
     expect(isPaused(container)).toBe(false);
+  });
+
+  it("draws no bubbles on a fresh install, so the first background is still", () => {
+    const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
+    prefs.prefs = { ...DEFAULT_PREFS };
+    prefs.ready = true;
+    const { container } = render(AppBackground, { prefs });
+    expect(container.querySelectorAll(".circles li")).toHaveLength(0);
+  });
+
+  it("draws the bubbles once the motif is unlocked and equipped", () => {
+    const { container } = render(AppBackground, { prefs: readyPrefs() });
+    expect(container.querySelectorAll(".circles li").length).toBeGreaterThan(0);
+  });
+
+  it("draws nothing when the motif is equipped but no longer unlocked", () => {
+    const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
+    prefs.prefs = { ...DEFAULT_PREFS, seen_level: 1, motif: "bubbles" };
+    prefs.ready = true;
+    const { container } = render(AppBackground, { prefs });
+    expect(container.querySelectorAll(".circles li")).toHaveLength(0);
   });
 });

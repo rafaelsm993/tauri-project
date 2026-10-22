@@ -33,6 +33,19 @@ test.describe("touch devices", () => {
     await page.waitForLoadState("networkidle");
   });
 
+  test("reward chips are at least 44px tall on coarse pointers", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "mouse viewports may use compact targets");
+    await mockLibrary(page, [], { seenLevel: 25 });
+    await page.goto("/profile");
+    const chips = page.getByRole("group", { name: "Accent" }).getByRole("button");
+    await expect(chips.first()).toBeVisible();
+    const heights = await chips.evaluateAll((els) =>
+      els.map((e) => e.getBoundingClientRect().height),
+    );
+    expect(heights.length).toBeGreaterThan(1);
+    for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
+  });
+
   test("category tabs are at least 44px tall on coarse pointers", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mouse viewports may use compact targets");
     const heights = await page

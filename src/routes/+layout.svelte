@@ -30,7 +30,8 @@
   import { startTransition } from "$lib/utils/transition";
   import { resolve } from "$app/paths";
   import { reminderStore } from "$lib/stores/reminders.svelte";
-  import { applyTheme } from "$lib/theme";
+  import { applyDecoration, applyTheme } from "$lib/theme";
+  import { unlocksStore } from "$lib/stores/unlocks.svelte";
   import { detailPath } from "$lib/domain/libraryView";
   import { inAppHistory } from "$lib/utils/history";
   import type { DueSession } from "$lib/domain/reminders";
@@ -42,6 +43,11 @@
   // DOM side effect: the saved theme wins over the one painted at boot.
   $effect(() => {
     if (prefsStore.ready) applyTheme(prefsStore.prefs.theme);
+  });
+
+  // DOM side effect: the equipped palette rides on top of the theme as channel overrides.
+  $effect(() => {
+    if (prefsStore.ready) applyDecoration(unlocksStore.tokens);
   });
 
   // DOM side effect: CSS reads the motion answer as `<html data-motion>`.

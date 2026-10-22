@@ -15,6 +15,9 @@ export interface Prefs {
   // Picked during the welcome; seeds the first discover pages, empty when skipped.
   taste_families: string[];
   taste_genres: string[];
+  accent: string;
+  pack: string;
+  motif: string;
 }
 
 export type Theme = "system" | "dark" | "light";
@@ -32,4 +35,7 @@ export const DEFAULT_PREFS: Prefs = {
   welcome_beat: 0,
   taste_families: [],
   taste_genres: [],
+  accent: "default",
+  pack: "default",
+  motif: "default",
 };

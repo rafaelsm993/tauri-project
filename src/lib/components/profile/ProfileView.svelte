@@ -10,6 +10,7 @@
   import StatusCard from "./StatusCard.svelte";
   import GardenCard from "./GardenCard.svelte";
   import TasteCard from "./TasteCard.svelte";
+  import UnlocksSection from "./UnlocksSection.svelte";
   import ForecastCard from "./ForecastCard.svelte";
   import { gamificationStore, GamificationStore } from "$lib/stores/gamification.svelte";
   import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
@@ -92,6 +93,8 @@
       </p>
     {/if}
   </div>
+
+  <UnlocksSection />
 </main>
 
 <style lang="scss">

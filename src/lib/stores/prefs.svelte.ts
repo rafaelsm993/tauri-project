@@ -23,8 +23,14 @@ function normalize(raw: unknown): Prefs {
         : DEFAULT_PREFS.welcome_beat,
     taste_families: strings(r.taste_families),
     taste_genres: strings(r.taste_genres),
+    accent: name(r.accent, DEFAULT_PREFS.accent),
+    pack: name(r.pack, DEFAULT_PREFS.pack),
+    motif: name(r.motif, DEFAULT_PREFS.motif),
   };
 }
+
+const name = (v: unknown, fallback: string): string =>
+  typeof v === "string" && v.length > 0 ? v : fallback;
 
 const strings = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];

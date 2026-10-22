@@ -1,6 +1,9 @@
 {
   "prefs": {
+    "accent": "default",
+    "motif": "default",
     "motion": true,
+    "pack": "default",
     "reading_pages_per_hour": null,
     "seen_level": 0,
     "taste_families": [],

@@ -76,6 +76,9 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         welcome_beat: 0,
         taste_families: [] as string[],
         taste_genres: [] as string[],
+        accent: "default",
+        pack: "default",
+        motif: "default",
       };
       type Hit = { media_key: string; media_type: string; title: string; provider: string };
       const calls: { cmd: string; args: unknown }[] = [];

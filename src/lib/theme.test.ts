@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyTheme, THEME_KEY } from "./theme";
+import { applyDecoration, applyTheme, THEME_KEY } from "./theme";
 
 const root = document.documentElement;
 
@@ -109,5 +109,35 @@ describe("Android system bars", () => {
     const applyTheme = await freshApply();
     expect(() => applyTheme("light")).not.toThrow();
     expect(root.dataset.theme).toBe("light");
+  });
+});
+
+describe("applyDecoration", () => {
+  afterEach(() => applyDecoration({}));
+
+  it("writes each token as an inline channel override", () => {
+    applyDecoration({ "--clr-primary-rgb": "1 2 3" });
+    expect(root.style.getPropertyValue("--clr-primary-rgb")).toBe("1 2 3");
+  });
+
+  it("removes a token that is no longer equipped, restoring the base palette", () => {
+    applyDecoration({ "--clr-primary-rgb": "1 2 3" });
+    applyDecoration({});
+    expect(root.style.getPropertyValue("--clr-primary-rgb")).toBe("");
+  });
+
+  it("swaps cleanly from one palette to another", () => {
+    applyDecoration({ "--clr-primary-rgb": "1 2 3", "--clr-bg-rgb": "4 5 6" });
+    applyDecoration({ "--clr-primary-rgb": "7 8 9" });
+    expect(root.style.getPropertyValue("--clr-primary-rgb")).toBe("7 8 9");
+    expect(root.style.getPropertyValue("--clr-bg-rgb")).toBe("");
+  });
+
+  it("leaves properties it never set alone", () => {
+    root.style.setProperty("--unrelated", "keep");
+    applyDecoration({ "--clr-primary-rgb": "1 2 3" });
+    applyDecoration({});
+    expect(root.style.getPropertyValue("--unrelated")).toBe("keep");
+    root.style.removeProperty("--unrelated");
   });
 });

@@ -9,6 +9,9 @@ const PREFS_KEYS = {
   theme: 0,
   welcomed: 0,
   welcome_beat: 0,
+  accent: 0,
+  pack: 0,
+  motif: 0,
   taste_families: 0,
   taste_genres: 0,
 } satisfies Record<keyof Prefs, 0>;

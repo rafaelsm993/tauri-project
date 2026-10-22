@@ -58,6 +58,9 @@ describe("PrefsStore", () => {
       welcome_beat: 0,
       taste_families: [],
       taste_genres: [],
+      accent: "default",
+      pack: "default",
+      motif: "default",
     });
   });
 

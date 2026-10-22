@@ -1,10 +1,19 @@
 <script lang="ts">
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
+  import { isUnlocked } from "$lib/domain/unlocks";
 
   // The store prop exists for tests; the app uses the singleton.
   let { prefs = prefsStore }: { prefs?: PrefsStore } = $props();
 
   const BUBBLE_COUNT = 20;
+
+  // Bubbles are the level-2 unlock (Q15): a fresh install gets a still background, and an
+  // equipped motif stops drawing if the level it needs is no longer there.
+  const bubbles = $derived(
+    prefs.ready && isUnlocked("bubbles", prefs.prefs.seen_level) && prefs.prefs.motif === "bubbles"
+      ? BUBBLE_COUNT
+      : 0,
+  );
 
   let hidden = $state(false);
   let blurred = $state(false);
@@ -30,7 +39,7 @@
   <div class="bg-area" class:paused>
     <ul class="circles">
       <!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -- skeleton placeholder, only the index is used -->
-      {#each { length: BUBBLE_COUNT } as _, i (i)}
+      {#each { length: bubbles } as _, i (i)}
         <li></li>
       {/each}
     </ul>

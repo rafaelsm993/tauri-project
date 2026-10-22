@@ -18,6 +18,11 @@ pub enum Theme {
     Light,
 }
 
+// Nothing equipped: the palette as written in global.css.
+fn default_decoration() -> String {
+    "default".to_string()
+}
+
 // Everything the user sets once and the app remembers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -36,6 +41,10 @@ pub struct Prefs {
     // Picked during the welcome; seeds the first discover pages, empty when skipped.
     pub taste_families: Vec<String>,
     pub taste_genres: Vec<String>,
+    // Equipped decoration, unlocked by levelling; "default" means the base palette stands.
+    pub accent: String,
+    pub pack: String,
+    pub motif: String,
 }
 
 impl Default for Prefs {
@@ -49,6 +58,9 @@ impl Default for Prefs {
             welcome_beat: 0,
             taste_families: Vec::new(),
             taste_genres: Vec::new(),
+            accent: default_decoration(),
+            pack: default_decoration(),
+            motif: default_decoration(),
         }
     }
 }
@@ -66,6 +78,9 @@ pub struct PrefsPatch {
     pub welcome_beat: Option<u8>,
     pub taste_families: Option<Vec<String>>,
     pub taste_genres: Option<Vec<String>>,
+    pub accent: Option<String>,
+    pub pack: Option<String>,
+    pub motif: Option<String>,
 }
 
 // v1 → v2: the background-only switch became the app-wide motion switch.
@@ -107,6 +122,15 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(families) = patch.taste_families {
         prefs.taste_families = families;
+    }
+    if let Some(accent) = patch.accent {
+        prefs.accent = accent;
+    }
+    if let Some(pack) = patch.pack {
+        prefs.pack = pack;
+    }
+    if let Some(motif) = patch.motif {
+        prefs.motif = motif;
     }
     if let Some(genres) = patch.taste_genres {
         prefs.taste_genres = genres;
@@ -187,6 +211,31 @@ mod tests {
             serde_json::from_value(json!({ "taste_families": ["anime"] })).unwrap();
         apply_patch(&mut p, second);
         assert_eq!(p.taste_families, vec!["anime".to_string()]);
+    }
+
+    // The exact JSON the unlocks panel sends; deny_unknown_fields makes a typo fatal.
+    #[test]
+    fn the_patch_the_unlocks_panel_sends_is_accepted() {
+        let mut p = Prefs::default();
+        let patch: PrefsPatch = serde_json::from_value(json!({
+            "accent": "ember",
+            "pack": "midnight",
+            "motif": "bubbles",
+        }))
+        .unwrap();
+        apply_patch(&mut p, patch);
+        assert_eq!(p.accent, "ember");
+        assert_eq!(p.pack, "midnight");
+        assert_eq!(p.motif, "bubbles");
+    }
+
+    // Equipped decoration defaults to the base palette, so an older prefs.json loads untouched.
+    #[test]
+    fn prefs_without_decoration_fields_keep_the_base_palette() {
+        let p: Prefs = serde_json::from_value(json!({ "motion": true })).unwrap();
+        assert_eq!(p.accent, "default");
+        assert_eq!(p.pack, "default");
+        assert_eq!(p.motif, "default");
     }
 
     // The exact JSON the welcome's last beat sends; deny_unknown_fields makes a typo fatal.

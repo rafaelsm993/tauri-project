@@ -119,6 +119,9 @@ export const test = base.extend({
         welcome_beat: 0,
         taste_families: [] as string[],
         taste_genres: [] as string[],
+        accent: "default",
+        pack: "default",
+        motif: "default",
       };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {

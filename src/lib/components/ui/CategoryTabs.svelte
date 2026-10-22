@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { MediaType } from "$lib/types/media";
+  import { shouldReveal } from "$lib/domain/navigation";
 
   type Category = { key: MediaType; label: string };
 
@@ -23,14 +24,30 @@
     // Optional control after the tabs; outside the scrolling nav so its popups aren't clipped.
     trailing?: Snippet;
   } = $props();
+
+  let railEl: HTMLElement | undefined = $state();
+
+  // A taste pick can select a tab that sits outside the scrolled rail, leaving selection
+  // looking unset. The scroll distance is decided by shouldReveal, tested on its own.
+  function reveal(tab: HTMLElement) {
+    if (!railEl) return;
+    const by = shouldReveal(railEl.getBoundingClientRect(), tab.getBoundingClientRect());
+    if (by !== 0) railEl.scrollLeft += by;
+  }
+
+  $effect(() => {
+    const tab = railEl?.querySelector<HTMLElement>(`[data-category="${active}"]`);
+    if (tab) reveal(tab);
+  });
 </script>
 
 <div class="category-bar">
-  <nav class="category-tabs" aria-label="Categories">
+  <nav class="category-tabs" aria-label="Categories" bind:this={railEl}>
     {#each CATEGORIES as cat (cat.key)}
       <button
         type="button"
         class="category-tab"
+        data-category={cat.key}
         class:active={active === cat.key}
         aria-pressed={active === cat.key}
         onclick={() => onchange(cat.key)}

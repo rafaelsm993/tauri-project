@@ -100,6 +100,8 @@ const FIXTURES: Record<string, unknown> = {
   },
   backup_cancel_import: null,
   startup_status: null,
+  keys_status: { tmdb: true, rawg: true },
+  keys_check: null,
 };
 
 export const test = base.extend({
@@ -110,7 +112,10 @@ export const test = base.extend({
       const prefs = { motion: true, seen_level: 0, reading_pages_per_hour: null };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
-        invoke: async (cmd: string, args?: { patch?: object; mode?: string; id?: string }) => {
+        invoke: async (
+          cmd: string,
+          args?: { patch?: object; mode?: string; id?: string; which?: string },
+        ) => {
           calls.push(cmd);
           // Tests set window.__detailDelays ({ id: ms }) to answer each detail by id, late.
           const delays = (window as { __detailDelays?: Record<string, number> }).__detailDelays;
@@ -133,6 +138,18 @@ export const test = base.extend({
           const refused = (window as { __startupProblem?: object }).__startupProblem;
           if (cmd === "startup_status" && refused) return refused;
           if (cmd === "prefs_load") return { ...prefs };
+          // Tests set window.__noKeys to run as a fresh install with no API keys.
+          const w = window as { __noKeys?: boolean; __keys?: Record<string, boolean> };
+          if (cmd === "keys_status" && w.__noKeys) {
+            w.__keys ??= { tmdb: false, rawg: false };
+            return { ...w.__keys };
+          }
+          if (cmd === "keys_set" || cmd === "keys_clear") {
+            w.__keys ??= { tmdb: !w.__noKeys, rawg: !w.__noKeys };
+            const which = String((args as { which?: string })?.which);
+            w.__keys[which] = cmd === "keys_set";
+            return { ...w.__keys };
+          }
           if (cmd === "network_check") return !(window as { __offline?: boolean }).__offline;
           if (cmd === "prefs_update") {
             Object.assign(prefs, args?.patch);

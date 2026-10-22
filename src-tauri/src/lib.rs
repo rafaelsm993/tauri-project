@@ -1,5 +1,6 @@
 pub mod api;
 pub mod backup;
+pub mod keys;
 pub mod library;
 pub mod logging;
 pub mod prefs;
@@ -53,9 +54,10 @@ pub fn run() {
                 .app_data_dir()
                 .map_err(|e| format!("no app data dir: {e}"))?;
             match startup::load(&dir) {
-                Ok((library, prefs)) => {
+                Ok((library, prefs, keys)) => {
                     _app.manage(library);
                     _app.manage(prefs);
+                    _app.manage(keys);
                     _app.manage(startup::StartupState::default());
                 }
                 Err(problem) => {
@@ -101,6 +103,10 @@ pub fn run() {
             library::ipc::library_retry_posters,
             prefs::ipc::prefs_load,
             prefs::ipc::prefs_update,
+            keys::ipc::keys_status,
+            keys::ipc::keys_set,
+            keys::ipc::keys_clear,
+            keys::ipc::keys_check,
             backup::ipc::backup_export,
             backup::ipc::backup_pick_import,
             backup::ipc::backup_apply_import,

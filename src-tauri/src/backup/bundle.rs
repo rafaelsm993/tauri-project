@@ -296,6 +296,30 @@ pub(crate) mod tests {
 
     pub(crate) const PNG: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
 
+    // A backup carries the user's data, never their API keys.
+    #[test]
+    fn a_backup_never_contains_keys_json() {
+        let bytes = build(&sample()).unwrap();
+        let mut zip = zip::ZipArchive::new(Cursor::new(bytes.clone())).unwrap();
+        let names: Vec<String> = (0..zip.len())
+            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .collect();
+        assert!(
+            !names.iter().any(|n| n.contains("keys")),
+            "a backup listed a keys file: {names:?}"
+        );
+        assert!(names.contains(&"library.json".to_string()), "{names:?}");
+        let text = String::from_utf8_lossy(&bytes);
+        assert!(
+            !text.contains("TMDB_API_KEY"),
+            "a backup mentioned an API key"
+        );
+        assert!(
+            !text.contains("RAWG_API_KEY"),
+            "a backup mentioned an API key"
+        );
+    }
+
     pub(crate) fn entry(n: u64, updated_at: &str) -> LibraryEntry {
         let item = MediaItem::new(
             Id::Num(n),

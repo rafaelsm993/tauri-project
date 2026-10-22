@@ -3,6 +3,7 @@
   import Switch from "$lib/components/ui/Switch.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import BackupSection from "./BackupSection.svelte";
+  import KeysSection from "./KeysSection.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import type { Theme } from "$lib/types/prefs";
 
@@ -46,6 +47,8 @@
   {#if store.error}
     <ErrorNote message={store.error} />
   {/if}
+
+  <KeysSection />
 
   <BackupSection />
 </main>

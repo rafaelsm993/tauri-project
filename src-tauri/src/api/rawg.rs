@@ -9,8 +9,10 @@ const PROVIDER: ProviderId = ProviderId::Rawg;
 
 const BASE: &str = "https://api.rawg.io/api";
 
+// Runtime env, then the key the user saved, then the one baked in by build.rs.
 fn api_key() -> String {
-    std::env::var("RAWG_API_KEY").unwrap_or_else(|_| env!("RAWG_API_KEY").to_string())
+    crate::keys::ipc::key_for(crate::keys::Keyed::Rawg, option_env!("RAWG_API_KEY"))
+        .unwrap_or_default()
 }
 
 const PAGE_SIZE: u32 = 20;

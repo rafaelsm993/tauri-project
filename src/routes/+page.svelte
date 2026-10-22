@@ -9,6 +9,7 @@
   import { onReconnect } from "$lib/stores/online.svelte";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
+  import NoKeyNote from "$lib/components/media/NoKeyNote.svelte";
   import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import GenreCarousel from "$lib/components/ui/GenreCarousel.svelte";
@@ -106,6 +107,8 @@
         onClearSearch={clearSearch}
         onAllGenres={() => browse.switchGenre(null)}
       />
+
+      <NoKeyNote type={browse.activeCategory} />
 
       {#if browse.error && browse.gridMode}
         <div class="page-error">

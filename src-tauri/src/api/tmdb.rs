@@ -13,9 +13,10 @@ const IMG: &str = "https://image.tmdb.org/t/p";
 const LANG: &str = "en-US";
 const MAX_CAST: usize = 20;
 
-// Runtime env wins; falls back to the key baked in from `.env` by build.rs.
+// Runtime env, then the key the user saved, then the one baked in by build.rs.
 fn api_key() -> String {
-    std::env::var("TMDB_API_KEY").unwrap_or_else(|_| env!("TMDB_API_KEY").to_string())
+    crate::keys::ipc::key_for(crate::keys::Keyed::Tmdb, option_env!("TMDB_API_KEY"))
+        .unwrap_or_default()
 }
 
 fn img(size: &str, path: Option<&str>) -> Option<String> {

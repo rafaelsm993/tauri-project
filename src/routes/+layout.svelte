@@ -22,6 +22,7 @@
   import { libraryStore } from "$lib/stores/library.svelte";
   import { motionStore } from "$lib/stores/motion.svelte";
   import { prefsStore } from "$lib/stores/prefs.svelte";
+  import { keysStore } from "$lib/stores/keys.svelte";
   import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { onReconnect } from "$lib/stores/online.svelte";
   import { checkNetwork, watchConnectivity, watchNetwork } from "$lib/api/offline";
@@ -68,9 +69,11 @@
   $effect(() => {
     if (problem !== null) return;
     untrack(() => {
-      void Promise.all([libraryStore.hydrate(), prefsStore.hydrate()]).then(() => {
-        if (libraryStore.ready) void gamificationStore.load().then(() => reminderStore.check());
-      });
+      void Promise.all([libraryStore.hydrate(), prefsStore.hydrate(), keysStore.hydrate()]).then(
+        () => {
+          if (libraryStore.ready) void gamificationStore.load().then(() => reminderStore.check());
+        },
+      );
     });
   });
 

@@ -1,3 +1,4 @@
+use crate::keys::ipc::KeysState;
 use crate::library::commands::LibraryState;
 use crate::prefs::ipc::PrefsState;
 use serde::Serialize;
@@ -40,11 +41,12 @@ fn problem(file: &str, dir: &Path, err: String) -> StartupProblem {
     }
 }
 
-// Loads the saved library and prefs; a refused file becomes a problem, never an overwrite.
-pub fn load(dir: &Path) -> Result<(LibraryState, PrefsState), StartupProblem> {
+// Loads the saved library, prefs and keys; a refused file becomes a problem, never an overwrite.
+pub fn load(dir: &Path) -> Result<(LibraryState, PrefsState, KeysState), StartupProblem> {
     let library = crate::library::ipc::init(dir).map_err(|e| problem("library.json", dir, e))?;
     let prefs = crate::prefs::ipc::init(dir).map_err(|e| problem("prefs.json", dir, e))?;
-    Ok((library, prefs))
+    let keys = crate::keys::ipc::init(dir).map_err(|e| problem("keys.json", dir, e))?;
+    Ok((library, prefs, keys))
 }
 
 #[tauri::command]

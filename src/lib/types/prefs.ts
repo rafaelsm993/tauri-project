@@ -18,6 +18,8 @@ export interface Prefs {
   accent: string;
   pack: string;
   motif: string;
+  // How many particles the equipped motif draws; 0 means none, MAX_PARTICLES is the cap.
+  particle_count: number;
 }
 
 export type Theme = "system" | "dark" | "light";
@@ -38,4 +40,5 @@ export const DEFAULT_PREFS: Prefs = {
   accent: "default",
   pack: "default",
   motif: "default",
+  particle_count: 12,
 };

@@ -88,4 +88,72 @@ describe("AppBackground", () => {
     const { container } = render(AppBackground, { prefs });
     expect(container.querySelectorAll(".circles li")).toHaveLength(0);
   });
+
+  it("gives every particle its own geometry from the motif, not a nth-child rule", () => {
+    const { container } = render(AppBackground, { prefs: readyPrefs() });
+    const first = container.querySelector<HTMLElement>(".circles li")!;
+    for (const prop of ["--p-left", "--p-size", "--p-duration", "--p-delay", "--p-opacity"]) {
+      expect(first.style.getPropertyValue(prop), `${prop} missing`).not.toBe("");
+    }
+  });
+
+  it("names the equipped motif on the layer so each gets its own keyframe", () => {
+    const { container } = render(AppBackground, { prefs: readyPrefs() });
+    expect(container.querySelector(".circles")!.getAttribute("data-motif")).toBe("bubbles");
+  });
+
+  it("gives each motif its own keyframe rather than reusing one animation", () => {
+    const keyframeOf = (motif: string, level: number) => {
+      const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
+      prefs.prefs = { ...DEFAULT_PREFS, motion: true, seen_level: level, motif };
+      prefs.ready = true;
+      const { container } = render(AppBackground, { prefs });
+      return container
+        .querySelector<HTMLElement>(".circles")!
+        .style.getPropertyValue("--p-keyframe");
+    };
+    expect(keyframeOf("bubbles", 2)).not.toBe(keyframeOf("aurora", 25));
+    expect(keyframeOf("embers", 25)).not.toBe(keyframeOf("aurora", 25));
+  });
+
+  it("draws nothing until the saved prefs have loaded, so no motif flashes on boot", () => {
+    const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
+    prefs.prefs = { ...DEFAULT_PREFS, motion: true, seen_level: 2, motif: "bubbles" };
+    const { container } = render(AppBackground, { prefs });
+    expect(container.querySelectorAll(".circles li")).toHaveLength(0);
+  });
+
+  it("swaps the whole scene the moment a different motif is equipped", async () => {
+    const prefs = readyPrefs();
+    const { container } = render(AppBackground, { prefs });
+    const before = container.querySelector<HTMLElement>(".circles li")!.style.cssText;
+    prefs.prefs = { ...prefs.prefs, seen_level: 25, motif: "aurora" };
+    await tick();
+    expect(container.querySelector(".circles")!.getAttribute("data-motif")).toBe("aurora");
+    expect(container.querySelector<HTMLElement>(".circles li")!.style.cssText).not.toBe(before);
+  });
+
+  it("draws the other motifs too, not only bubbles", () => {
+    for (const motif of ["embers", "aurora"]) {
+      const prefs = new PrefsStore({ load: vi.fn(), update: vi.fn() });
+      prefs.prefs = { ...DEFAULT_PREFS, motion: true, seen_level: 25, motif };
+      prefs.ready = true;
+      const { container } = render(AppBackground, { prefs });
+      expect(container.querySelectorAll(".circles li").length, motif).toBeGreaterThan(0);
+    }
+  });
+
+  it("draws the number of particles the user chose", () => {
+    const prefs = readyPrefs();
+    prefs.prefs = { ...prefs.prefs, particle_count: 6 };
+    const { container } = render(AppBackground, { prefs });
+    expect(container.querySelectorAll(".circles li")).toHaveLength(6);
+  });
+
+  it("draws nothing when the user turns the count down to zero", () => {
+    const prefs = readyPrefs();
+    prefs.prefs = { ...prefs.prefs, particle_count: 0 };
+    const { container } = render(AppBackground, { prefs });
+    expect(container.querySelectorAll(".circles li")).toHaveLength(0);
+  });
 });

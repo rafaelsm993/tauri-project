@@ -23,6 +23,10 @@ fn default_decoration() -> String {
     "default".to_string()
 }
 
+// The motif particle count a fresh install draws, and the ceiling the UI offers.
+pub const DEFAULT_PARTICLES: u8 = 12;
+pub const MAX_PARTICLES: u8 = 20;
+
 // Everything the user sets once and the app remembers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -45,6 +49,8 @@ pub struct Prefs {
     pub accent: String,
     pub pack: String,
     pub motif: String,
+    // How many particles the equipped motif draws; 0 means none, 20 is the cap.
+    pub particle_count: u8,
 }
 
 impl Default for Prefs {
@@ -61,6 +67,7 @@ impl Default for Prefs {
             accent: default_decoration(),
             pack: default_decoration(),
             motif: default_decoration(),
+            particle_count: DEFAULT_PARTICLES,
         }
     }
 }
@@ -81,6 +88,7 @@ pub struct PrefsPatch {
     pub accent: Option<String>,
     pub pack: Option<String>,
     pub motif: Option<String>,
+    pub particle_count: Option<u8>,
 }
 
 // v1 → v2: the background-only switch became the app-wide motion switch.
@@ -93,6 +101,11 @@ fn rename_background_animation(mut v: Value) -> Result<Value, String> {
 }
 
 pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
+    if let Some(n) = patch.particle_count {
+        if n > MAX_PARTICLES {
+            return Err(format!("{n} particles is above the {MAX_PARTICLES} cap"));
+        }
+    }
     match patch.reading_pages_per_hour {
         Some(Some(n)) if !(5..=300).contains(&n) => {
             Err(format!("{n} pages an hour is outside 5–300"))
@@ -113,6 +126,9 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(theme) = patch.theme {
         prefs.theme = theme;
+    }
+    if let Some(n) = patch.particle_count {
+        prefs.particle_count = n;
     }
     if let Some(done) = patch.welcomed {
         prefs.welcomed = done;
@@ -221,12 +237,32 @@ mod tests {
             "accent": "ember",
             "pack": "midnight",
             "motif": "bubbles",
+            "particle_count": 12,
         }))
         .unwrap();
         apply_patch(&mut p, patch);
         assert_eq!(p.accent, "ember");
         assert_eq!(p.pack, "midnight");
         assert_eq!(p.motif, "bubbles");
+        assert_eq!(p.particle_count, 12);
+    }
+
+    #[test]
+    fn a_prefs_file_without_a_particle_count_gets_the_default() {
+        let p: Prefs = serde_json::from_value(json!({ "motion": true })).unwrap();
+        assert_eq!(p.particle_count, 12);
+    }
+
+    #[test]
+    fn a_particle_count_above_the_cap_is_refused() {
+        let patch: PrefsPatch = serde_json::from_value(json!({ "particle_count": 21 })).unwrap();
+        assert!(validate_patch(&patch).is_err());
+    }
+
+    #[test]
+    fn a_particle_count_of_zero_is_allowed_as_off() {
+        let patch: PrefsPatch = serde_json::from_value(json!({ "particle_count": 0 })).unwrap();
+        assert!(validate_patch(&patch).is_ok());
     }
 
     // Equipped decoration defaults to the base palette, so an older prefs.json loads untouched.

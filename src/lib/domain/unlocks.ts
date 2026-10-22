@@ -83,8 +83,10 @@ export const UNLOCKS: readonly Unlock[] = [
 
 const BY_ID = new Map(UNLOCKS.map((u) => [u.id, u]));
 
-export function isUnlocked(id: UnlockId, seenLevel: number): boolean {
-  const unlock = BY_ID.get(id);
+// Takes a plain string: the equipped id comes from prefs, where an unknown value is possible
+// after a downgrade or a hand-edited file, and must simply read as not unlocked.
+export function isUnlocked(id: string, seenLevel: number): boolean {
+  const unlock = BY_ID.get(id as UnlockId);
   return unlock !== undefined && seenLevel >= unlock.level;
 }
 

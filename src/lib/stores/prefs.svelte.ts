@@ -1,5 +1,6 @@
 import { prefs as defaultClient, type PrefsClient } from "$lib/api/prefs";
 import { DEFAULT_PREFS, THEMES, type Prefs, type PrefsPatch, type Theme } from "$lib/types/prefs";
+import { MAX_PARTICLES } from "$lib/domain/motifs";
 import { errorMessage } from "$lib/utils/errors";
 
 // Keeps only known fields with the right type; e2e fakes answer unknown commands with junk.
@@ -23,6 +24,12 @@ function normalize(raw: unknown): Prefs {
         : DEFAULT_PREFS.welcome_beat,
     taste_families: strings(r.taste_families),
     taste_genres: strings(r.taste_genres),
+    particle_count:
+      Number.isInteger(r.particle_count) &&
+      (r.particle_count as number) >= 0 &&
+      (r.particle_count as number) <= MAX_PARTICLES
+        ? (r.particle_count as number)
+        : DEFAULT_PREFS.particle_count,
     accent: name(r.accent, DEFAULT_PREFS.accent),
     pack: name(r.pack, DEFAULT_PREFS.pack),
     motif: name(r.motif, DEFAULT_PREFS.motif),

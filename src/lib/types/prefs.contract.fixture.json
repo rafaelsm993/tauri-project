@@ -4,6 +4,7 @@
     "motif": "default",
     "motion": true,
     "pack": "default",
+    "particle_count": 12,
     "reading_pages_per_hour": null,
     "seen_level": 0,
     "taste_families": [],

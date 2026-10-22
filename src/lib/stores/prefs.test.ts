@@ -61,6 +61,7 @@ describe("PrefsStore", () => {
       accent: "default",
       pack: "default",
       motif: "default",
+      particle_count: 12,
     });
   });
 

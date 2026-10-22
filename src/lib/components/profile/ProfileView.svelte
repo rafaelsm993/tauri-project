@@ -8,14 +8,19 @@
   import ProgressionCard from "./ProgressionCard.svelte";
   import ActivityCard from "./ActivityCard.svelte";
   import StatusCard from "./StatusCard.svelte";
+  import GardenCard from "./GardenCard.svelte";
   import TasteCard from "./TasteCard.svelte";
   import ForecastCard from "./ForecastCard.svelte";
   import { gamificationStore, GamificationStore } from "$lib/stores/gamification.svelte";
+  import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
   import { motionStore } from "$lib/stores/motion.svelte";
 
-  // `store` and `motion` exist for tests; the app follows the OS and the saved setting.
-  let { store = gamificationStore, motion }: { store?: GamificationStore; motion?: boolean } =
-    $props();
+  // `store`, `library` and `motion` exist for tests; the app uses the singletons and the OS.
+  let {
+    store = gamificationStore,
+    library = libraryStore,
+    motion,
+  }: { store?: GamificationStore; library?: LibraryStore; motion?: boolean } = $props();
 
   const moves = $derived(motion ?? motionStore.on);
 
@@ -71,6 +76,7 @@
       <ProgressionCard weeks={store.weeks} today={store.today} />
       <ActivityCard activity={store.activity} today={store.today} streak={store.streak} />
       <StatusCard counts={store.statuses} />
+      <GardenCard entries={library.entries} />
       <TasteCard families={store.families} />
       <ForecastCard
         backlog={store.backlog}
@@ -149,6 +155,7 @@
     grid-template-areas:
       "level level level level stats stats stats stats stats stats stats stats"
       "progression progression progression progression progression progression progression progression activity activity activity activity"
+      "garden garden garden garden garden garden garden garden garden garden garden garden"
       "library library library library taste taste taste taste forecast forecast forecast forecast";
 
     @include respond-to(lg) {
@@ -156,6 +163,7 @@
       grid-template-areas:
         "level stats"
         "progression progression"
+        "garden garden"
         "activity library"
         "taste forecast";
     }
@@ -166,6 +174,7 @@
         "level"
         "stats"
         "progression"
+        "garden"
         "activity"
         "library"
         "taste"

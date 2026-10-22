@@ -1,15 +1,21 @@
 import { familyOf, type Family } from "./dashboard";
+import { detailPath } from "./libraryView";
 import { resolveTotal } from "./length";
 import { percent } from "./progress";
 import { STATUS_LABELS } from "$lib/stores/library.svelte";
 import { MEDIA_LABELS, type MediaType } from "$lib/types/media";
 import type { LibraryEntry } from "$lib/types/library";
 
+// How the library is shown: the poster grid or the garden (GOALS §6.2).
+export type LibraryViewMode = "grid" | "garden";
+
 // How grown one item looks: planning → in progress → completed, dropped rests apart (GOALS §5.3).
 export type Stage = "seed" | "sprout" | "bloom" | "dormant";
 
 export interface Plant {
   key: string;
+  // Route id for the item's page, from the same split as the grid cards.
+  id: string;
   title: string;
   type: MediaType;
   family: Family;
@@ -26,6 +32,12 @@ export interface Scene {
   // Items past the cap, shown as a line that opens the grid.
   more: number;
 }
+
+// The Library view toggle; grid first, so nothing about the default screen changes.
+export const VIEW_OPTIONS: { value: LibraryViewMode; label: string }[] = [
+  { value: "grid", label: "Grid" },
+  { value: "garden", label: "Garden" },
+];
 
 // Plants drawn at once; past this the scene stops being readable at 360 px.
 export const SCENE_CAP = 120;
@@ -71,6 +83,7 @@ export function plantOf(entry: LibraryEntry): Plant {
   const seed = seedOf(entry.key);
   return {
     key: entry.key,
+    id: detailPath(entry).id,
     title: entry.snapshot.title,
     type,
     family: familyOf(type),

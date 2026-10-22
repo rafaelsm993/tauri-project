@@ -3,6 +3,7 @@
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import LibraryCard from "$lib/components/library/LibraryCard.svelte";
+  import GardenScene from "$lib/components/garden/GardenScene.svelte";
   import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
   import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
@@ -11,6 +12,7 @@
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
   import { libraryFilters, LibraryFilters } from "$lib/stores/libraryFilters.svelte";
+  import { VIEW_OPTIONS } from "$lib/domain/garden";
   import type { LibraryEntry } from "$lib/types/library";
   import {
     filterEntries,
@@ -73,6 +75,12 @@
             onchange={(v) => (filters.type = v)}
           />
         {/if}
+        <SegmentedControl
+          label="View"
+          options={VIEW_OPTIONS}
+          value={filters.view}
+          onchange={(v) => (filters.view = v)}
+        />
       </div>
     {/if}
     <TodayStrip
@@ -106,13 +114,17 @@
         onclose={() => (planning = null)}
       />
     {/if}
-    <ul class="library-grid">
-      {#each visible as entry (entry.key)}
-        <li>
-          <LibraryCard {entry} posterDir={store.posterDir} onplan={() => (planning = entry)} />
-        </li>
-      {/each}
-    </ul>
+    {#if filters.view === "garden"}
+      <GardenScene entries={visible} />
+    {:else}
+      <ul class="library-grid">
+        {#each visible as entry (entry.key)}
+          <li>
+            <LibraryCard {entry} posterDir={store.posterDir} onplan={() => (planning = entry)} />
+          </li>
+        {/each}
+      </ul>
+    {/if}
   {/if}
 </main>
 

@@ -184,3 +184,58 @@ describe("LibraryView", () => {
     expect(type.getByRole("button", { name: /^all 3/i, pressed: true })).toBeInTheDocument();
   });
 });
+
+describe("LibraryView: garden view", () => {
+  const view = () => within(screen.getByRole("group", { name: "View" }));
+  // A plant's name is exactly "T1, movie, completed"; a card's name has no commas.
+  const plants = () => screen.queryAllByRole("link", { name: /^T\d, \w+, / });
+  const posters = () => cards().filter((el) => !/,/.test(el.getAttribute("aria-label") ?? ""));
+
+  it("shows the grid first and switches to the garden", async () => {
+    render(LibraryPage, {
+      store: await storeWith([entry(1, "movie", "completed"), entry(2, "book", "planning")]),
+      filters: new LibraryFilters(),
+    });
+    expect(posters()).toHaveLength(2);
+    expect(plants()).toHaveLength(0);
+
+    await userEvent.click(view().getByRole("button", { name: "Garden" }));
+    expect(plants()).toHaveLength(2);
+    expect(posters()).toHaveLength(0);
+  });
+
+  it("shows which view is active", async () => {
+    const filters = new LibraryFilters();
+    render(LibraryPage, { store: await storeWith([entry(1, "movie", "completed")]), filters });
+    expect(view().getByRole("button", { name: "Grid", pressed: true })).toBeInTheDocument();
+    await userEvent.click(view().getByRole("button", { name: "Garden" }));
+    expect(view().getByRole("button", { name: "Garden", pressed: true })).toBeInTheDocument();
+  });
+
+  it("keeps the chosen view when you come back", async () => {
+    const store = await storeWith([entry(1, "movie", "completed")]);
+    const filters = new LibraryFilters();
+    const first = render(LibraryPage, { store, filters });
+    await userEvent.click(view().getByRole("button", { name: "Garden" }));
+    first.unmount();
+    render(LibraryPage, { store, filters });
+    expect(plants()).toHaveLength(1);
+  });
+
+  it("plants only what the filters leave visible", async () => {
+    const filters = new LibraryFilters();
+    filters.view = "garden";
+    render(LibraryPage, {
+      store: await storeWith([entry(1, "movie", "completed"), entry(2, "book", "planning")]),
+      filters,
+    });
+    expect(plants()).toHaveLength(2);
+    await userEvent.type(search(), "t1");
+    expect(plants()).toHaveLength(1);
+  });
+
+  it("offers no view toggle while the library is empty", async () => {
+    render(LibraryPage, { store: await storeWith([]), filters: new LibraryFilters() });
+    expect(screen.queryByRole("group", { name: "View" })).toBeNull();
+  });
+});

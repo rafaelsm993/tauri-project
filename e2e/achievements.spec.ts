@@ -109,4 +109,45 @@ test.describe("achievements", () => {
     await expect(ahead).toBeVisible();
     await expect(page.getByText("Level 25")).toBeVisible();
   });
+
+  test("the garden sway animates the plants", async ({ page, isMobile }) => {
+    test.skip(
+      !!isMobile,
+      "the sway is desktop-only: animating ten plants costs 126% CPU on a real phone",
+    );
+    await mockLibrary(page, [ENTRY], { seenLevel: 8 });
+    await page.goto("/profile");
+
+    await page
+      .getByRole("group", { name: "Garden" })
+      .getByRole("button", { name: /^Garden sway$/ })
+      .click();
+    // In-app navigation, not goto: a reload restarts the IPC fake and forgets the equip.
+    await page
+      .getByRole("link", { name: /library/i })
+      .first()
+      .click();
+    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Garden" }).click();
+    const art = page.locator(".garden .plant-art").first();
+    await expect(art).toBeAttached();
+
+    const anims = await art.evaluate((el) =>
+      el.getAnimations().map((a) => ({
+        name: (a as CSSAnimation).animationName,
+        state: a.playState,
+      })),
+    );
+    expect(anims.length).toBeGreaterThan(0);
+    expect(anims[0].name).toContain("garden-sway");
+    expect(anims[0].state).toBe("running");
+  });
+
+  test("the garden stays still when the sway is not equipped", async ({ page }) => {
+    await mockLibrary(page, [ENTRY], { seenLevel: 8 });
+    await page.goto("/library");
+    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Garden" }).click();
+    const art = page.locator(".garden .plant-art").first();
+    await expect(art).toBeAttached();
+    expect(await art.evaluate((el) => el.getAnimations().length)).toBe(0);
+  });
 });

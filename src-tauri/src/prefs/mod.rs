@@ -49,6 +49,8 @@ pub struct Prefs {
     pub accent: String,
     pub pack: String,
     pub motif: String,
+    // The equipped garden reward ("sway"); "default" leaves the plants still.
+    pub garden: String,
     // How many particles the equipped motif draws; 0 means none, 20 is the cap.
     pub particle_count: u8,
 }
@@ -67,6 +69,7 @@ impl Default for Prefs {
             accent: default_decoration(),
             pack: default_decoration(),
             motif: default_decoration(),
+            garden: default_decoration(),
             particle_count: DEFAULT_PARTICLES,
         }
     }
@@ -88,6 +91,7 @@ pub struct PrefsPatch {
     pub accent: Option<String>,
     pub pack: Option<String>,
     pub motif: Option<String>,
+    pub garden: Option<String>,
     pub particle_count: Option<u8>,
 }
 
@@ -129,6 +133,9 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(n) = patch.particle_count {
         prefs.particle_count = n;
+    }
+    if let Some(id) = patch.garden {
+        prefs.garden = id;
     }
     if let Some(done) = patch.welcomed {
         prefs.welcomed = done;
@@ -237,6 +244,7 @@ mod tests {
             "accent": "ember",
             "pack": "midnight",
             "motif": "bubbles",
+            "garden": "sway",
             "particle_count": 12,
         }))
         .unwrap();
@@ -244,6 +252,7 @@ mod tests {
         assert_eq!(p.accent, "ember");
         assert_eq!(p.pack, "midnight");
         assert_eq!(p.motif, "bubbles");
+        assert_eq!(p.garden, "sway");
         assert_eq!(p.particle_count, 12);
     }
 

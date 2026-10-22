@@ -100,4 +100,31 @@ describe("GardenScene", () => {
     });
     expect(container.querySelector(".garden")?.classList.contains("moves")).toBe(false);
   });
+
+  it("sways when the reward is equipped and motion is allowed", () => {
+    const { container } = render(GardenScene, {
+      entries: [entry("a", "completed")],
+      motion: true,
+      sway: true,
+    });
+    expect(container.querySelector(".garden")?.classList.contains("sways")).toBe(true);
+  });
+
+  it("does not sway while the reward is not equipped", () => {
+    const { container } = render(GardenScene, {
+      entries: [entry("a", "completed")],
+      motion: true,
+      sway: false,
+    });
+    expect(container.querySelector(".garden")?.classList.contains("sways")).toBe(false);
+  });
+
+  it("never sways while the user has animations off, however it is equipped", () => {
+    const { container } = render(GardenScene, {
+      entries: [entry("a", "completed")],
+      motion: false,
+      sway: true,
+    });
+    expect(container.querySelector(".garden")?.classList.contains("sways")).toBe(false);
+  });
 });

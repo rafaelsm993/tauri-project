@@ -4,7 +4,7 @@ import { MOTIFS, MAX_PARTICLES, motifById, particlesFor } from "./motifs";
 describe("the motif registry", () => {
   it("has an entry for every motif on the unlock ladder", async () => {
     const { UNLOCKS } = await import("./unlocks");
-    for (const u of UNLOCKS.filter((x) => x.kind === "motif" && x.id !== "sway")) {
+    for (const u of UNLOCKS.filter((x) => x.kind === "motif")) {
       expect(MOTIFS[u.id], `no motif art for ${u.id}`).toBeDefined();
     }
   });

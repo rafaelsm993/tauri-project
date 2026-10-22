@@ -30,6 +30,7 @@ function normalize(raw: unknown): Prefs {
       (r.particle_count as number) <= MAX_PARTICLES
         ? (r.particle_count as number)
         : DEFAULT_PREFS.particle_count,
+    garden: name(r.garden, DEFAULT_PREFS.garden),
     accent: name(r.accent, DEFAULT_PREFS.accent),
     pack: name(r.pack, DEFAULT_PREFS.pack),
     motif: name(r.motif, DEFAULT_PREFS.motif),

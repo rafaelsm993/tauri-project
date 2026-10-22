@@ -18,6 +18,8 @@ export interface Prefs {
   accent: string;
   pack: string;
   motif: string;
+  // The equipped garden reward ("sway"); "default" leaves the plants still.
+  garden: string;
   // How many particles the equipped motif draws; 0 means none, MAX_PARTICLES is the cap.
   particle_count: number;
 }
@@ -40,5 +42,6 @@ export const DEFAULT_PREFS: Prefs = {
   accent: "default",
   pack: "default",
   motif: "default",
+  garden: "default",
   particle_count: 12,
 };

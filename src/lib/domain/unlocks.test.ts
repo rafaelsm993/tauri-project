@@ -32,7 +32,7 @@ describe("the ladder", () => {
   it("labels every unlock and says what kind it is", () => {
     for (const u of UNLOCKS) {
       expect(u.label.length).toBeGreaterThan(0);
-      expect(["accent", "motif", "pack"]).toContain(u.kind);
+      expect(["accent", "motif", "pack", "garden"]).toContain(u.kind);
     }
   });
 });
@@ -109,5 +109,18 @@ describe("what the user may equip", () => {
         expect(open.has(item.id)).toBe(true);
       }
     }
+  });
+
+  it("counts the garden sway as its own kind, not a background motif", () => {
+    const sway = UNLOCKS.find((u) => u.id === "sway");
+    expect(sway?.kind).toBe("garden");
+  });
+
+  it("keeps the background motifs to the ones the background can draw", () => {
+    expect(UNLOCKS.filter((u) => u.kind === "motif").map((u) => u.id)).toEqual([
+      "bubbles",
+      "embers",
+      "aurora",
+    ]);
   });
 });

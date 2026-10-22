@@ -1,6 +1,6 @@
 // What levelling opens up. Keyed off `seen_level`, the highest level ever congratulated, so a
 // level that later drops (an import, a merge) never takes a reward away (Q14).
-export type UnlockKind = "accent" | "motif" | "pack";
+export type UnlockKind = "accent" | "motif" | "pack" | "garden";
 
 export type UnlockId =
   "bubbles" | "ember" | "embers" | "sway" | "dusk" | "aurora" | "sunrise" | "ocean" | "midnight";
@@ -39,7 +39,7 @@ export const UNLOCKS: readonly Unlock[] = [
   },
   {
     id: "sway",
-    kind: "motif",
+    kind: "garden",
     level: 8,
     label: "Garden sway",
     blurb: "Your plants lean in a soft breeze.",

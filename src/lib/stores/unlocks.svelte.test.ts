@@ -96,4 +96,31 @@ describe("UnlocksStore", () => {
     const store = new UnlocksStore(fakePrefs({ seen_level: 1, accent: "ocean" }) as never);
     expect(store.tokens).toEqual({});
   });
+
+  it("reports the equipped garden reward once it is earned", () => {
+    const store = new UnlocksStore(fakePrefs({ seen_level: 8, garden: "sway" }) as never);
+    expect(store.garden).toBe("sway");
+  });
+
+  it("falls back to a still garden when the reward is not earned", () => {
+    const store = new UnlocksStore(fakePrefs({ seen_level: 7, garden: "sway" }) as never);
+    expect(store.garden).toBe("default");
+  });
+
+  it("reports no garden reward while none is equipped", () => {
+    const store = new UnlocksStore(fakePrefs({ seen_level: 8 }) as never);
+    expect(store.garden).toBe("default");
+  });
+
+  it("equips the garden reward through the garden slot", async () => {
+    const p = fakePrefs({ seen_level: 8 });
+    await new UnlocksStore(p as never).equip("garden", "sway");
+    expect(p.update).toHaveBeenCalledWith({ garden: "sway" });
+  });
+
+  it("refuses a garden reward that has not been earned", async () => {
+    const p = fakePrefs({ seen_level: 7 });
+    await new UnlocksStore(p as never).equip("garden", "sway");
+    expect(p.update).not.toHaveBeenCalled();
+  });
 });

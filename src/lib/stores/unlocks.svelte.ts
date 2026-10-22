@@ -9,7 +9,7 @@ import {
 } from "$lib/domain/themes";
 import { UNLOCKS, isUnlocked, nextUnlock, type Unlock, type UnlockId } from "$lib/domain/unlocks";
 
-export type Slot = "accent" | "pack" | "motif";
+export type Slot = "accent" | "pack" | "motif" | "garden";
 
 // What the user has earned and what they have equipped. Reads `seen_level`, the highest level
 // ever congratulated, so a level that later drops never takes a reward away (Q14).
@@ -58,6 +58,12 @@ export class UnlocksStore {
 
   get motif(): string {
     const id = this.prefs.prefs.motif;
+    return isUnlocked(id as UnlockId, this.seenLevel) ? id : "default";
+  }
+
+  // The garden slot holds one reward, so prefs store it as the motif-style id or "default".
+  get garden(): string {
+    const id = this.prefs.prefs.garden;
     return isUnlocked(id as UnlockId, this.seenLevel) ? id : "default";
   }
 

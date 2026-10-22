@@ -77,9 +77,17 @@ describe("AchievementsSection", () => {
     expect(screen.getByText(/only on the desktop app/i)).toBeInTheDocument();
   });
 
-  it("does not claim desktop-only for the accent or palette slots", () => {
+  it("claims desktop-only for the background and garden, not for colours", () => {
     const { unlocks } = stores({ seen_level: 25 });
     render(AchievementsSection, { unlocks });
-    expect(screen.getAllByText(/only on the desktop app/i)).toHaveLength(1);
+    // Background and Garden animate; Accent and Palette are just colours and work everywhere.
+    expect(screen.getAllByText(/only on the desktop app/i)).toHaveLength(2);
+  });
+
+  it("says the garden sway is desktop-only once it is earned", () => {
+    const { unlocks } = stores({ seen_level: 8 });
+    render(AchievementsSection, { unlocks });
+    expect(screen.getByRole("group", { name: "Garden" })).toBeInTheDocument();
+    expect(screen.getByText(/sway runs only on the desktop app/i)).toBeInTheDocument();
   });
 });

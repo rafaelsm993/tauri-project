@@ -79,6 +79,8 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         accent: "default",
         pack: "default",
         motif: "default",
+        garden: "default",
+        particle_count: 12,
       };
       type Hit = { media_key: string; media_type: string; title: string; provider: string };
       const calls: { cmd: string; args: unknown }[] = [];

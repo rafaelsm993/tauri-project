@@ -62,6 +62,7 @@ describe("PrefsStore", () => {
       pack: "default",
       motif: "default",
       particle_count: 12,
+      garden: "default",
     });
   });
 

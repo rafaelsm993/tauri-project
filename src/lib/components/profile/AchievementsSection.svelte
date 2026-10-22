@@ -12,6 +12,7 @@
   function choices(slot: Slot): Unlock[] {
     return unlocks.unlocked.filter((u) => {
       if (slot === "motif") return u.kind === "motif";
+      if (slot === "garden") return u.kind === "garden";
       if (slot === "accent") return u.kind === "accent" && suits(ACCENTS[u.id]);
       return u.kind === "pack" && suits(PACKS[u.id]);
     });
@@ -21,12 +22,19 @@
     palette !== undefined && offerable(palette, theme);
 
   const equipped = (slot: Slot) =>
-    slot === "accent" ? unlocks.accent : slot === "pack" ? unlocks.pack : unlocks.motif;
+    slot === "accent"
+      ? unlocks.accent
+      : slot === "pack"
+        ? unlocks.pack
+        : slot === "garden"
+          ? unlocks.garden
+          : unlocks.motif;
 
   const SLOTS: { slot: Slot; label: string }[] = [
     { slot: "accent", label: "Accent" },
     { slot: "pack", label: "Palette" },
     { slot: "motif", label: "Background" },
+    { slot: "garden", label: "Garden" },
   ];
 </script>
 
@@ -69,6 +77,8 @@
         </div>
         {#if slot === "motif"}
           <p class="note">Backgrounds draw only on the desktop app; phones keep the still glow.</p>
+        {:else if slot === "garden"}
+          <p class="note">The sway runs only on the desktop app; phones keep the garden still.</p>
         {/if}
       </div>
     {/if}

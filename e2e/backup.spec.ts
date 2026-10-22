@@ -13,8 +13,13 @@ test("export says what was saved and where", async ({ page }) => {
 });
 
 test("a closed save dialog changes nothing", async ({ page }) => {
-  await page.evaluate(() => Object.assign(window, { __dialogClosed: true }));
+  // addInitScript, not evaluate: the flag has to exist before the app boots, otherwise the
+  // dialog can be asked before the test has said it was closed.
+  await page.addInitScript(() => Object.assign(window, { __dialogClosed: true }));
+  await page.goto("/settings");
   await backup(page).getByRole("button", { name: "Export backup" }).click();
+  // Anchor on a positive first: once the button is enabled again the export has finished,
+  // so an absent status means "never appeared", not "has not rendered yet".
   await expect(backup(page).getByRole("button", { name: "Export backup" })).toBeEnabled();
   await expect(backup(page).getByRole("status")).toHaveCount(0);
 });

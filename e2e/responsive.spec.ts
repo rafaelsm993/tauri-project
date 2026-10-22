@@ -136,9 +136,23 @@ test.describe("touch devices", () => {
     await page.getByRole("button", { name: /^Genres/ }).click();
     const group = page.getByRole("group", { name: "Genres" });
     await expect(group).toBeVisible();
-    const panel = (await group.evaluate((g) =>
-      g.closest("[popover]")!.getBoundingClientRect().toJSON(),
-    ))!;
+    // The popover animates open, so a single measurement can land mid-transition and read a
+    // geometry the user never sees. Poll until the box stops moving, then assert on it.
+    const box = () =>
+      group.evaluate((g) => {
+        const r = g.closest("[popover]")!.getBoundingClientRect();
+        return { left: r.left, right: r.right, bottom: r.bottom };
+      });
+    let last = await box();
+    await expect
+      .poll(async () => {
+        const now = await box();
+        const settled = JSON.stringify(now) === JSON.stringify(last);
+        last = now;
+        return settled;
+      })
+      .toBe(true);
+    const panel = last;
     expect(panel.left, "panel starts off-screen").toBeGreaterThanOrEqual(0);
     expect(panel.right, "panel ends off-screen").toBeLessThanOrEqual(viewport.width);
     expect(panel.bottom, "panel runs below the viewport").toBeLessThanOrEqual(viewport.height);

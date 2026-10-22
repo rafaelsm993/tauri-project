@@ -31,7 +31,12 @@ pub fn env_var(which: Keyed) -> &'static str {
 }
 
 fn remember(keys: &Keys) {
-    if let Ok(mut c) = cache().write() {
+    remember_into(cache(), keys);
+}
+
+// Split from `remember` so the mirroring can be tested without the process-global cache.
+fn remember_into(mirror: &RwLock<Keys>, keys: &Keys) {
+    if let Ok(mut c) = mirror.write() {
         *c = keys.clone();
     }
 }
@@ -171,11 +176,47 @@ mod tests {
     async fn a_saved_key_is_what_a_provider_reads() {
         let dir = scratch("keys-provider");
         let state = init(&dir).unwrap();
-        std::env::remove_var(env_var(Keyed::Rawg));
         set(&state, Keyed::Rawg, Some("saved".into()))
             .await
             .unwrap();
-        assert_eq!(key_for(Keyed::Rawg, Some("compiled")), Some("saved".into()));
+
+        // Read the saved key from this state's own store rather than the process-global
+        // mirror: every sibling test's `init` overwrites that mirror, so asserting through
+        // it let another test decide this one's result.
+        let stored = state
+            .store
+            .read(|k| k.get(Keyed::Rawg).map(String::from))
+            .await;
+        assert_eq!(
+            resolve(None, stored.as_deref(), Some("compiled")),
+            Some("saved".into())
+        );
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn the_mirror_takes_whatever_the_store_holds() {
+        let mirror = RwLock::new(Keys::default());
+        let mut keys = Keys::default();
+        keys.set(Keyed::Tmdb, Some("saved".into()));
+
+        remember_into(&mirror, &keys);
+
+        assert_eq!(
+            mirror.read().unwrap().get(Keyed::Tmdb).map(String::from),
+            Some("saved".into())
+        );
+    }
+
+    #[test]
+    fn the_mirror_forgets_a_cleared_key() {
+        let mut keys = Keys::default();
+        keys.set(Keyed::Tmdb, Some("saved".into()));
+        let mirror = RwLock::new(keys.clone());
+
+        keys.set(Keyed::Tmdb, None);
+        remember_into(&mirror, &keys);
+
+        assert_eq!(mirror.read().unwrap().get(Keyed::Tmdb), None);
     }
 }

@@ -83,15 +83,17 @@
         props={{ spline: { motion: "tween" }, xAxis: { format: shortDate, ticks: 3 } }}
       />
     </div>
-    <table class="sr">
-      <caption>XP per week, then at this pace</caption>
-      <thead><tr><th>Week</th><th>XP</th><th>Projected</th></tr></thead>
-      <tbody>
-        {#each line as p (p.week)}
-          <tr><td>{p.week}</td><td>{p.actual ?? ""}</td><td>{p.projected ?? ""}</td></tr>
-        {/each}
-      </tbody>
-    </table>
+    <div class="sr">
+      <table>
+        <caption>XP per week, then at this pace</caption>
+        <thead><tr><th>Week</th><th>XP</th><th>Projected</th></tr></thead>
+        <tbody>
+          {#each line as p (p.week)}
+            <tr><td>{p.week}</td><td>{p.actual ?? ""}</td><td>{p.projected ?? ""}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
   {/if}
 </ChartCard>
 

@@ -54,15 +54,17 @@
       }}
     />
   </div>
-  <table class="sr">
-    <caption>Total XP at the end of each week</caption>
-    <thead><tr><th>Week</th><th>XP</th></tr></thead>
-    <tbody>
-      {#each shown as w (w.week)}
-        <tr><td>{w.week}</td><td>{w.total}</td></tr>
-      {/each}
-    </tbody>
-  </table>
+  <div class="sr">
+    <table>
+      <caption>Total XP at the end of each week</caption>
+      <thead><tr><th>Week</th><th>XP</th></tr></thead>
+      <tbody>
+        {#each shown as w (w.week)}
+          <tr><td>{w.week}</td><td>{w.total}</td></tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
 </ChartCard>
 
 <style lang="scss">

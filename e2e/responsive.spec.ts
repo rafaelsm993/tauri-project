@@ -378,3 +378,28 @@ test.describe("theming", () => {
     await expect.poll(background).toContain("0, 128, 255");
   });
 });
+
+test.describe("screen-reader tables", () => {
+  test("stay announced without widening the page", async ({ page }) => {
+    await page.goto("/profile");
+    // These tables exist only for screen readers. A table ignores width:1px and sizes to
+    // its content, so hiding the table itself widened the page; the wrapper is hidden
+    // instead, which must not cost the table semantics.
+    await expect(page.getByRole("table").first()).toBeAttached();
+    expect(await page.getByRole("row").count()).toBeGreaterThan(0);
+    expect(await page.getByRole("cell").count()).toBeGreaterThan(0);
+    // The page width is the assertion that matters: any sr-only table that escapes its
+    // wrapper widens the document, whichever card it lives on.
+    const over = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(over, "an sr-only table is widening the page").toBeLessThanOrEqual(0);
+    const widths = await page.evaluate(() =>
+      [...document.querySelectorAll("div.sr, table.sr")].map(
+        (el) => el.getBoundingClientRect().width,
+      ),
+    );
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect(w).toBeLessThanOrEqual(2);
+  });
+});

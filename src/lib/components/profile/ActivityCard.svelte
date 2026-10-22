@@ -41,15 +41,17 @@
       {/each}
     {/each}
   </div>
-  <table class="sr">
-    <caption>Active days</caption>
-    <thead><tr><th>Day</th><th>Actions</th></tr></thead>
-    <tbody>
-      {#each activeDays as day (day.date)}
-        <tr><td>{day.date}</td><td>{plural(day.count, "action")}</td></tr>
-      {/each}
-    </tbody>
-  </table>
+  <div class="sr">
+    <table>
+      <caption>Active days</caption>
+      <thead><tr><th>Day</th><th>Actions</th></tr></thead>
+      <tbody>
+        {#each activeDays as day (day.date)}
+          <tr><td>{day.date}</td><td>{plural(day.count, "action")}</td></tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
   <p class="heat-legend" aria-hidden="true">
     Less
     {#each [0, 1, 2, 3, 4] as l (l)}<span class="cell l{l}"></span>{/each}

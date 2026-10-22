@@ -34,20 +34,22 @@
       }}
     />
   </div>
-  <table class="sr">
-    <caption>Items, completions and hours per family</caption>
-    <thead><tr><th>Family</th><th>Items</th><th>Completed</th><th>Hours</th></tr></thead>
-    <tbody>
-      {#each FAMILIES as f (f)}
-        <tr>
-          <td>{FAMILY_LABELS[f]}</td>
-          <td>{families[f].items}</td>
-          <td>{families[f].completed}</td>
-          <td>{formatHours(families[f].hours)}</td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+  <div class="sr">
+    <table>
+      <caption>Items, completions and hours per family</caption>
+      <thead><tr><th>Family</th><th>Items</th><th>Completed</th><th>Hours</th></tr></thead>
+      <tbody>
+        {#each FAMILIES as f (f)}
+          <tr>
+            <td>{FAMILY_LABELS[f]}</td>
+            <td>{families[f].items}</td>
+            <td>{families[f].completed}</td>
+            <td>{formatHours(families[f].hours)}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
 </ChartCard>
 
 <style lang="scss">

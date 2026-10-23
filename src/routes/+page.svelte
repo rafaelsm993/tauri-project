@@ -83,20 +83,17 @@
           onclear={clearSearch}
         />
       </div>
+      {#if browse.carouselMode && browse.genres.length > 0}
+        <MultiSelect
+          label="Genres"
+          options={browse.genreOptions}
+          selected={browse.selectedGenres}
+          onchange={(ids) => browse.setSelectedGenres(ids)}
+        />
+      {/if}
     {/snippet}
     {#snippet collapsible()}
-      <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)}>
-        {#snippet trailing()}
-          {#if browse.carouselMode && browse.genres.length > 0}
-            <MultiSelect
-              label="Genres"
-              options={browse.genreOptions}
-              selected={browse.selectedGenres}
-              onchange={(ids) => browse.setSelectedGenres(ids)}
-            />
-          {/if}
-        {/snippet}
-      </CategoryTabs>
+      <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)} />
     {/snippet}
   </AppHeader>
   <header class="page-header">

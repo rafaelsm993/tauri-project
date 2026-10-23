@@ -161,7 +161,7 @@ test.describe("touch devices", () => {
     expect(height, "main column collapsed to 0 px and clips its content").toBeGreaterThan(0);
   });
 
-  test("genre filter sits at the end of the category bar and hides during search", async ({
+  test("genre filter sits beside the search field and hides during search", async ({
     page,
     isMobile,
   }) => {
@@ -169,15 +169,18 @@ test.describe("touch devices", () => {
     const trigger = page.getByRole("button", { name: /^Genres/ });
     await expect(trigger).toBeVisible();
     expect(await nav.getByRole("button").count()).toBe(6);
-    const sameBar = await trigger.evaluate(
-      (t) => t.closest(".category-bar") !== null && !t.closest("nav"),
-    );
-    expect(sameBar, "trigger is not in the category bar").toBe(true);
+    // It used to sit inside the category bar behind a divider, where it ate 31% of a 320px bar
+    // and pushed four of the six categories out of sight. It now shares the search row, which
+    // also keeps it on screen when the filters collapse.
+    const placed = await trigger.evaluate((t) => ({
+      inCategoryBar: t.closest(".category-bar") !== null,
+      inHeaderRow: t.closest(".app-header .row") !== null,
+    }));
+    expect(placed.inCategoryBar, "trigger is still in the category bar").toBe(false);
+    expect(placed.inHeaderRow, "trigger is not in the header's persistent row").toBe(true);
     if (isMobile) expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    const bar = (await trigger.evaluate(
-      (t) => t.closest(".category-bar")!.getBoundingClientRect().right,
-    ))!;
-    expect(bar, "category bar is wider than the viewport").toBeLessThanOrEqual(
+    const barRight = await nav.evaluate((n) => n.getBoundingClientRect().right);
+    expect(barRight, "category bar is wider than the viewport").toBeLessThanOrEqual(
       page.viewportSize()!.width,
     );
 

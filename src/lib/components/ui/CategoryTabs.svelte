@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
   import type { MediaType } from "$lib/types/media";
   import { shouldReveal } from "$lib/domain/navigation";
 
@@ -17,12 +16,9 @@
   let {
     active,
     onchange,
-    trailing,
   }: {
     active: MediaType;
     onchange: (category: MediaType) => void;
-    // Optional control after the tabs; outside the scrolling nav so its popups aren't clipped.
-    trailing?: Snippet;
   } = $props();
 
   let railEl: HTMLElement | undefined = $state();
@@ -56,10 +52,6 @@
       </button>
     {/each}
   </nav>
-  {#if trailing}
-    <span class="category-bar__divider" aria-hidden="true"></span>
-    {@render trailing()}
-  {/if}
 </div>
 
 <style lang="scss">
@@ -74,13 +66,6 @@
     border-radius: $radius-full;
     max-width: 100%;
     min-width: 0;
-  }
-
-  .category-bar__divider {
-    flex: 0 0 auto;
-    width: 1px;
-    height: 1.1em;
-    background: rgb(var(--clr-ink-rgb) / 0.12);
   }
 
   .category-tabs {

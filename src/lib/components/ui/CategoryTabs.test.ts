@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRawSnippet } from "svelte";
 import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import { MEDIA_LABELS } from "$lib/types/media";
@@ -34,17 +33,13 @@ describe("CategoryTabs", () => {
     for (const key of keys) expect(mediaTypes).toContain(key);
   });
 
-  it("renders an optional trailing control after the tabs, outside the tab nav", () => {
-    const trailing = createRawSnippet(() => ({
-      render: () => `<button type="button">Extra</button>`,
-    }));
-    render(CategoryTabs, { active: "movie", onchange: () => {}, trailing });
-
+  it("holds nothing but categories, so the rail keeps its full width", () => {
+    // The genre filter used to sit in this bar behind a divider and took 31% of it on a phone,
+    // which is why only two of the six categories were visible.
+    const { container } = render(CategoryTabs, { active: "movie", onchange: () => {} });
     const nav = screen.getByRole("navigation", { name: "Categories" });
-    const extra = screen.getByRole("button", { name: "Extra" });
     expect(within(nav).getAllByRole("button")).toHaveLength(6);
-    expect(nav.contains(extra)).toBe(false);
-    expect(extra.parentElement).toBe(nav.parentElement);
-    expect(nav.compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelectorAll(".category-bar button")).toHaveLength(6);
+    expect(container.querySelector(".category-bar__divider")).toBeNull();
   });
 });

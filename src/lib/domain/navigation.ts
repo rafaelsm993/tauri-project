@@ -23,3 +23,17 @@ export function shouldReveal(rail: Span, tab: Span): number {
   }
   return 0;
 }
+
+export type HeaderScroll = { y: number; collapsed: boolean };
+
+// Below this many px a scroll is jitter, not intent.
+const JITTER_PX = 8;
+
+// Whether the header should step aside, from the scroll position alone. Pure so the decision is
+// testable without a layout: no element, no rAF, no measured geometry.
+export function collapseOnScroll(prev: HeaderScroll, y: number): HeaderScroll {
+  if (y <= 0) return { y: 0, collapsed: false };
+  const delta = y - prev.y;
+  if (Math.abs(delta) <= JITTER_PX) return { y, collapsed: prev.collapsed };
+  return { y, collapsed: delta > 0 };
+}

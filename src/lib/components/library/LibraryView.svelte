@@ -9,6 +9,7 @@
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import { localDay } from "$lib/domain/calendar";
   import SearchField from "$lib/components/ui/SearchField.svelte";
+  import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
   import { libraryFilters, LibraryFilters } from "$lib/stores/libraryFilters.svelte";
@@ -48,41 +49,48 @@
 </script>
 
 <main class="library">
-  <header class="library-head">
-    <div class="library-titlebar">
-      <h1 class="library-title">Library</h1>
+  <AppHeader heading="Library">
+    {#snippet action()}
       <AddManuallyButton type={type === "all" ? undefined : type} variant="icon" />
-    </div>
-    {#if store.entries.length > 0}
-      <div class="library-filters">
+    {/snippet}
+    {#snippet persistent()}
+      {#if store.entries.length > 0}
         <SearchField
           label="Search your library"
           placeholder="Search by title"
           value={filters.query}
           onchange={(v) => (filters.query = v)}
         />
-        <SegmentedControl
-          label="Status"
-          options={statuses}
-          value={status}
-          onchange={(v) => (filters.status = v)}
-        />
-        {#if types.length > 2}
+      {/if}
+    {/snippet}
+    {#snippet collapsible()}
+      {#if store.entries.length > 0}
+        <div class="library-filters">
           <SegmentedControl
-            label="Type"
-            options={types}
-            value={type}
-            onchange={(v) => (filters.type = v)}
+            label="Status"
+            options={statuses}
+            value={status}
+            onchange={(v) => (filters.status = v)}
           />
-        {/if}
-        <SegmentedControl
-          label="View"
-          options={VIEW_OPTIONS}
-          value={filters.view}
-          onchange={(v) => (filters.view = v)}
-        />
-      </div>
-    {/if}
+          {#if types.length > 2}
+            <SegmentedControl
+              label="Type"
+              options={types}
+              value={type}
+              onchange={(v) => (filters.type = v)}
+            />
+          {/if}
+          <SegmentedControl
+            label="View"
+            options={VIEW_OPTIONS}
+            value={filters.view}
+            onchange={(v) => (filters.view = v)}
+          />
+        </div>
+      {/if}
+    {/snippet}
+  </AppHeader>
+  <header class="library-head">
     <TodayStrip
       today={reminders.data}
       busy={(key) => reminders.busy(key)}
@@ -145,17 +153,6 @@
   }
 
   // The button sits by the title: the top-right corner belongs to the level chip on desktop.
-  .library-titlebar {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    min-width: 0;
-  }
-
-  .library-title {
-    @include page-title;
-  }
-
   .library-grid {
     list-style: none;
     margin: 0;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import Switch from "$lib/components/ui/Switch.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
@@ -24,7 +25,7 @@
 </script>
 
 <main class="settings">
-  <h1 class="settings-title">Settings</h1>
+  <AppHeader heading="Settings" />
 
   <section class="settings-row" aria-label="Animations">
     <Switch
@@ -106,10 +107,6 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-  }
-
-  .settings-title {
-    @include page-title;
   }
 
   .settings-row {

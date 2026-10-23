@@ -26,3 +26,13 @@ if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.sho
     this.removeAttribute("open");
   };
 }
+
+// jsdom has no ResizeObserver, which Svelte's `bind:clientHeight` needs. Nothing lays out here,
+// so a recorder that never fires is enough: sizes stay 0 and components must cope with that.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}

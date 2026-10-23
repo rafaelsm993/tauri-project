@@ -9,6 +9,7 @@
   import { libraryStore } from "$lib/stores/library.svelte";
   import { continueEntries } from "$lib/domain/libraryView";
   import { onReconnect } from "$lib/stores/online.svelte";
+  import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
   import NoKeyNote from "$lib/components/media/NoKeyNote.svelte";
@@ -68,32 +69,37 @@
 <svelte:head><title>Aevum</title></svelte:head>
 
 <div class="page">
+  <AppHeader>
+    {#snippet persistent()}
+      <div class="search-slot">
+        <SearchField
+          mode="submit"
+          label="Search the catalog"
+          placeholder="Search movies, TV, anime, manga, books, games…"
+          value={typed}
+          loading={browse.loading && browse.isSearch}
+          onchange={(v) => (typed = v)}
+          onsubmit={(q) => browse.search(q)}
+          onclear={clearSearch}
+        />
+      </div>
+    {/snippet}
+    {#snippet collapsible()}
+      <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)}>
+        {#snippet trailing()}
+          {#if browse.carouselMode && browse.genres.length > 0}
+            <MultiSelect
+              label="Genres"
+              options={browse.genreOptions}
+              selected={browse.selectedGenres}
+              onchange={(ids) => browse.setSelectedGenres(ids)}
+            />
+          {/if}
+        {/snippet}
+      </CategoryTabs>
+    {/snippet}
+  </AppHeader>
   <header class="page-header">
-    <div class="search-slot">
-      <SearchField
-        mode="submit"
-        label="Search the catalog"
-        placeholder="Search movies, TV, anime, manga, books, games…"
-        value={typed}
-        loading={browse.loading && browse.isSearch}
-        onchange={(v) => (typed = v)}
-        onsubmit={(q) => browse.search(q)}
-        onclear={clearSearch}
-      />
-    </div>
-
-    <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)}>
-      {#snippet trailing()}
-        {#if browse.carouselMode && browse.genres.length > 0}
-          <MultiSelect
-            label="Genres"
-            options={browse.genreOptions}
-            selected={browse.selectedGenres}
-            onchange={(ids) => browse.setSelectedGenres(ids)}
-          />
-        {/if}
-      {/snippet}
-    </CategoryTabs>
     <TodayStrip
       today={reminderStore.data}
       busy={(key) => reminderStore.busy(key)}

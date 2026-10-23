@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import { untrack } from "svelte";
+  import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import PlanDialog from "./PlanDialog.svelte";
   import WeekTimeline from "./WeekTimeline.svelte";
   import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
@@ -36,10 +37,11 @@
 </script>
 
 <main class="planner">
-  <div class="planner-titlebar">
-    <h1 class="planner-title">Planner</h1>
-    <AddManuallyButton after="stay" variant="icon" />
-  </div>
+  <AppHeader heading="Planner">
+    {#snippet action()}
+      <AddManuallyButton after="stay" variant="icon" />
+    {/snippet}
+  </AppHeader>
 
   {#if library.ready && empty}
     <p class="planner-empty">
@@ -131,17 +133,6 @@
   }
 
   // The button sits by the title: the top-right corner belongs to the level chip on desktop.
-  .planner-titlebar {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    min-width: 0;
-  }
-
-  .planner-title {
-    @include page-title;
-  }
-
   .planner-empty {
     max-width: 40rem;
     color: var(--clr-text-2);

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { resolve } from "$app/paths";
+  import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import "layerchart/core.css";
   import LevelCard from "./LevelCard.svelte";
@@ -43,17 +44,18 @@
 <svelte:document onvisibilitychange={onReturn} />
 
 <main class="profile">
-  <header class="profile-header">
-    <h1 class="profile-title">Profile</h1>
-    <a class="profile-settings" href={resolve("/settings")}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.8-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.3 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.8 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.8H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z"
-        />
-      </svg>
-      Settings
-    </a>
-  </header>
+  <AppHeader heading="Profile">
+    {#snippet action()}
+      <a class="profile-settings" href={resolve("/settings")}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.8-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.3 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.8 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.8H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z"
+          />
+        </svg>
+        Settings
+      </a>
+    {/snippet}
+  </AppHeader>
 
   {#if store.error}
     <ErrorNote message={store.error} />
@@ -103,20 +105,6 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-  }
-
-  .profile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-md;
-    min-width: 0;
-  }
-
-  .profile-title {
-    @include page-title;
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   // Phones have no Settings tab; desktop has it in the rail.

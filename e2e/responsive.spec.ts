@@ -1,14 +1,17 @@
 import { expect, test } from "./fixtures/tauri-ipc";
 import { manualItem, mockLibrary } from "./fixtures/library";
 
+// `chrome` is what the shared AppHeader should put on each screen. Content screens opt out:
+// a detail page and the onboarding flow own their whole viewport, and their <h1> is the thing
+// you came to read, not the name of a section.
 const SCREENS = [
-  { name: "home", path: "/" },
-  { name: "detail", path: "/media/movie/1" },
-  { name: "library", path: "/library" },
-  { name: "profile", path: "/profile" },
-  { name: "planner", path: "/planner" },
-  { name: "welcome", path: "/welcome" },
-  { name: "settings", path: "/settings" },
+  { name: "home", path: "/", chrome: { chip: true, heading: null } },
+  { name: "detail", path: "/media/movie/1", chrome: null },
+  { name: "library", path: "/library", chrome: { chip: true, heading: "Library" } },
+  { name: "profile", path: "/profile", chrome: { chip: true, heading: "Profile" } },
+  { name: "planner", path: "/planner", chrome: { chip: true, heading: "Planner" } },
+  { name: "welcome", path: "/welcome", chrome: null },
+  { name: "settings", path: "/settings", chrome: { chip: true, heading: "Settings" } },
 ];
 
 for (const screen of SCREENS) {
@@ -24,8 +27,78 @@ for (const screen of SCREENS) {
       );
       expect(overflow, "page is wider than the viewport").toBeLessThanOrEqual(0);
     });
+
+    test("carries exactly one level chip", async ({ page }) => {
+      // The chip used to live in a desktop-only .app-bar, so phones showed none at all. One
+      // header owns it now: two would mean a page kept its own, zero that it forgot the header.
+      await expect(page.getByRole("link", { name: /^Level \d/ })).toHaveCount(
+        screen.chrome?.chip ? 1 : 0,
+      );
+    });
+
+    test("titles itself through the shared header", async ({ page }) => {
+      // Home keeps <main> for its content column, so the header is a sibling there and a
+      // child elsewhere: count the header itself rather than pinning it to a parent.
+      const header = page.locator(".app-header");
+      if (!screen.chrome) {
+        await expect(header).toHaveCount(0);
+        return;
+      }
+      await expect(header).toHaveCount(1);
+      // Home is search-first and deliberately has no heading of its own.
+      const heading = header.getByRole("heading", { level: 1 });
+      if (screen.chrome.heading === null) {
+        await expect(heading).toHaveCount(0);
+        return;
+      }
+      await expect(heading).toHaveText(screen.chrome.heading);
+    });
   });
 }
+
+test.describe("the browse header", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("steps the filters aside on the way down and brings them back on the way up", async ({
+    page,
+  }) => {
+    const tabs = page.getByRole("button", { name: "Movies" });
+    const search = page.getByRole("searchbox", { name: "Search the catalog" });
+    await expect(tabs).toBeVisible();
+
+    await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));
+    await expect(tabs).toBeHidden();
+    // Search is the one control that must survive the whole scroll.
+    await expect(search).toBeInViewport();
+
+    await page.evaluate(() => scrollTo({ top: 1100, behavior: "instant" }));
+    await expect(tabs).toBeVisible();
+  });
+
+  test("collapsing never moves the page under you", async ({ page }) => {
+    // Shrinking the header instead of hiding it reflows everything below: cards move mid-tap,
+    // scroll restoration misses, and the shifted scrollY flips the collapse straight back so the
+    // header will not come down again. Measured document-relative, because lazily loaded rails
+    // change the page's total height on their own and would mask the header's contribution.
+    const contentTop = () =>
+      page.evaluate(() => (document.querySelector(".page-body") as HTMLElement).offsetTop);
+    // Wait for the filters to be laid out before measuring, or the baseline is read while the
+    // header is still short and matches the collapsed height by accident.
+    const tabs = page.getByRole("button", { name: "Movies" });
+    await expect(tabs).toBeVisible();
+    const expanded = await contentTop();
+    expect(expanded).toBeGreaterThan(0);
+
+    await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));
+    await expect(tabs).toBeHidden();
+
+    expect(await contentTop(), "the header changed size and pushed the page").toBe(expanded);
+    expect(await page.evaluate(() => Math.round(scrollY))).toBe(1400);
+  });
+});
 
 test.describe("touch devices", () => {
   test.beforeEach(async ({ page }) => {

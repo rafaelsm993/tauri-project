@@ -8,7 +8,6 @@
   import AppBackground from "$lib/components/ui/AppBackground.svelte";
   import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
   import AppNav from "$lib/components/ui/AppNav.svelte";
-  import LevelChip from "$lib/components/ui/LevelChip.svelte";
   import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
   import ReminderToast from "$lib/components/planner/ReminderToast.svelte";
   import ManualEntrySheet from "$lib/components/library/ManualEntrySheet.svelte";
@@ -153,11 +152,6 @@
   <div class="app-shell">
     <AppNav {section} {progress} />
     <div class="app-content">
-      {#if progress}
-        <header class="app-bar">
-          <LevelChip level={progress.level} title={progress.title} />
-        </header>
-      {/if}
       {@render children()}
     </div>
   </div>
@@ -196,19 +190,4 @@
   }
 
   // Mirrors the home page box so the chip lines up with the search bar and carousels.
-  .app-bar {
-    position: absolute;
-    inset: 0 0 auto;
-    z-index: var(--z-raised);
-    display: flex;
-    justify-content: flex-end;
-    max-width: $page-max-width;
-    margin-inline: auto;
-    padding: $spacing-lg $spacing-xl 0;
-    pointer-events: none;
-
-    @include respond-to(md) {
-      display: none;
-    }
-  }
 </style>

@@ -147,6 +147,17 @@ test.describe("touch devices", () => {
     expect(floating.length).toBe(0);
   });
 
+  test("shows every category at once, with nothing behind a scroll", async ({ page }) => {
+    // The rail used to hide 310px of 513px on a 384px phone: four of the six were unreachable
+    // without a sideways swipe nothing signposted.
+    const rail = page.getByRole("navigation", { name: "Categories" });
+    const hidden = await rail.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(hidden, "a category is hidden behind a scroll").toBeLessThanOrEqual(1);
+    for (const name of ["Movies", "TV Shows", "Anime", "Manga", "Books", "Games"]) {
+      await expect(page.getByRole("button", { name })).toBeInViewport();
+    }
+  });
+
   test("every category tab is reachable (fits or scrolls horizontally)", async ({ page }) => {
     const nav = page.getByRole("navigation", { name: "Categories" });
     const ok = await nav.evaluate((el) => {

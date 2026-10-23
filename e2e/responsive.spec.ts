@@ -246,7 +246,7 @@ test.describe("touch devices", () => {
 
     await group.getByRole("checkbox", { name: "Western" }).check();
     await group.getByRole("checkbox", { name: "Comedy" }).check();
-    await expect(page.getByRole("button", { name: "Genres · 2" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Genres\s*2$/ })).toBeVisible();
     await expect(headings).toHaveText(["Comedy", "Western"]);
 
     await page.keyboard.press("Escape");
@@ -256,7 +256,7 @@ test.describe("touch devices", () => {
       page.getByRole("main").locator(".card__label-title", { hasText: "Test movie 1" }).first(),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Genres · 2" }).click();
+    await page.getByRole("button", { name: /^Genres\s*2$/ }).click();
     await page.getByRole("button", { name: "Clear" }).click();
     await expect(headings).toHaveCount(19);
   });

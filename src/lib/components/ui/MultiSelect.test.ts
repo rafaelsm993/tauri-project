@@ -3,6 +3,28 @@ import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import MultiSelect from "./MultiSelect.svelte";
 
+describe("MultiSelect, compacted", () => {
+  it("keeps its name for a screen reader when the label is only shown to icons", () => {
+    // On a 360px header the words "Genres" squeezed the search field down to a few characters,
+    // so narrow widths show the icon alone. The name must survive that, or the control becomes
+    // unreachable by voice and unreadable by a screen reader.
+    render(MultiSelect, { label: "Genres", options: [], selected: [], onchange: () => {} });
+    const trigger = screen.getByRole("button", { name: /^Genres/ });
+    expect(trigger.querySelector("svg.ms-trigger__icon")).not.toBeNull();
+    expect(trigger.textContent).toContain("Genres");
+  });
+
+  it("still shows how many are picked", () => {
+    render(MultiSelect, {
+      label: "Genres",
+      options: [{ value: 1, label: "Action" }],
+      selected: [1],
+      onchange: () => {},
+    });
+    expect(screen.getByRole("button", { name: /Genres/ }).textContent).toContain("1");
+  });
+});
+
 const options = [
   { value: 28, label: "Action" },
   { value: 35, label: "Comedy" },
@@ -20,7 +42,10 @@ describe("MultiSelect", () => {
     const { trigger, rerender } = setup();
     expect(trigger).toHaveTextContent(/^Genres$/);
     await rerender({ selected: [28, "drama"] });
-    expect(trigger).toHaveTextContent("Genres · 2");
+    // The count is its own badge rather than "Genres · 2", so it survives the label being
+    // hidden on a narrow header while the name still reads "Genres".
+    expect(trigger.querySelector(".ms-trigger__count")).toHaveTextContent("2");
+    expect(trigger).toHaveAccessibleName(/Genres/);
   });
 
   it("trigger controls the panel and reflects its open state", () => {

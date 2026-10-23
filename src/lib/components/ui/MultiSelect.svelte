@@ -53,7 +53,13 @@
   aria-expanded={open}
   {disabled}
 >
-  <span class="ms-trigger__label">{count > 0 ? `${label} · ${count}` : label}</span>
+  <svg class="ms-trigger__icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 6h16M7 12h10M10 18h4" />
+  </svg>
+  <span class="ms-trigger__label">{label}</span>
+  {#if count > 0}
+    <span class="ms-trigger__count">{count}</span>
+  {/if}
   <svg class="ms-trigger__chevron" class:open viewBox="0 0 24 24" aria-hidden="true">
     <path d="M6 9l6 6 6-6" />
   </svg>
@@ -79,6 +85,46 @@
 </div>
 
 <style lang="scss">
+  .ms-trigger__icon {
+    display: none;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+
+  .ms-trigger__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.15em;
+    padding: 0 0.3em;
+    border-radius: $radius-full;
+    background: var(--clr-primary);
+    color: var(--clr-bg);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  // The words cost ~70px of a 320px header row, which left the search field showing about one
+  // word of its placeholder. Narrow widths get the icon and a count; the label stays in the
+  // accessible name. Keyed on width, since the desktop window reaches 360px too.
+  @include respond-to(md) {
+    .ms-trigger__icon {
+      display: block;
+    }
+
+    .ms-trigger__label {
+      @include sr-only;
+    }
+
+    .ms-trigger__chevron {
+      display: none;
+    }
+  }
+
   // Trigger matches a CategoryTabs tab so it reads as part of the bar.
   .ms-trigger {
     flex: 0 0 auto;

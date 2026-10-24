@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { release, reserve } from "./toastSpace";
 
   // `accent` is an RGB channel token such as `--clr-highlight-rgb`; `resetKey` restarts auto-hide.
   let {
@@ -35,11 +36,36 @@
     const timer = setTimeout(onclose, autoHideMs);
     return () => clearTimeout(timer);
   });
+
+  // While open, the page can scroll its end above the toast instead of leaving it underneath.
+  const id = $props.id();
+  let box = $state<HTMLDivElement>();
+  $effect(() => {
+    if (!open || !box) return;
+    const el = box;
+    const measure = () =>
+      reserve(id, Math.max(0, Math.ceil(window.innerHeight - el.getBoundingClientRect().top)));
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      watch.disconnect();
+      window.removeEventListener("resize", measure);
+      release(id);
+    };
+  });
 </script>
 
 <div class="toast-region" role="status" aria-live="polite" aria-label={label}>
   {#if open}
-    <div class="toast" class:bar class:still={!motion} style:--accent="var({accent})">
+    <div
+      bind:this={box}
+      class="toast"
+      class:bar
+      class:still={!motion}
+      style:--accent="var({accent})"
+    >
       {@render children()}
       {#if actions}
         <div class="toast-actions">{@render actions()}</div>

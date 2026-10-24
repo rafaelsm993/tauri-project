@@ -65,4 +65,12 @@ describe("Toast", () => {
     vi.advanceTimersByTime(1);
     expect(onclose).toHaveBeenCalledOnce();
   });
+
+  it("reserves the space it covers while open, so the page can scroll above it", async () => {
+    const { rerender } = setup();
+    const covered = () => document.documentElement.style.getPropertyValue("--toast-covered");
+    expect(covered()).toMatch(/^\d+px$/);
+    await rerender({ open: false });
+    expect(covered()).toBe("");
+  });
 });

@@ -186,6 +186,10 @@
 
   .app-shell {
     padding-left: var(--nav-left);
-    padding-bottom: calc(var(--nav-bottom) + env(safe-area-inset-bottom, 0px));
+    // An open toast covers the bottom; the page's end can still scroll above it.
+    padding-bottom: max(
+      calc(var(--nav-bottom) + env(safe-area-inset-bottom, 0px)),
+      calc(var(--toast-covered, 0px) + #{$spacing-sm})
+    );
   }
 </style>

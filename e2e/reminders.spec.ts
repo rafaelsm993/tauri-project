@@ -88,6 +88,29 @@ test("a Planning item with a session today leads Continue", async ({ page }) => 
   expect(saved.at(-1)?.args).toMatchObject({ patch: { progress: 2, status: "in_progress" } });
 });
 
+test("the reminder toast never hides the end of a page for good", async ({ page }) => {
+  await mockLibrary(page, LIBRARY);
+  await page.goto("/library");
+  const toast = reminder(page).locator(".toast");
+  await expect(toast).toBeVisible();
+  await page.evaluate(() =>
+    scrollTo({ top: document.documentElement.scrollHeight, behavior: "instant" }),
+  );
+  const top = (await toast.boundingBox())!.y;
+  const cards = page.getByRole("main").getByRole("list").getByRole("listitem");
+  const last = (await cards.last().boundingBox())!;
+  expect(last.y + last.height, "the last card ends under the toast").toBeLessThanOrEqual(top);
+  // Closed, the space goes: nothing is left to scroll past.
+  await toast.getByRole("button", { name: "Close" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--toast-covered"),
+      ),
+    )
+    .toBe("");
+});
+
 test("Log session on a Library card confirms, then saves the progress", async ({ page }) => {
   await mockLibrary(page, LIBRARY);
   await page.goto("/library");

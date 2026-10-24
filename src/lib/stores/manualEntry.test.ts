@@ -6,7 +6,8 @@ const ENTRY = { key: "manual:book:1", snapshot: { title: "Dune" } } as LibraryEn
 
 function store() {
   const navigate = vi.fn();
-  return { navigate, entry: new ManualEntryStore(navigate) };
+  const land = vi.fn();
+  return { navigate, land, entry: new ManualEntryStore(navigate, land) };
 }
 
 describe("manual entry", () => {
@@ -62,12 +63,26 @@ describe("manual entry", () => {
   });
 
   it("an edit saves quietly: no notice, no navigation", () => {
-    const { entry, navigate } = store();
+    const { entry, navigate, land } = store();
     entry.open({ type: "book", edit: "manual:book:1" });
     entry.saved(ENTRY);
     entry.closed();
     expect(entry.notice).toBeNull();
     expect(navigate).not.toHaveBeenCalled();
+    expect(land).not.toHaveBeenCalled();
+  });
+
+  it("an edit that changed the type lands on the new page once closed, replacing the old", () => {
+    const { entry, navigate, land } = store();
+    entry.open({ type: "movie", edit: "manual:movie:1" });
+    entry.saved(ENTRY);
+    expect(land).not.toHaveBeenCalled();
+    entry.closed();
+    expect(land).toHaveBeenCalledExactlyOnceWith(ENTRY);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(entry.notice).toBeNull();
+    entry.closed();
+    expect(land).toHaveBeenCalledOnce();
   });
 
   it("opening an existing item from the duplicate prompt also waits for the close", () => {

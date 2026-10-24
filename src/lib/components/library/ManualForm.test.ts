@@ -144,7 +144,7 @@ describe("ManualForm", () => {
     expect(onsave).not.toHaveBeenCalled();
   });
 
-  it("editing fills the fields and the length, locks the type, and sends the length", async () => {
+  it("editing fills the fields and the length, and sends the length", async () => {
     const dune = saved("book", "Dune", {
       year: "1965",
       creator: "Frank Herbert",
@@ -155,7 +155,8 @@ describe("ManualForm", () => {
     expect(screen.getByRole("heading")).toHaveTextContent("Edit Dune");
     expect(screen.getByLabelText("Author")).toHaveValue("Frank Herbert");
     expect(screen.getByLabelText(/Genres/)).toHaveValue("Sci-fi");
-    expect(screen.getByRole("button", { name: "Movie" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Movie" })).toBeEnabled();
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Pages")).toHaveValue(412);
     await user.clear(screen.getByLabelText("Title"));
     await user.type(screen.getByLabelText("Title"), "Dune Messiah");
@@ -181,6 +182,39 @@ describe("ManualForm", () => {
     const { onsave, user } = form({ type: "book", edit: dune, entries: [dune] });
     await user.click(save());
     expect(onsave.mock.calls[0][1]).toEqual({ length: { ...emptyLength(), pages: 412 } });
+  });
+
+  it("can change a saved item's type, says what that does, and asks the new length", async () => {
+    const dune = saved("book", "Dune");
+    const { onsave, user } = form({ type: "book", edit: dune, entries: [dune] });
+    await user.click(screen.getByRole("button", { name: "Manga" }));
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent("Changing the type to Manga starts its progress over at 0");
+    expect(note).toHaveTextContent("removes its plan");
+    expect(note).toHaveTextContent("Its history and XP stay with it");
+    expect(screen.getByLabelText("Chapters")).toHaveValue(null);
+    expect(screen.queryByLabelText("Pages")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Chapters"), "100");
+    await user.click(save());
+    expect(onsave).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ media_type: "manga", title: "Dune" }),
+      { length: { ...emptyLength(), chapters: 100 } },
+    );
+  });
+
+  it("switching back to the saved type brings its length back and drops the note", async () => {
+    const dune = saved("book", "Dune");
+    const { user } = form({ type: "book", edit: dune, entries: [dune] });
+    await user.click(screen.getByRole("button", { name: "Manga" }));
+    await user.click(screen.getByRole("button", { name: "Book" }));
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Pages")).toHaveValue(412);
+  });
+
+  it("adding shows no note when the type changes", async () => {
+    const { user } = form({ type: "book" });
+    await user.click(screen.getByRole("button", { name: "Manga" }));
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
   it("disables everything while saving and shows the backend's reason", () => {

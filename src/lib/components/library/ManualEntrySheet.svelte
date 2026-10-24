@@ -2,6 +2,7 @@
   import ManualForm from "./ManualForm.svelte";
   import Sheet from "$lib/components/ui/Sheet.svelte";
   import Toast from "$lib/components/ui/Toast.svelte";
+  import { emptyLength } from "$lib/domain/length";
   import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
   import { manualEntry, ManualEntryStore } from "$lib/stores/manualEntry.svelte";
   import { motionStore } from "$lib/stores/motion.svelte";
@@ -19,13 +20,15 @@
   const request = $derived(entry.current);
   const editing = $derived(request?.edit ? (library.get(request.edit) ?? null) : null);
 
-  // An edit saves the details, then the length only when it changed.
+  // An edit saves the details, then the length only when it changed; a new type moves the item.
   async function save(draft: ManualDraft, user: Partial<UserData>) {
     if (!request) return;
     busy = true;
     error = "";
     let saved: LibraryEntry | null = null;
-    if (request.edit) {
+    if (request.edit && editing && draft.media_type !== editing.snapshot.media_type) {
+      saved = await library.retypeManual(request.edit, draft, user.length ?? emptyLength());
+    } else if (request.edit) {
       const key = request.edit;
       const lengthChanged =
         !!user.length && JSON.stringify(user.length) !== JSON.stringify(editing?.user.length);

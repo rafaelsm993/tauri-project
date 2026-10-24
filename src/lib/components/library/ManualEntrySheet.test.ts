@@ -136,6 +136,51 @@ describe("ManualEntrySheet", () => {
     expect(saved).not.toHaveBeenCalled();
   });
 
+  it("a changed type moves the item instead of editing it", async () => {
+    const book = { ...DUNE, user: { ...DUNE.user, length: { ...emptyLength(), pages: 412 } } };
+    const MANGA = "manual:manga:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+    const manga = {
+      ...book,
+      key: MANGA,
+      snapshot: { ...book.snapshot, media_key: MANGA, media_type: "manga" },
+    } as LibraryEntry;
+    const retypeManual = vi.fn(async () => manga);
+    const editManual = vi.fn();
+    const update = vi.fn();
+    const { library, entry, user } = setup({ retypeManual, editManual, update }, [book]);
+    await library.hydrate();
+    const saved = vi.spyOn(entry, "saved");
+    entry.open({ type: "book", edit: KEY });
+    await screen.findByRole("dialog", { name: "Edit Dune" });
+    await user.click(screen.getByRole("button", { name: "Manga" }));
+    await user.type(screen.getByLabelText("Chapters"), "100");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledWith(manga));
+    expect(retypeManual).toHaveBeenCalledWith(
+      KEY,
+      expect.objectContaining({ media_type: "manga" }),
+      { ...emptyLength(), chapters: 100 },
+    );
+    expect(editManual).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(library.has(KEY)).toBe(false);
+  });
+
+  it("stays open with the reason when the type change is refused", async () => {
+    const retypeManual = vi.fn(async () => {
+      throw "manual:manga:x is already in the library";
+    });
+    const { library, entry, user } = setup({ retypeManual }, [DUNE]);
+    await library.hydrate();
+    const saved = vi.spyOn(entry, "saved");
+    entry.open({ type: "book", edit: KEY });
+    await user.click(await screen.findByRole("button", { name: "Manga" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/already in the library/)).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(saved).not.toHaveBeenCalled();
+  });
+
   it("closes on Cancel without saving", async () => {
     const addManual = vi.fn();
     const { entry, user } = setup({ addManual });

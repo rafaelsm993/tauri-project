@@ -177,6 +177,36 @@ test.describe("a hand-made item's page", () => {
     await page.goBack();
     await expect(page).toHaveURL(/\/library$/);
   });
+
+  test("changing the type warns first, then moves the item to its new page", async ({ page }) => {
+    await page.goto("/library");
+    await page.getByRole("link", { name: /Hades/ }).click();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const sheet = page.getByRole("dialog", { name: "Edit Hades" });
+    await expect(sheet.getByRole("note")).toHaveCount(0);
+    await sheet.getByRole("group", { name: "Type" }).getByRole("button", { name: "Book" }).click();
+    await expect(sheet.getByRole("note")).toContainText("starts its progress over at 0");
+    await sheet.getByLabel("Pages").fill("300");
+    await sheet.getByRole("button", { name: "Save" }).click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/media/book/${UUID}$`));
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hades");
+    const calls = await ipcCalls(page);
+    expect(calls.filter((c) => c.cmd === "library_edit_manual")).toHaveLength(0);
+    const moves = calls.filter((c) => c.cmd === "library_retype_manual");
+    expect(moves).toHaveLength(1);
+    expect(moves[0].args).toMatchObject({
+      key: `manual:game:${UUID}`,
+      draft: { media_type: "book", title: "Hades" },
+      length: { pages: 300 },
+      event: { kind: "library_retype", payload: { into: `manual:book:${UUID}` } },
+    });
+
+    // The old page was replaced, so Back leaves for where the user came from.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/library$/);
+  });
 });
 
 test("offline: add a book with genres, open it, find its card, then plan it", async ({ page }) => {

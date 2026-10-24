@@ -13,7 +13,7 @@ export interface MatchNotice {
 type Unmerger = { unmerge: (key: MediaKey) => Promise<LibraryEntry | null>; error: string };
 
 // The detail page this item lives on now; replaces the history entry so Back skips the old page.
-function land(entry: LibraryEntry) {
+export function land(entry: LibraryEntry) {
   const path = detailPath(entry);
   void goto(resolve("/media/[type]/[id]", { type: path.type, id: encodeURIComponent(path.id) }), {
     replaceState: true,

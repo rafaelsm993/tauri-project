@@ -49,6 +49,7 @@
   const typeOptions = TYPE_ORDER.map((t) => ({ value: t, label: MEDIA_LABELS[t] }));
   const genreChips = $derived(splitTags(genres));
   const isGame = $derived(mediaType === "game");
+  const retyping = $derived(!!edit && mediaType !== edit.snapshot.media_type);
   const titleError = $derived(tried && !name.trim() ? "Add a title." : "");
   const yearError = $derived(
     tried && year.trim() && !/^[12]\d{3}$/.test(year.trim()) ? "Use four digits, like 1999." : "",
@@ -112,12 +113,22 @@
         label="Type"
         options={typeOptions}
         value={mediaType}
-        disabled={busy || !!edit}
+        disabled={busy}
         onchange={(t) => {
           mediaType = t;
+          // Each type counts its length differently; its own saved length comes back with it.
+          if (edit)
+            length = t === edit.snapshot.media_type ? { ...edit.user.length } : emptyLength();
           changed();
         }}
       />
+      {#if retyping}
+        <p class="retype-note" role="note">
+          Changing the type to {MEDIA_LABELS[mediaType]} starts its progress over at 0 and removes its
+          plan, because each type counts progress differently. Enter its length again below. Its history
+          and XP stay with it.
+        </p>
+      {/if}
     </div>
 
     <div class="field">
@@ -227,6 +238,13 @@
 </form>
 
 <style lang="scss">
+  .retype-note {
+    font-size: 0.85rem;
+    color: var(--clr-text-2);
+    border-inline-start: 3px solid var(--clr-accent);
+    padding-inline-start: $spacing-sm;
+  }
+
   .manual-form {
     display: flex;
     flex-direction: column;

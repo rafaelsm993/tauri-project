@@ -1,6 +1,7 @@
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { detailPath } from "$lib/domain/libraryView";
+import { land } from "$lib/stores/match.svelte";
 import type { LibraryEntry } from "$lib/types/library";
 import type { MediaKey, MediaType } from "$lib/types/media";
 
@@ -32,11 +33,17 @@ export class ManualEntryStore {
   current = $state<ManualEntryRequest | null>(null);
   notice = $state<LibraryEntry | null>(null);
 
-  private pending: LibraryEntry | null = null;
+  // `moved`: an edit changed the item's key, so its old page must be replaced, not stacked on.
+  private pending: { entry: LibraryEntry; moved: boolean } | null = null;
   private navigate: (entry: LibraryEntry) => void;
+  private land: (entry: LibraryEntry) => void;
 
-  constructor(navigate: (entry: LibraryEntry) => void = openItem) {
+  constructor(
+    navigate: (entry: LibraryEntry) => void = openItem,
+    landOn: (entry: LibraryEntry) => void = land,
+  ) {
     this.navigate = navigate;
+    this.land = landOn;
   }
 
   open(options: ManualEntryOptions = {}) {
@@ -59,22 +66,27 @@ export class ManualEntryStore {
   saved(entry: LibraryEntry) {
     const request = this.current;
     this.current = null;
-    if (!request || request.edit) return;
-    if (request.after === "open") this.pending = entry;
+    if (!request) return;
+    if (request.edit) {
+      if (entry.key !== request.edit) this.pending = { entry, moved: true };
+      return;
+    }
+    if (request.after === "open") this.pending = { entry, moved: false };
     else this.notice = entry;
   }
 
   // The duplicate prompt's "Open it": same order as a save.
   openExisting(entry: LibraryEntry) {
     this.current = null;
-    this.pending = entry;
+    this.pending = { entry, moved: false };
   }
 
   // The sheet's history entry is gone; only now can navigating not be undone by it.
   closed() {
-    const entry = this.pending;
+    const done = this.pending;
     this.pending = null;
-    if (entry) this.navigate(entry);
+    if (done?.moved) this.land(done.entry);
+    else if (done) this.navigate(done.entry);
   }
 
   openNotice() {

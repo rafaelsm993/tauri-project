@@ -116,6 +116,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
           patch?: Record<string, unknown>;
           draft?: Record<string, unknown>;
           user?: Record<string, unknown>;
+          length?: Record<string, unknown>;
           event?: { at_utc: string };
           id?: string;
           media_type?: string;
@@ -161,6 +162,26 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
           const at_i = library.findIndex((e) => e.key === key);
           if (at_i >= 0) library.splice(at_i, 1);
           library.push(entry as unknown as (typeof library)[number]);
+          return structuredClone(entry);
+        }
+        // Like Rust: same id under the new type, progress and plan start over.
+        if (cmd === "library_retype_manual") {
+          const draft = args!.draft!;
+          const at_i = library.findIndex((e) => e.key === args?.key);
+          const old = library[at_i] as unknown as {
+            snapshot: Record<string, unknown>;
+            user: Record<string, unknown>;
+            created_at: string;
+          };
+          const key = `manual:${draft.media_type}:${args!.key!.split(":").slice(2).join(":")}`;
+          const entry = {
+            key,
+            snapshot: { ...old.snapshot, ...draft, media_key: key },
+            user: { ...old.user, progress: 0, plan: null, length: args!.length },
+            created_at: old.created_at,
+            updated_at: args!.event!.at_utc,
+          };
+          library.splice(at_i, 1, entry as unknown as (typeof library)[number]);
           return structuredClone(entry);
         }
         if (cmd === "library_update") {

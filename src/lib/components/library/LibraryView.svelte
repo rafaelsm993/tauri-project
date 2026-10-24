@@ -2,19 +2,15 @@
   import { resolve } from "$app/paths";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
-  import LibraryCard from "$lib/components/library/LibraryCard.svelte";
+  import PlannableCard from "$lib/components/library/PlannableCard.svelte";
   import GardenScene from "$lib/components/garden/GardenScene.svelte";
-  import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
-  import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
-  import { localDay } from "$lib/domain/calendar";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
   import { libraryFilters, LibraryFilters } from "$lib/stores/libraryFilters.svelte";
   import { VIEW_OPTIONS } from "$lib/domain/garden";
-  import type { LibraryEntry } from "$lib/types/library";
   import {
     filterEntries,
     searchEntries,
@@ -22,7 +18,7 @@
     typeOptions,
   } from "$lib/domain/libraryView";
 
-  type Reminders = Pick<typeof reminderStore, "data" | "busy" | "done" | "nextSession">;
+  type Reminders = Pick<typeof reminderStore, "data">;
 
   // The store, filters and reminders props exist for tests; the app uses the singletons.
   let {
@@ -30,8 +26,6 @@
     filters = libraryFilters,
     reminders = reminderStore,
   }: { store?: LibraryStore; filters?: LibraryFilters; reminders?: Reminders } = $props();
-
-  let planning = $state<LibraryEntry | null>(null);
 
   const matching = $derived(searchEntries(store.entries, filters.query));
   const types = $derived(typeOptions(matching, store.entries));
@@ -101,14 +95,6 @@
       {/if}
     {/snippet}
   </AppHeader>
-  <header class="library-head">
-    <TodayStrip
-      today={reminders.data}
-      busy={(key) => reminders.busy(key)}
-      ondone={(key) => void reminders.done(key)}
-      onnext={(key) => void reminders.nextSession(key)}
-    />
-  </header>
 
   {#if store.error}
     <ErrorNote message={store.error} />
@@ -125,21 +111,19 @@
   {:else if visible.length === 0}
     <p class="library-note">{emptyFilterText}</p>
   {:else}
-    {#if planning}
-      <PlanDialog
-        entry={planning}
-        today={localDay()}
-        library={store}
-        onclose={() => (planning = null)}
-      />
-    {/if}
     {#if filters.view === "garden"}
       <GardenScene entries={visible} />
     {:else}
       <ul class="library-grid">
         {#each visible as entry (entry.key)}
           <li>
-            <LibraryCard {entry} posterDir={store.posterDir} onplan={() => (planning = entry)} />
+            <PlannableCard
+              {entry}
+              posterDir={store.posterDir}
+              library={store}
+              dueMinutes={reminders.data.due.find((d) => d.entry.key === entry.key)?.minutes ??
+                null}
+            />
           </li>
         {/each}
       </ul>
@@ -155,7 +139,6 @@
     gap: $spacing-lg;
   }
 
-  .library-head,
   .library-filters {
     display: flex;
     flex-direction: column;

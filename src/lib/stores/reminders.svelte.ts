@@ -80,6 +80,11 @@ export class ReminderStore {
     this.toast = null;
   }
 
+  // A logged session made today's reminder for that item moot.
+  logged(key: string): void {
+    if (this.toast?.entry.key === key) this.toast = null;
+  }
+
   later(): void {
     if (this.toast) this.deps.log(`[reminder] snoozed ${this.toast.entry.key}`);
     this.snoozedUntil = this.clock().getTime() + SNOOZE_MS;

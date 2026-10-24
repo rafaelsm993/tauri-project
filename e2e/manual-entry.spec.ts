@@ -190,7 +190,9 @@ test("offline: add a book with genres, open it, find its card, then plan it", as
   await expect(
     page.getByRole("link", { name: "Book Piranesi Planning Not started" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Piranesi \d+ min$/ })).toBeVisible();
+  // Planned for today: the card notes the time and offers to log it.
+  await expect(page.getByText(/^\d+ min today$/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log a session of Piranesi" })).toBeVisible();
   await page
     .getByRole("navigation", { name: "Main" })
     .getByRole("link", { name: "Planner" })

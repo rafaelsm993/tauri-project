@@ -134,6 +134,16 @@ describe("ReminderStore", () => {
     expect(store.toast).not.toBeNull();
   });
 
+  it("closes the toast of an item whose session was just logged", () => {
+    const { store } = setup();
+    store.check();
+    expect(store.toast?.entry.key).toBe("tmdb:tv:1");
+    store.logged("tmdb:tv:2");
+    expect(store.toast?.entry.key).toBe("tmdb:tv:1");
+    store.logged("tmdb:tv:1");
+    expect(store.toast).toBeNull();
+  });
+
   it("Done resumes the plan tomorrow and closes its toast", async () => {
     const { store, deps } = setup();
     store.check();

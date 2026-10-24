@@ -81,23 +81,28 @@ describe("LibraryView", () => {
     expect(screen.getByRole("link", { name: /browse/i })).toHaveAttribute("href", "/");
   });
 
-  it("shows today's sessions under the header", async () => {
-    const store = await storeWith([entry(1, "tv", "in_progress")]);
-    const tv = store.entries[0];
+  it("offers Log session on a planned card and notes today's time when due", async () => {
+    const plan = { days: [0, 1, 2, 3, 4, 5, 6], max_session_minutes: 30, since: "2026-09-28" };
+    const planned = entry(1, "tv", "in_progress");
+    planned.user = {
+      ...planned.user,
+      plan,
+      length: { ...emptyLength(), episodes: 9, episode_minutes: 30 },
+    };
+    const store = await storeWith([planned, entry(2, "tv", "planning")]);
+    const tv = store.entries.find((e) => e.key === "tmdb:tv:1")!;
     const reminders = {
       data: {
-        due: [{ entry: tv, family: "screen" as const, minutes: 45, finish: "2026-10-03" }],
+        due: [{ entry: tv, family: "screen" as const, minutes: 30, finish: "2026-10-03" }],
         replanned: null,
       },
-      busy: () => false,
-      done: vi.fn(async () => {}),
-      nextSession: vi.fn(async () => {}),
     };
     render(LibraryPage, { store, filters: new LibraryFilters(), reminders });
-    const today = screen.getByRole("region", { name: "Today" });
-    expect(today).toHaveTextContent("T1");
-    await userEvent.click(within(today).getByRole("button", { name: "Done: T1" }));
-    expect(reminders.done).toHaveBeenCalledWith(tv.key);
+    expect(screen.queryByRole("region", { name: "Today" })).not.toBeInTheDocument();
+    expect(screen.getByText("30 min today")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Log a session of T1" }));
+    expect(screen.getByRole("dialog", { name: "Log a session of T1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Log a session of T2" })).not.toBeInTheDocument();
   });
 
   it("opens the plan sheet for a card and closes it on cancel", async () => {

@@ -31,6 +31,8 @@ function entry(over: Partial<LibraryEntry["user"]> = {}): LibraryEntry {
   };
 }
 
+const PLAN = { days: [0], max_session_minutes: 30, since: "2026-09-28" };
+
 describe("LibraryCard", () => {
   it("is a link to the detail page named after the title", () => {
     render(LibraryCard, { entry: entry() });
@@ -46,12 +48,47 @@ describe("LibraryCard", () => {
     expect(onplan).toHaveBeenCalled();
   });
 
-  it("says Edit plan once the item has one", () => {
-    const plan = { days: [0], max_session_minutes: 60, since: "2026-10-01" };
-    render(LibraryCard, { entry: entry({ plan }), onplan: vi.fn() });
-    expect(screen.getByRole("button", { name: "Edit plan for Arcane" })).toHaveTextContent(
-      "Edit plan",
-    );
+  it("puts an outline plan icon on the cover of an unplanned item, and no Log session", () => {
+    render(LibraryCard, { entry: entry(), onplan: vi.fn(), onlog: vi.fn() });
+    const icon = screen.getByRole("button", { name: "Plan Arcane" });
+    // Sits over the cover's corner (the type badge holds the other one).
+    expect(icon).toHaveClass("lib-card__plan-icon");
+    expect(icon).not.toHaveClass("planned");
+    expect(screen.queryByRole("button", { name: /^Log a session/ })).not.toBeInTheDocument();
+  });
+
+  it("fills the plan icon once the item has a plan", () => {
+    render(LibraryCard, { entry: entry({ plan: PLAN }), onplan: vi.fn() });
+    expect(screen.getByRole("button", { name: "Edit plan for Arcane" })).toHaveClass("planned");
+  });
+
+  it("offers Log session for a planned item, with today's time when due", async () => {
+    const onlog = vi.fn();
+    render(LibraryCard, { entry: entry({ plan: PLAN }), onplan: vi.fn(), onlog, dueMinutes: 45 });
+    expect(screen.getByText("45 min today")).toBeInTheDocument();
+    const log = screen.getByRole("button", { name: "Log a session of Arcane" });
+    expect(log).toHaveTextContent("Log session");
+    expect(screen.getByRole("link", { name: /arcane/i })).not.toContainElement(log);
+    await fireEvent.click(log);
+    expect(onlog).toHaveBeenCalledOnce();
+  });
+
+  it("notes no time on a day without a session", () => {
+    render(LibraryCard, { entry: entry({ plan: PLAN }), onplan: vi.fn(), onlog: vi.fn() });
+    expect(screen.getByRole("button", { name: "Log a session of Arcane" })).toBeInTheDocument();
+    expect(screen.queryByText(/today$/)).not.toBeInTheDocument();
+  });
+
+  it("offers no Log session once the item is completed or dropped", () => {
+    for (const status of ["completed", "dropped"] as const) {
+      const { unmount } = render(LibraryCard, {
+        entry: entry({ plan: PLAN, status }),
+        onplan: vi.fn(),
+        onlog: vi.fn(),
+      });
+      expect(screen.queryByRole("button", { name: /^Log a session/ })).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it("has no Plan button for a dropped item or without onplan", () => {

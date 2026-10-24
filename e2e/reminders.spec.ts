@@ -69,11 +69,61 @@ test("Done in the strip resumes the plan tomorrow and clears the session", async
   });
 });
 
-test("Next session in the Library strip saves the same way", async ({ page }) => {
+test("Log session on a Library card confirms, then saves the progress", async ({ page }) => {
   await mockLibrary(page, LIBRARY);
   await page.goto("/library");
-  await today(page).getByRole("button", { name: "Next session: Frieren" }).click();
-  await expect(page.getByRole("region", { name: "Today" })).toHaveCount(0);
+  await expect(page.getByText("45 min today")).toBeVisible();
+  await page.getByRole("button", { name: "Log a session of Frieren" }).click();
+  const sheet = page.getByRole("dialog", { name: "Log a session of Frieren" });
+  await expect(sheet.getByLabel("Session length (minutes)")).toHaveValue("45");
+  await expect(sheet).toContainText("+2 episodes · 2 of 28 episodes");
+  await expect(sheet).toContainText("14 sessions · 10 h 24 min");
+  // 45 min is 1.875 episodes: the user may record 1 instead.
+  await sheet.getByRole("button", { name: "Round down · 1 episode" }).click();
+  await expect(sheet).toContainText("+1 episode · 1 of 28 episodes");
+  await sheet.getByRole("button", { name: "Round up · 2 episodes" }).click();
+  await sheet.getByRole("button", { name: "Log session", exact: true }).click();
+  await expect(sheet).toBeHidden();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ key: FRIEREN.key, patch: { progress: 2 } });
+  // Logged: today's session is done, so its time note goes.
+  await expect(page.getByText("45 min today")).toHaveCount(0);
+});
+
+test("a session on an unplanned day says so and still counts", async ({ page }) => {
+  await mockLibrary(page, LIBRARY);
+  await page.goto("/library");
+  // Frieren's reminder floats over the last row on a small phone; a person closes it first.
+  await reminder(page).getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "Log a session of Hades" }).click();
+  const sheet = page.getByRole("dialog", { name: "Log a session of Hades" });
+  await expect(sheet.getByRole("note")).toContainText("isn't one of the days you planned");
+  await expect(sheet.getByLabel("Session length (minutes)")).toHaveValue("120");
+  await sheet.getByRole("button", { name: "Log session", exact: true }).click();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ key: HADES.key, patch: { progress: 2 } });
+});
+
+test("the cover icon plans an unplanned item", async ({ page }) => {
+  const LOOSE = item(5, "tv", "Arcane", { episodes: 9, episode_minutes: 40 }, null);
+  await mockLibrary(page, [LOOSE]);
+  await page.goto("/library");
+  await expect(page.getByRole("button", { name: "Log a session of Arcane" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Plan Arcane" }).click();
+  await expect(page.getByRole("dialog", { name: "Plan Arcane" })).toBeVisible();
+});
+
+test("logging the last session completes the item", async ({ page }) => {
+  const DUNE = item(3, "book", "Dune", { pages: 600 }, MON_THU);
+  const NEARLY = { ...DUNE, user: { ...DUNE.user, progress: 590 } };
+  await mockLibrary(page, [NEARLY]);
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Log a session of Dune" }).click();
+  const sheet = page.getByRole("dialog", { name: "Log a session of Dune" });
+  await expect(sheet).toContainText("this finishes it");
+  await sheet.getByRole("button", { name: "Log session", exact: true }).click();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { progress: 600, status: "completed" } });
 });
 
 test("Start opens the item", async ({ page }) => {

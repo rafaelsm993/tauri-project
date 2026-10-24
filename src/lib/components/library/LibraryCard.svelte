@@ -7,15 +7,29 @@
   import { posterSources } from "$lib/domain/poster";
   import { isBinary, percent, progressLabel } from "$lib/domain/progress";
   import { STATUS_LABELS } from "$lib/stores/library.svelte";
+  import { formatMinutes } from "$lib/utils/format";
   import { MEDIA_LABELS } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
 
-  // `onplan` adds a Plan button below the card; absent, the card is only a link.
+  // `onplan` puts a plan icon on the cover (outline = plan it, filled = edit it); `onlog` adds
+  // "Log session" under a planned card; `dueMinutes` notes today's planned time. Absent, the
+  // card is only a link.
   let {
     entry,
     posterDir = null,
     onplan,
-  }: { entry: LibraryEntry; posterDir?: string | null; onplan?: () => void } = $props();
+    onlog,
+    dueMinutes = null,
+  }: {
+    entry: LibraryEntry;
+    posterDir?: string | null;
+    onplan?: () => void;
+    onlog?: () => void;
+    dueMinutes?: number | null;
+  } = $props();
+
+  // The planner glyph from the nav, so the icon reads as "Planner" everywhere.
+  const PLAN_ICON = "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4";
 
   let failed = $state(0);
 
@@ -26,6 +40,9 @@
   const sources = $derived(posterSources(entry.snapshot, posterDir));
   const src = $derived(sources[failed] ?? null);
   const path = $derived(detailPath(entry));
+  const loggable = $derived(
+    !!entry.user.plan && entry.user.status !== "dropped" && entry.user.status !== "completed",
+  );
   const href = $derived(
     resolve("/media/[type]/[id]", { type: path.type, id: encodeURIComponent(path.id) }),
   );
@@ -74,29 +91,97 @@
     </div>
   </a>
   {#if onplan && entry.user.status !== "dropped"}
+    <!-- A sibling of the link, never inside it: a button in an <a> is invalid and steals its click. -->
     <button
       type="button"
-      class="lib-card__plan"
+      class="lib-card__plan-icon"
+      class:planned={!!entry.user.plan}
       aria-label={entry.user.plan
         ? `Edit plan for ${entry.snapshot.title}`
         : `Plan ${entry.snapshot.title}`}
       onclick={onplan}
     >
-      {entry.user.plan ? "Edit plan" : "Plan"}
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d={PLAN_ICON} /></svg>
     </button>
+  {/if}
+  {#if onlog && loggable}
+    {#if dueMinutes !== null}
+      <p class="lib-card__today">{formatMinutes(dueMinutes)} today</p>
+    {/if}
+    <button
+      type="button"
+      class="lib-card__log"
+      aria-label="Log a session of {entry.snapshot.title}"
+      onclick={onlog}>Log session</button
+    >
   {/if}
 </div>
 
 <style lang="scss">
   .lib-card-wrap {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
     min-width: 0;
   }
 
-  .lib-card__plan {
-    align-self: flex-start;
+  // Over the cover's top-right corner (the type badge holds the top-left).
+  .lib-card__plan-icon {
+    position: absolute;
+    top: $spacing-xs;
+    right: $spacing-xs;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
+    border-radius: $radius-full;
+    background: rgb(var(--clr-surface-rgb) / 0.85);
+    color: var(--clr-text);
+    cursor: pointer;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    &.planned {
+      background: var(--clr-primary);
+      border-color: transparent;
+      color: var(--clr-on-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 2px;
+    }
+
+    // 30px to the eye, 44px to the finger.
+    @include touch {
+      &::after {
+        content: "";
+        position: absolute;
+        inset: -7px;
+      }
+    }
+  }
+
+  .lib-card__today {
+    margin: 0;
+    font-family: $font-mono;
+    font-size: 0.72rem;
+    color: var(--clr-text-2);
+  }
+
+  .lib-card__log {
+    align-self: stretch;
     background: none;
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
     color: var(--clr-text-2);

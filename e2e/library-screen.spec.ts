@@ -60,11 +60,16 @@ test("the library lists saved items and filters them", async ({ page }) => {
   await page.goto("/library");
   const cards = page.getByRole("main").getByRole("list").getByRole("link");
   await expect(cards).toHaveCount(8);
-  await page
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  const panel = page.getByRole("dialog", { name: "Filters" });
+  await panel
     .getByRole("group", { name: "Status" })
     .getByRole("button", { name: /^in progress/i })
     .click();
   await expect(cards).toHaveCount(4);
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole("button", { name: "Remove filter: In progress" })).toBeVisible();
 });
 
 test("the library has no horizontal overflow", async ({ page }) => {

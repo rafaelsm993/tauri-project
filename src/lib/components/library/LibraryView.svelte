@@ -3,6 +3,7 @@
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import PlannableCard from "$lib/components/library/PlannableCard.svelte";
+  import LibraryFilterBar from "$lib/components/library/LibraryFilterBar.svelte";
   import GardenScene from "$lib/components/garden/GardenScene.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import SearchField from "$lib/components/ui/SearchField.svelte";
@@ -25,7 +26,14 @@
     store = libraryStore,
     filters = libraryFilters,
     reminders = reminderStore,
-  }: { store?: LibraryStore; filters?: LibraryFilters; reminders?: Reminders } = $props();
+    narrowFilters = undefined,
+  }: {
+    store?: LibraryStore;
+    filters?: LibraryFilters;
+    reminders?: Reminders;
+    // Tests pin the phone layout; the app follows the window.
+    narrowFilters?: boolean;
+  } = $props();
 
   const matching = $derived(searchEntries(store.entries, filters.query));
   const types = $derived(typeOptions(matching, store.entries));
@@ -60,28 +68,15 @@
     {#snippet collapsible()}
       {#if store.entries.length > 0}
         <div class="library-filters">
-          <div class="filter-row">
-            <span class="filter-label" aria-hidden="true">Status</span>
-            <SegmentedControl
-              label="Status"
-              options={statuses}
-              value={status}
-              onchange={(v) => (filters.status = v)}
-              wrap
-            />
-          </div>
-          {#if types.length > 2}
-            <div class="filter-row">
-              <span class="filter-label" aria-hidden="true">Type</span>
-              <SegmentedControl
-                label="Type"
-                options={types}
-                value={type}
-                onchange={(v) => (filters.type = v)}
-                wrap
-              />
-            </div>
-          {/if}
+          <LibraryFilterBar
+            {statuses}
+            {types}
+            {status}
+            {type}
+            onstatus={(v) => (filters.status = v)}
+            ontype={(v) => (filters.type = v)}
+            narrow={narrowFilters}
+          />
           <div class="filter-row">
             <span class="filter-label" aria-hidden="true">View</span>
             <SegmentedControl

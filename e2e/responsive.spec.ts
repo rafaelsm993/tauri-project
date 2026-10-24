@@ -56,46 +56,44 @@ for (const screen of SCREENS) {
 }
 
 test.describe("the library filters", () => {
-  test("names each row, so two 'All' pills are not mistaken for one", async ({ page }) => {
-    await mockLibrary(page, [
-      manualItem("book", "Piranesi"),
-      manualItem("movie", "Arrival"),
-      manualItem("anime", "Frieren"),
-    ]);
+  const four = () => [
+    manualItem("book", "Piranesi"),
+    manualItem("movie", "Arrival"),
+    manualItem("anime", "Frieren"),
+    manualItem("game", "Outer Wilds"),
+  ];
+
+  test("fit Status and Type in one short row", async ({ page }) => {
+    await mockLibrary(page, four());
     await page.goto("/library");
     await page.waitForLoadState("networkidle");
-    for (const name of ["Status", "Type", "View"]) {
-      const group = page.getByRole("group", { name });
-      const label = page.locator(".filter-label", { hasText: name });
-      await expect(label).toBeVisible();
-      const l = (await label.boundingBox())!;
-      const g = (await group.boundingBox())!;
-      expect(l.y + l.height, `${name} label is not above its row`).toBeLessThanOrEqual(g.y + 1);
-      expect(g.y - (l.y + l.height), `${name} label is far from its row`).toBeLessThanOrEqual(8);
-    }
+    const bar = page.locator(".filter-bar");
+    expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(52);
+    const chips = page.getByRole("group", { name: "Type" }).getByRole("button");
+    await expect(chips).toHaveText([/^Movie/, /^Anime/, /^Book/, /^Game/]);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 
-  test("keeps every filter option reachable without a sideways swipe", async ({ page }) => {
-    await mockLibrary(page, [
-      manualItem("book", "Piranesi"),
-      manualItem("movie", "Arrival"),
-      manualItem("anime", "Frieren"),
-      manualItem("game", "Outer Wilds"),
-    ]);
+  test("reach every Status and Type option from the panel without a sideways swipe", async ({
+    page,
+  }) => {
+    await mockLibrary(page, four());
     await page.goto("/library");
     await page.waitForLoadState("networkidle");
-
-    // Status hid 217px of its options on a 360px phone and Type hid 19px, so options like
-    // "Completed" and "Dropped" were unreachable without a swipe nothing signposted.
-    for (const label of ["Status", "Type", "View"]) {
-      const group = page.getByRole("group", { name: label });
-      await expect(group).toBeVisible();
+    await page.getByRole("button", { name: "Filters" }).click();
+    const panel = page.getByRole("dialog", { name: "Filters" });
+    await expect(panel).toBeVisible();
+    for (const label of ["Status", "Type"]) {
+      const group = panel.getByRole("group", { name: label });
       const hidden = await group.evaluate((el) => el.scrollWidth - el.clientWidth);
       expect(hidden, `${label} hides options behind a scroll`).toBeLessThanOrEqual(1);
     }
     for (const name of [/^All/, /^Planning/, /^In progress/, /^Completed/, /^Dropped/]) {
       await expect(
-        page.getByRole("group", { name: "Status" }).getByRole("button", { name }),
+        panel.getByRole("group", { name: "Status" }).getByRole("button", { name }),
       ).toBeInViewport();
     }
   });

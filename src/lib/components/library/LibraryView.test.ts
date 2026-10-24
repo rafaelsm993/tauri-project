@@ -122,23 +122,35 @@ describe("LibraryView", () => {
       entry(2, "tv", "in_progress"),
       entry(3, "tv", "planning"),
     ]);
-    render(LibraryPage, { store, filters: new LibraryFilters() });
+    render(LibraryPage, { store, filters: new LibraryFilters(), narrowFilters: true });
     expect(cards()).toHaveLength(3);
 
-    await userEvent.click(screen.getByRole("button", { name: /^planning/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Filters" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Filters" }));
+    await userEvent.click(
+      within(dialog.getByRole("group", { name: "Status" })).getByRole("button", {
+        name: /^planning/i,
+      }),
+    );
     expect(cards()).toHaveLength(2);
+    await userEvent.keyboard("{Escape}");
 
-    await userEvent.click(screen.getByRole("button", { name: /^tv/i }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Type" })).getByRole("button", {
+        name: /^tv show/i,
+      }),
+    );
     expect(cards().map((a) => a.textContent)).toEqual([expect.stringContaining("T3")]);
+    expect(screen.getByRole("button", { name: "Remove filter: Planning" })).toBeInTheDocument();
   });
 
   it("says when a filter matches nothing", async () => {
-    render(LibraryPage, {
-      store: await storeWith([entry(1, "movie", "planning")]),
-      filters: new LibraryFilters(),
-    });
-    await userEvent.click(screen.getByRole("button", { name: /^dropped/i }));
+    // An empty status can't be picked, but a kept one can end up matching nothing.
+    const filters = new LibraryFilters();
+    filters.status = "dropped";
+    render(LibraryPage, { store: await storeWith([entry(1, "movie", "planning")]), filters });
     expect(screen.getByText(/no dropped items/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove filter: Dropped" })).toBeInTheDocument();
   });
 
   it("narrows the grid by title as you type, with counts that follow", async () => {
@@ -147,12 +159,13 @@ describe("LibraryView", () => {
       entry(2, "tv", "in_progress"),
       entry(3, "tv", "planning"),
     ]);
-    render(LibraryPage, { store, filters: new LibraryFilters() });
+    render(LibraryPage, { store, filters: new LibraryFilters(), narrowFilters: true });
     await userEvent.type(search(), "t2");
     expect(cards().map((a) => a.textContent)).toEqual([expect.stringContaining("T2")]);
+    await userEvent.click(screen.getByRole("button", { name: "Filters" }));
     const status = within(screen.getByRole("group", { name: "Status" }));
     expect(status.getByRole("button", { name: /^all 1/i })).toBeInTheDocument();
-    expect(status.getByRole("button", { name: /^planning 0/i })).toBeInTheDocument();
+    expect(status.getByRole("button", { name: /^planning 0/i })).toBeDisabled();
   });
 
   it("says when no title matches and clearing restores the grid", async () => {
@@ -186,13 +199,23 @@ describe("LibraryView", () => {
     filters.type = "anime";
     render(LibraryPage, { store, filters });
     expect(cards()).toHaveLength(3);
-    const type = within(screen.getByRole("group", { name: "Type" }));
-    expect(type.getByRole("button", { name: /^all 3/i, pressed: true })).toBeInTheDocument();
+    const chips = within(screen.getByRole("group", { name: "Type" })).getAllByRole("button");
+    expect(chips).toHaveLength(3);
+    expect(chips.every((c) => c.getAttribute("aria-pressed") === "false")).toBe(true);
   });
 });
 
 describe("LibraryView: garden view", () => {
   const view = () => within(screen.getByRole("group", { name: "View" }));
+
+  it("keeps View as its own row beside the filter bar", async () => {
+    render(LibraryPage, {
+      store: await storeWith([entry(1, "movie", "completed"), entry(2, "tv", "planning")]),
+      filters: new LibraryFilters(),
+    });
+    expect(view().getByRole("button", { name: "Grid", pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
+  });
   // A plant's name is exactly "T1, movie, completed"; a card's name has no commas.
   const plants = () => screen.queryAllByRole("link", { name: /^T\d, \w+, / });
   const posters = () => cards().filter((el) => !/,/.test(el.getAttribute("aria-label") ?? ""));

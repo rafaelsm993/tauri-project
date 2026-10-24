@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
 import { manualItem, mockLibrary } from "./fixtures/library";
 
@@ -85,6 +86,44 @@ test.describe("the browse header", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
+  });
+
+  // Android draws the app under its status bar and reports that bar's height through
+  // env(safe-area-inset-top); Chromium here reports 0. Fake the Galaxy A34's 27px.
+  const fakeStatusBar = (page: Page) =>
+    page.evaluate(() => document.documentElement.style.setProperty("--safe-top", "27px"));
+
+  test("pins below the status bar with a little air, and paints that air", async ({ page }) => {
+    await fakeStatusBar(page);
+    await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));
+    const header = page.locator(".app-header");
+    await expect.poll(async () => Math.round((await header.boundingBox())!.y)).toBe(35);
+    // Whatever sits at the very top edge must be the header's own band, not scrolled content.
+    const covered = await page.evaluate(() => {
+      const h = document.querySelector(".app-header")!;
+      const r = h.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, 2);
+      return !!hit && h.contains(hit);
+    });
+    expect(covered, "content shows under the status bar").toBe(true);
+  });
+
+  test("rests where it pins, so it never lands on the content below", async ({ page }) => {
+    await fakeStatusBar(page);
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+    const gap = await page.evaluate(() => {
+      const h = document.querySelector(".app-header")!;
+      const next = h.nextElementSibling as HTMLElement;
+      return Math.round(next.getBoundingClientRect().top - h.getBoundingClientRect().bottom);
+    });
+    expect(gap, "the header overlaps the content under it").toBeGreaterThanOrEqual(0);
+    // At rest the status bar shows the app's background art, not a painted band.
+    const banded = await page.evaluate(() => {
+      const h = document.querySelector(".app-header")!;
+      const hit = document.elementFromPoint(h.getBoundingClientRect().left + 10, 2);
+      return !!hit && h.contains(hit);
+    });
+    expect(banded).toBe(false);
   });
 
   test("steps the filters aside on the way down and brings them back on the way up", async ({

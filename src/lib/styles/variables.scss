@@ -105,6 +105,9 @@ $nav-bar-height: 56px;
   max-width: $page-max-width;
   margin-inline: auto;
   padding: $spacing-lg $spacing-xl $spacing-2xl;
+  // Rest where the sticky header pins (status bar + a little air), or sticky shoves it down
+  // over the first content row at scroll 0.
+  padding-top: max(#{$spacing-lg}, calc(var(--safe-top) + #{$spacing-sm}));
   min-width: 0;
 }
 

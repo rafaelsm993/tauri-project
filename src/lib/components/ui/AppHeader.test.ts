@@ -34,6 +34,18 @@ describe("AppHeader", () => {
     expect(container.querySelector(".app-header")).toHaveAttribute("data-collapsed", "false");
   });
 
+  it("marks itself stuck once the page has scrolled, and not at the top", async () => {
+    const { container } = render(AppHeader, { ...base });
+    const header = container.querySelector(".app-header")!;
+    expect(header).toHaveAttribute("data-stuck", "false");
+    scrollTo(40);
+    await tick();
+    expect(header).toHaveAttribute("data-stuck", "true");
+    scrollTo(0);
+    await tick();
+    expect(header).toHaveAttribute("data-stuck", "false");
+  });
+
   it("gives the page one heading, so every screen titles itself the same way", () => {
     render(AppHeader, { ...base, heading: "Library" });
     expect(screen.getByRole("heading", { level: 1, name: "Library" })).toBeInTheDocument();

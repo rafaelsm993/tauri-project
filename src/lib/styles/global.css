@@ -77,6 +77,9 @@
 
   /* ── Z-index stack ── */
   --z-raised: 10;
+  /* The status bar's height on edge-to-edge Android; 0 everywhere else. One name so the sticky
+     header and the page frame always agree, and tests can fake a bar. */
+  --safe-top: env(safe-area-inset-top, 0px);
   --z-nav: 200;
   --z-toast: 300;
 }

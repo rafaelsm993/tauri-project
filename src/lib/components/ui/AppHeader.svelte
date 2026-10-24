@@ -26,7 +26,7 @@
   });
 </script>
 
-<header class="app-header" data-collapsed={scroll.collapsed}>
+<header class="app-header" data-collapsed={scroll.collapsed} data-stuck={scroll.y > 0}>
   <div class="row">
     <!-- A page with a heading gets a title row (Library, Planner, Settings, Profile); Home has
          no <h1>, so its search shares this row rather than burning a whole one. -->
@@ -48,10 +48,22 @@
 <style lang="scss">
   .app-header {
     position: sticky;
-    top: 0;
+    top: calc(var(--safe-top) + #{$spacing-sm});
     z-index: var(--z-raised);
     display: flex;
     flex-direction: column;
+  }
+
+  // While stuck, paint from the screen edge down to the header: the status bar sits over the
+  // page on Android, and scrolled posters behind the clock are unreadable. At rest the page's
+  // own background shows there instead.
+  .app-header[data-stuck="true"]::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    height: calc(var(--safe-top) + #{$spacing-sm});
+    background: var(--clr-bg);
   }
 
   // Each row carries its own ground rather than the header carrying one for all of them: a

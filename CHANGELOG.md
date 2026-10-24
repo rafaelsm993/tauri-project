@@ -16,7 +16,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Settings: reading pace (pages per hour) and a default minutes per manga chapter, both prefilled in the Plan sheet.
 - One-tap common episode lengths when adding an item (TV 22/30/45/60, anime 12/24 min), on one row on a phone.
 - Edit an item's length any time; a hand-made item's length and **type** can change from its form (its history and XP follow it; progress restarts in the new type's units, the plan goes).
-- One sticky app header (search and filters), which collapses on scroll down and returns on scroll up; all six Home categories and every Library filter option fit a phone without a sideways swipe.
+- One sticky app header (search and filters), which collapses on scroll down and returns on scroll up; all six Home categories fit a phone without a sideways swipe.
+- Library filters fit one row: a **Filters** button (its badge counts what is on) opens Status and Type as a bottom sheet on a phone or a popover on desktop, applied at once, with Reset. The chosen status shows as a removable token, and the types scroll as chips with counts; picking one leaves only its chip, and its ✕ brings the rest back. Options with nothing in them are greyed out. On a phone the Library header went from 436 to 240 px.
 - Backup: export the library, activity, posters and settings to one zip from Settings, and import it back by merging or replacing (a safety copy is saved before a replace). API keys are never exported. Works on Android too, with files chosen in the system picker (the backup is verified before it is copied into the chosen file).
 - Profile: level, title, XP and streak, derived from the activity log (titles by level; values are placeholders until a playtest).
 - Profile dashboard: level ring, stat tiles, XP progression by family (30 days / 90 days / all), activity heatmap, library donut, taste radar and a forecast (backlog hours, next-level ETA, projected XP), built on LayerChart with the app's color tokens; every chart has a text summary and a table for screen readers.
@@ -36,6 +37,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 - An accent's own text colour (Ember's dark text) now reaches every filled button, in the dark, light and system themes.
 - The length and Log session sheets no longer open the phone keyboard over their own buttons.
+- An open toast (today's reminder, a level-up) no longer covers the end of a page: the page can scroll its last cards above it.
 - Taps reach cards showing through the collapsed header's gap; the header pins below the Android status bar.
 
 ### Removed

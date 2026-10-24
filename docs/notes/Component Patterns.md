@@ -106,6 +106,16 @@ A button that opens a popover of native checkboxes. Generic: values keep their t
 
 The one modal for add/edit forms: a native `<dialog>` opened with `showModal()`, centred, over a dimmed `::backdrop` (`--clr-shade-rgb`). Focus moves to its first field (or, with `focus="sheet"`, to the dialog itself, so a phone keyboard does not cover a sheet whose first control is a number field) and returns to the opener when it unmounts. Escape, the system back gesture (`cancel`) and a click on the backdrop call `onclose`; the parent decides and unmounts it. While an on-screen keyboard is up it sits above it (`--sheet-covered`, from `visualViewport`), so Save stays reachable. Opening it pushes a shallow history entry, so Android's Back (and the browser's) closes the sheet instead of leaving the page. `onclosed` runs only after that entry is gone, so a caller that navigates on save can't have its new page undone by the sheet's own Back. On a phone a short swipe down on the handle closes it (a quarter of its height, at most 120 px). `size="full"` is for long forms: the whole height below the status bar on a phone, a wider centred dialog on desktop. The form inside keeps its own card look. Used by `SaveToLibrary` (add / edit length), `PlanDialog`, `ManualEntrySheet` and `MatchSheet`. jsdom has no `showModal`, so `vitest-setup.ts` stubs it.
 
+## LibraryFilterBar and LibraryFilterPanel
+
+The Library's filters on one row: `[Filters ⊙n] [In progress ✕] [Movie 1] [Anime 2] …`. Props: `statuses`, `types`, `status`, `type`, `onstatus`, `ontype`, and `narrow` (tests pin it; the app follows `(max-width: 768px)`).
+- **Filters** is an icon with its accessible name ("Filters", "Filters, 2 on"); above 768 px the word shows too. The badge counts `activeFilterCount`.
+- Narrow, it opens `LibraryFilterPanel` in a bottom `Sheet` (`focus="sheet"`); wide, in a native `popover="auto"` placed by `followTrigger(trigger, panel, "start")`, so it lines up with the button's left edge. Picks apply at once and the panel stays open; Escape or a tap outside closes it.
+- The panel holds Status and Type as wrapping `SegmentedControl`s with Reset (disabled while nothing is on). Type hides when the library holds one type.
+- The row has no All chip: nothing picked means all. A picked type stands alone, filled, with ✕ (`aria-pressed="true"`, "Anime 2, remove filter"); a picked status shows as a filled token ("Remove filter: In progress"). Chips with a 0 count are disabled through `withEmptyDisabled`, except the one picked.
+- The chip row scrolls sideways; a mask fades whichever edge hides more chips. Chips animate (flip + fade) only while Animations are on.
+- `LibraryFilters` and `filterEntries` are unchanged; the View row (Grid/Garden) stays its own row.
+
 ## SessionPicker
 
 - Files: `src/lib/components/library/SessionPicker.svelte`, `src/lib/domain/sessionScale.ts`
@@ -164,7 +174,7 @@ The routes themselves are described in [SvelteKit Special Pages](Front-end/Svelt
 
 ```svelte
 <AppBackground />          <!-- fixed, z-index 0 -->
-<div class="app-shell">    <!-- padded by --nav-left / --nav-bottom -->
+<div class="app-shell">    <!-- padded by --nav-left / --nav-bottom, or --toast-covered while a toast is open -->
   <AppNav {section} {progress} />
   <div class="app-content">  <!-- z-index 1 -->
     {@render children()}     <!-- each page renders its own AppHeader -->
@@ -172,6 +182,8 @@ The routes themselves are described in [SvelteKit Special Pages](Front-end/Svelt
 </div>
 <OfflineBanner /> <LevelUpToast /> <ReminderToast /> <ManualEntrySheet /> <MatchSheet />
 ```
+
+An open `Toast` reserves the height it covers (`ui/toastSpace.ts` sets `--toast-covered` on the root to the tallest open toast), so a page's last cards can scroll above it.
 
 The layout imports `$lib/styles/global.css`. It has no route guard; the startup-problem screen has no
 navigation.
@@ -184,7 +196,7 @@ navigation.
 A `<button role="switch" aria-checked>` with its label and hint wired by `aria-labelledby` /
 `aria-describedby`, so Space and Enter work natively. The track is 48×28; under touch an invisible
 `::before` grows the hit area to 44 px. The thumb stops sliding when motion is off. Use it for
-on/off settings; a choice between named options stays a `SegmentedControl`.
+on/off settings; a choice between named options stays a `SegmentedControl`. An option can be `disabled` on its own, and counts show as accent badges.
 
 ## Themes
 

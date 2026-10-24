@@ -97,6 +97,61 @@ test.describe("the library filters", () => {
       ).toBeInViewport();
     }
   });
+
+  test("open as a bottom sheet on a phone and a popover under the button on desktop", async ({
+    page,
+  }) => {
+    await mockLibrary(page, four());
+    await page.goto("/library");
+    await page.waitForLoadState("networkidle");
+    const button = page.getByRole("button", { name: "Filters" });
+    await button.click();
+    const panel = page.getByRole("dialog", { name: "Filters" });
+    await expect(panel).toBeVisible();
+    // The sheet slides up; measure where it lands.
+    await panel.evaluate((el) =>
+      Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)),
+    );
+    const p = (await panel.boundingBox())!;
+    const b = (await button.boundingBox())!;
+    const { width, height } = page.viewportSize()!;
+    if (width <= 768) {
+      expect(
+        Math.abs(p.y + p.height - height),
+        "the sheet sits on the bottom edge",
+      ).toBeLessThanOrEqual(1);
+    } else {
+      expect(p.y, "the popover opens under the button").toBeGreaterThanOrEqual(b.y + b.height);
+      expect(Math.abs(p.x - b.x), "the popover lines up with the button").toBeLessThanOrEqual(8);
+    }
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+  });
+
+  test("picking a type leaves only its chip, and its cross brings the rest back", async ({
+    page,
+  }) => {
+    await mockLibrary(page, four());
+    await page.goto("/library");
+    await page.waitForLoadState("networkidle");
+    const row = page.getByRole("group", { name: "Type" });
+    await row.getByRole("button", { name: /^Anime 1$/ }).click();
+    await expect(row.getByRole("button")).toHaveCount(1);
+    const picked = row.getByRole("button", { name: "Anime 1, remove filter" });
+    await expect(picked).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("main").getByRole("list").getByRole("link")).toHaveCount(1);
+    await picked.click();
+    await expect(row.getByRole("button")).toHaveCount(4);
+  });
+
+  test("keep the Library header short on a phone", async ({ page }) => {
+    test.skip(page.viewportSize()!.width > 480, "phone widths only");
+    await mockLibrary(page, four());
+    await page.goto("/library");
+    await page.waitForLoadState("networkidle");
+    // Three wrapped rows made it 436px of an 832px phone screen.
+    expect((await page.locator(".app-header").boundingBox())!.height).toBeLessThanOrEqual(300);
+  });
 });
 
 test.describe("the browse header", () => {

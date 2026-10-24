@@ -302,12 +302,34 @@ test("the length warning takes the equipped accent's colours", async ({ page }) 
   await page.goto("/media/tv/66");
   const note = page.getByRole("note");
   await expect(note).toBeVisible();
-  const colours = await note.evaluate((n) => ({
-    bar: getComputedStyle(n).borderInlineStartColor,
-    button: getComputedStyle(n.querySelector("button") as HTMLElement).backgroundColor,
-  }));
-  expect(colours).toEqual({ bar: "rgb(163, 80, 12)", button: "rgb(199, 102, 18)" });
+  const colours = await note.evaluate((n) => {
+    const button = getComputedStyle(n.querySelector("button") as HTMLElement);
+    return {
+      bar: getComputedStyle(n).borderInlineStartColor,
+      button: button.backgroundColor,
+      text: button.color,
+    };
+  });
+  // Ember is a light orange, so its own dark text must reach the button.
+  expect(colours).toEqual({
+    bar: "rgb(163, 80, 12)",
+    button: "rgb(199, 102, 18)",
+    text: "rgb(28, 18, 8)",
+  });
 });
+
+for (const theme of ["dark", "light"]) {
+  test(`Ember's dark text reaches filled buttons in the ${theme} theme too`, async ({ page }) => {
+    await mockLibrary(page, [STRANGER], {
+      details: NO_RUNTIME,
+      seenLevel: 3,
+      prefs: { accent: "ember", theme },
+    });
+    await page.goto("/media/tv/66");
+    const button = page.getByRole("note").getByRole("button", { name: "Add length" });
+    await expect(button).toHaveCSS("color", "rgb(28, 18, 8)");
+  });
+}
 
 test("with the default accent the warning follows the default accent token", async ({ page }) => {
   await mockLibrary(page, [STRANGER], { details: NO_RUNTIME });
@@ -320,4 +342,6 @@ test("with the default accent the warning follows the default accent token", asy
   }));
   expect(bar).toBe(`rgb(${token.split(/\s+/).join(", ")})`);
   expect(bar).not.toBe("rgb(163, 80, 12)");
+  const text = await note.getByRole("button").evaluate((b) => getComputedStyle(b).color);
+  expect(text).toMatch(/^rgb\((255, 255, 255|245, 245, 241)\)$/);
 });

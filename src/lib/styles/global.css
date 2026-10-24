@@ -38,7 +38,9 @@
   --clr-text-2: #b3b3b3;
   --clr-text-3: #808080;
   --clr-text-inv: #000000;
-  --clr-on-primary: #f5f5f1;
+  /* Text on a primary fill; an accent may set its own channels (Ember needs dark text). */
+  --clr-on-primary-rgb: 245 245 241;
+  --clr-on-primary: rgb(var(--clr-on-primary-rgb));
 
   color-scheme: dark;
 
@@ -99,7 +101,7 @@
   --clr-text-2: #4a4a4a;
   --clr-text-3: #6b6b6b;
   --clr-text-inv: #ffffff;
-  --clr-on-primary: #ffffff;
+  --clr-on-primary-rgb: 255 255 255;
 
   color-scheme: light;
 }
@@ -119,7 +121,7 @@
     --clr-text-2: #4a4a4a;
     --clr-text-3: #6b6b6b;
     --clr-text-inv: #ffffff;
-    --clr-on-primary: #ffffff;
+    --clr-on-primary-rgb: 255 255 255;
 
     color-scheme: light;
   }

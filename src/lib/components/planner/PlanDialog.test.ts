@@ -7,6 +7,7 @@ import { PrefsStore } from "$lib/stores/prefs.svelte";
 import { DEFAULT_PREFS } from "$lib/types/prefs";
 import { emptyLength } from "$lib/domain/length";
 import type { LibraryEntry } from "$lib/types/library";
+import type { MediaDetail } from "$lib/types/media";
 
 const BOOK = {
   key: "itunes:book:1",
@@ -35,6 +36,7 @@ async function setup(
   over: Partial<LibraryClient> = {},
   entry: LibraryEntry = BOOK,
   saved: Partial<typeof DEFAULT_PREFS> = {},
+  props: Record<string, unknown> = {},
 ) {
   const client: LibraryClient = {
     load: vi.fn(async () => [entry]),
@@ -61,11 +63,94 @@ async function setup(
   });
   await prefs.hydrate();
   const onclose = vi.fn();
-  render(PlanDialog, { entry, today: "2026-10-01", library, prefs, onclose });
+  render(PlanDialog, {
+    entry,
+    today: "2026-10-01",
+    library,
+    prefs,
+    onclose,
+    catalogApi: { fetchDetail: vi.fn().mockRejectedValue("offline") },
+    ...props,
+  });
   return { client, prefsUpdate, onclose };
 }
 
+const GHOUL = {
+  ...BOOK,
+  key: "tmdb:tv:61374",
+  snapshot: {
+    ...BOOK.snapshot,
+    media_key: "tmdb:tv:61374",
+    provider: "tmdb",
+    media_type: "tv",
+    title: "Tokyo Ghoul",
+  },
+  user: { ...BOOK.user, length: { ...emptyLength(), episodes: 48 }, plan: null },
+} as LibraryEntry;
+
+const detail = (over: Partial<MediaDetail>) =>
+  ({
+    id: 61374,
+    provider: "tmdb",
+    media_key: "tmdb:tv:61374",
+    media_type: "tv",
+    title: "Tokyo Ghoul",
+    tagline: "",
+    overview: "",
+    poster_path: null,
+    backdrop_path: null,
+    vote_average: 0,
+    vote_count: 0,
+    release_date: "",
+    runtime: null,
+    genres: [],
+    cast: [],
+    videos: [],
+    ...over,
+  }) as MediaDetail;
+
 describe("PlanDialog", () => {
+  describe("a length from the catalog", () => {
+    it("asks the catalog for a missing length and fills it before the sheet shows", async () => {
+      const fetchDetail = vi.fn().mockResolvedValue(detail({ episodes: 48, runtime: 24 }));
+      await setup({}, GHOUL, {}, { catalogApi: { fetchDetail } });
+      expect(await screen.findByLabelText("Minutes per episode")).toHaveValue(24);
+      expect(fetchDetail).toHaveBeenCalledWith("tv", "61374");
+    });
+
+    it("uses the detail it was given instead of asking again", async () => {
+      const fetchDetail = vi.fn();
+      await setup({}, GHOUL, {}, { catalogApi: { fetchDetail }, detail: detail({ runtime: 24 }) });
+      expect(screen.getByLabelText("Minutes per episode")).toHaveValue(24);
+      expect(fetchDetail).not.toHaveBeenCalled();
+    });
+
+    it("still opens, with the field empty, when the catalog cannot be reached", async () => {
+      await setup({}, GHOUL);
+      expect(await screen.findByLabelText("Minutes per episode")).toHaveValue(null);
+    });
+
+    it("never asks for what no catalog has, like a book's pages", async () => {
+      const fetchDetail = vi.fn();
+      const noPages = { ...BOOK, user: { ...BOOK.user, length: emptyLength() } } as LibraryEntry;
+      await setup({}, noPages, {}, { catalogApi: { fetchDetail } });
+      expect(screen.getByLabelText(/^pages$/i)).toBeInTheDocument();
+      expect(fetchDetail).not.toHaveBeenCalled();
+    });
+
+    it("never asks about a hand-made item", async () => {
+      const fetchDetail = vi.fn();
+      const mine = {
+        ...GHOUL,
+        key: "manual:tv:abc",
+        snapshot: { ...GHOUL.snapshot, provider: "manual", media_key: "manual:tv:abc" },
+      } as LibraryEntry;
+      await setup({}, mine, {}, { catalogApi: { fetchDetail } });
+      expect(screen.getByLabelText("Minutes per episode")).toBeInTheDocument();
+      expect(fetchDetail).not.toHaveBeenCalled();
+    });
+  });
+
   it("is a labelled dialog that closes on Escape", async () => {
     const { onclose } = await setup();
     expect(screen.getByRole("dialog", { name: "Plan Dune" })).toBeInTheDocument();
@@ -162,8 +247,9 @@ describe("PlanDialog", () => {
       update: vi.fn(async () => DEFAULT_PREFS),
     });
     const onclose = vi.fn();
-    render(PlanDialog, { entry: tv, today: "2026-10-01", library, prefs, onclose });
-    await userEvent.type(screen.getByLabelText(/minutes per episode/i), "40");
+    const catalogApi = { fetchDetail: vi.fn().mockRejectedValue("offline") };
+    render(PlanDialog, { entry: tv, today: "2026-10-01", library, prefs, onclose, catalogApi });
+    await userEvent.type(await screen.findByLabelText(/minutes per episode/i), "40");
     await userEvent.click(screen.getByRole("button", { name: /save plan/i }));
     expect(update).toHaveBeenCalled();
     expect(plan).not.toHaveBeenCalled();

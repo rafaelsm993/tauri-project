@@ -2,16 +2,10 @@
   import { resolve } from "$app/paths";
   import { keysStore, KeysStore } from "$lib/stores/keys.svelte";
   import { manualEntry } from "$lib/stores/manualEntry.svelte";
-  import { MEDIA_LABELS, type MediaType } from "$lib/types/media";
+  import { MEDIA_LABELS, PROVIDER_LABELS, type MediaType } from "$lib/types/media";
 
   // The store prop exists for tests; the app uses the singleton.
   let { type, store = keysStore }: { type: MediaType; store?: KeysStore } = $props();
-
-  const PROVIDER: Partial<Record<MediaType, string>> = {
-    movie: "TMDB",
-    tv: "TMDB",
-    game: "RAWG",
-  };
 
   const missing = $derived(store.needsKey(type));
 </script>
@@ -19,7 +13,8 @@
 {#if missing}
   <div class="no-key">
     <p class="no-key-text">
-      {MEDIA_LABELS[type]} needs a free {PROVIDER[type]} key to search the catalog. Add one in
+      {MEDIA_LABELS[type]} needs a free {PROVIDER_LABELS[type === "game" ? "rawg" : "tmdb"]} key to search
+      the catalog. Add one in
       <a href={resolve("/settings")}>Settings</a>, or add what you are tracking yourself.
     </p>
     <button type="button" class="no-key-btn" onclick={() => manualEntry.open({ type })}>

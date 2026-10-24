@@ -159,6 +159,40 @@ describe("PlanSheet", () => {
     );
   });
 
+  describe("with a length from the catalog", () => {
+    const NEW_TV = entry("tv", { episodes: 48 }, null, 0);
+    const FOUND = { ...emptyLength(), episodes: 48, episode_minutes: 24 };
+
+    it("fills what the catalog knows, says so, and starts on one full episode", async () => {
+      const { onsave } = setup({ entry: NEW_TV, found: FOUND });
+      expect(screen.getByLabelText("Minutes per episode")).toHaveValue(24);
+      expect(screen.getByText(/filled in from tmdb/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Full episode · 24 min" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      await userEvent.click(day(/tue/i));
+      await userEvent.click(screen.getByRole("button", { name: "Save plan" }));
+      expect(onsave.mock.calls[0][0].length).toMatchObject({ episodes: 48, episode_minutes: 24 });
+      expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(24);
+    });
+
+    it("keeps the user's own number over the catalog's", async () => {
+      const { onsave } = setup({ entry: entry("tv", { episodes: 10 }, null, 0), found: FOUND });
+      expect(screen.queryByLabelText("Episodes")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Minutes per episode")).toHaveValue(24);
+      await userEvent.click(day(/tue/i));
+      await userEvent.click(screen.getByRole("button", { name: "Save plan" }));
+      expect(onsave.mock.calls[0][0].length).toMatchObject({ episodes: 10, episode_minutes: 24 });
+    });
+
+    it("says nothing about the catalog when it filled nothing", () => {
+      setup({ entry: NEW_TV, found: emptyLength() });
+      expect(screen.getByLabelText("Minutes per episode")).toHaveValue(null);
+      expect(screen.queryByText(/filled in from/i)).not.toBeInTheDocument();
+    });
+  });
+
   it("offers no Full for a book or a game", () => {
     setup({ entry: entry("game", { hours: 20 }) });
     expect(screen.queryByRole("button", { name: /^Full / })).not.toBeInTheDocument();

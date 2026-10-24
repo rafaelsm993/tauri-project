@@ -60,6 +60,28 @@ export function missingLengthFields(type: MediaType, length: Length): LengthFiel
   return REQUIRED_LENGTH_FIELDS[type].filter((field) => !known(length[field]));
 }
 
+// What lengthFromDetail can ever fill; pages and minutes per chapter are always the user's.
+const CATALOG_FIELDS: LengthField[] = [
+  "runtime_minutes",
+  "episodes",
+  "episode_minutes",
+  "chapters",
+  "hours",
+];
+
+export function catalogCanFill(type: MediaType, length: Length): boolean {
+  return missingLengthFields(type, length).some((field) => CATALOG_FIELDS.includes(field));
+}
+
+// The user's own number wins; the catalog only fills what is unknown.
+export function fillMissing(length: Length, from: Length): Length {
+  const out = { ...length };
+  for (const field of Object.keys(out) as LengthField[]) {
+    if (!known(out[field])) out[field] = known(from[field]);
+  }
+  return out;
+}
+
 // Derived, never stored: a stored flag would drift from the fields.
 export function isPlannable(type: MediaType, length: Length): boolean {
   return missingLengthFields(type, length).length === 0;

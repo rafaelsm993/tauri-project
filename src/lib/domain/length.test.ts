@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   REQUIRED_LENGTH_FIELDS,
+  catalogCanFill,
   emptyLength,
+  fillMissing,
   isPlannable,
   lengthFromDetail,
   missingLengthFields,
@@ -116,5 +118,41 @@ describe("resolveTotal", () => {
 
   it("works with no detail at all, as on a library card", () => {
     expect(resolveTotal("manga", null, len({ chapters: 41 }))).toBe(41);
+  });
+});
+
+describe("fillMissing", () => {
+  it("fills only fields that are unknown, so a typed number always wins", () => {
+    const mine = len({ episodes: 10 });
+    const catalog = len({ episodes: 48, episode_minutes: 24 });
+    expect(fillMissing(mine, catalog)).toEqual(len({ episodes: 10, episode_minutes: 24 }));
+  });
+
+  it("treats a zero as unknown on either side", () => {
+    const mine = len({ episode_minutes: 0 });
+    expect(fillMissing(mine, len({ episode_minutes: 24 })).episode_minutes).toBe(24);
+    expect(fillMissing(mine, emptyLength()).episode_minutes).toBeNull();
+  });
+
+  it("never changes the length it was given", () => {
+    const mine = emptyLength();
+    fillMissing(mine, len({ pages: 300 }));
+    expect(mine.pages).toBeNull();
+  });
+});
+
+describe("catalogCanFill", () => {
+  it("is true when a missing field is one a catalog can give", () => {
+    expect(catalogCanFill("tv", len({ episodes: 48 }))).toBe(true);
+    expect(catalogCanFill("movie", emptyLength())).toBe(true);
+  });
+
+  it("is false for what no catalog gives: a book's pages, a manga's minutes per chapter", () => {
+    expect(catalogCanFill("book", emptyLength())).toBe(false);
+    expect(catalogCanFill("manga", len({ chapters: 144 }))).toBe(false);
+  });
+
+  it("is false when nothing is missing", () => {
+    expect(catalogCanFill("tv", len({ episodes: 48, episode_minutes: 24 }))).toBe(false);
   });
 });

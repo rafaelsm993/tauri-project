@@ -3,6 +3,15 @@ export type MediaType = "movie" | "tv" | "anime" | "manga" | "book" | "game";
 // `manual` is reserved for user-created entries.
 export type ProviderId = "tmdb" | "anilist" | "rawg" | "itunes" | "manual";
 
+// How a provider is named to the user; a hand-made item never reaches the UI under it.
+export const PROVIDER_LABELS: Record<ProviderId, string> = {
+  tmdb: "TMDB",
+  anilist: "AniList",
+  rawg: "RAWG",
+  itunes: "Apple Books",
+  manual: "you",
+};
+
 // Library identity: `provider:media_type:id`.
 export type MediaKey = string;
 

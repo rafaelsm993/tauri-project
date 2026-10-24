@@ -119,7 +119,12 @@
   />
   {#if entry.user.status !== "dropped"}
     {#if planning}
-      <PlanDialog {entry} today={localDay()} onclose={() => (planning = false)} />
+      <PlanDialog
+        {entry}
+        detail={detail ?? undefined}
+        today={localDay()}
+        onclose={() => (planning = false)}
+      />
     {:else}
       <button type="button" class="plan-btn" onclick={() => (planning = true)}>
         {entry.user.plan ? "Edit plan" : "Plan"}

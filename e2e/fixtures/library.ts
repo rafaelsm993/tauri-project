@@ -58,13 +58,15 @@ export interface LibraryFake {
   now?: string;
   // Saved preferences to start from, over the defaults below.
   prefs?: Record<string, unknown>;
+  // What catalog_detail adds for a key, e.g. { "tmdb:tv:4": { runtime: 40, episodes: 9 } }.
+  details?: Record<string, object>;
 }
 
 // A stateful fake: library_update merges its patch, so a saved plan shows up on the page.
 export async function mockLibrary(page: Page, entries: object[], fake: LibraryFake = {}) {
   await page.clock.setFixedTime(new Date(fake.now ?? "2026-10-01T10:00:00"));
   await page.addInitScript(
-    ({ list, events, seenLevel, motion, emptyLength, results, savedPrefs }) => {
+    ({ list, events, seenLevel, motion, emptyLength, results, savedPrefs, details }) => {
       const library = structuredClone(list) as {
         key: string;
         user: Record<string, unknown>;
@@ -216,6 +218,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
             genres: [],
             cast: [],
             videos: [],
+            ...(details[saved?.key ?? `tmdb:${args?.media_type}:${args?.id}`] ?? {}),
           };
         }
         if (cmd === "library_events") return structuredClone(events);
@@ -286,6 +289,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
       emptyLength: LENGTH,
       results: fake.results ?? [],
       savedPrefs: fake.prefs ?? {},
+      details: fake.details ?? {},
     },
   );
 }

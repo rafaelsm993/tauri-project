@@ -201,3 +201,25 @@ test("planner and plan sheet controls are touch-sized", async ({ page, isMobile 
     expect(h).toBeGreaterThanOrEqual(44);
   expect(await noOverflow(page)).toBeLessThanOrEqual(0);
 });
+
+test("a new plan takes the episode length the catalog lists", async ({ page }) => {
+  const ghoul = item(7, "tv", "Tokyo Ghoul", { episodes: 48 }, null);
+  await mockLibrary(page, [ghoul], { details: { "tmdb:tv:7": { episodes: 48, runtime: 24 } } });
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Tokyo Ghoul" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Tokyo Ghoul" });
+  await expect(dialog.getByLabel("Minutes per episode")).toHaveValue("24");
+  await expect(dialog.getByText(/filled in from tmdb/i)).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Full episode · 24 min" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Tue" }).click();
+  await dialog.getByRole("button", { name: "Save plan" }).click();
+  await expect(dialog).toHaveCount(0);
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved[0]?.args).toMatchObject({
+    patch: { length: { episodes: 48, episode_minutes: 24 } },
+  });
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 24 } } });
+});

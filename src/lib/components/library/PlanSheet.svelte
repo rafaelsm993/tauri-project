@@ -2,11 +2,12 @@
   import { untrack } from "svelte";
   import LengthFields from "./LengthFields.svelte";
   import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
-  import { LENGTH_LABELS, missingLengthFields } from "$lib/domain/length";
+  import { LENGTH_LABELS, fillMissing, missingLengthFields } from "$lib/domain/length";
   import { finishShift, planFor } from "$lib/domain/planner";
   import { fullSession } from "$lib/domain/sessionLog";
   import { formatDay, formatMinutes, plural } from "$lib/utils/format";
   import type { Length, LibraryEntry, Plan } from "$lib/types/library";
+  import { PROVIDER_LABELS } from "$lib/types/media";
 
   export interface PlanSave {
     plan: Plan;
@@ -21,6 +22,7 @@
     today,
     pagesPerHour,
     chapterMinutes = null,
+    found = null,
     busy = false,
     onsave,
     onclear,
@@ -31,6 +33,8 @@
     pagesPerHour: number | null;
     // The Settings default for a manga's minutes per chapter; null when unset.
     chapterMinutes?: number | null;
+    // What the catalog knows of the length; fills only fields the saved entry lacks.
+    found?: Length | null;
     busy?: boolean;
     onsave: (value: PlanSave) => void;
     onclear: () => void;
@@ -48,10 +52,10 @@
 
   // Local copies, so editing never touches the saved entry until Save.
   let days = $state<number[]>(untrack(() => [...(entry.user.plan?.days ?? [])]));
-  // A manga missing its minutes per chapter starts from the Settings default.
+  // Missing fields start from the catalog, then a manga's minutes from the Settings default.
   let draft = $state<Length>(
     untrack(() => {
-      const length = { ...entry.user.length };
+      const length = found ? fillMissing(entry.user.length, found) : { ...entry.user.length };
       if (entry.snapshot.media_type === "manga" && !length.chapter_minutes && chapterMinutes)
         length.chapter_minutes = chapterMinutes;
       return length;
@@ -73,6 +77,7 @@
   const askedFields = untrack(() =>
     missingLengthFields(entry.snapshot.media_type, entry.user.length),
   );
+  const fromCatalog = untrack(() => askedFields.some((field) => found?.[field] != null));
   const asksPace = $derived(type === "book" && pagesPerHour === null);
   const usedPace = $derived(type === "book" ? pace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
@@ -149,7 +154,12 @@
 
   {#if askedFields.length > 0}
     <div class="sheet-block">
-      <p class="sheet-hint">Needed to plan it: how long it is.</p>
+      <p class="sheet-hint">
+        Needed to plan it: how long it is.
+        {#if fromCatalog}
+          Filled in from {PROVIDER_LABELS[entry.snapshot.provider]}; change it if it is off.
+        {/if}
+      </p>
       <LengthFields fields={askedFields} bind:length={draft} disabled={busy} />
     </div>
   {/if}

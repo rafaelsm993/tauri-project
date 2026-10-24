@@ -52,6 +52,9 @@
     z-index: var(--z-raised);
     display: flex;
     flex-direction: column;
+    // Only the rows take taps: a collapsed row keeps its box, and the cards showing through that
+    // gap must still be tappable. `visibility: hidden` already drops the hidden row's own taps.
+    pointer-events: none;
   }
 
   // While stuck, paint from the screen edge down to the header: the status bar sits over the
@@ -64,6 +67,8 @@
     bottom: 100%;
     height: calc(var(--safe-top) + #{$spacing-sm});
     background: var(--clr-bg);
+    // Painted over the content, so it takes the taps that content can no longer be seen for.
+    pointer-events: auto;
   }
 
   // Each row carries its own ground rather than the header carrying one for all of them: a
@@ -71,6 +76,7 @@
   .row,
   .collapsible {
     background: var(--clr-bg);
+    pointer-events: auto;
   }
 
   .row {

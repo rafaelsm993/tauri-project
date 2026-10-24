@@ -177,6 +177,20 @@ test.describe("the browse header", () => {
     await expect(tabs).toBeVisible();
   });
 
+  test("a tap in the collapsed gap reaches the content showing through it", async ({ page }) => {
+    // The hidden rows keep their box so the page never jumps; that box must not swallow taps
+    // meant for the cards scrolled underneath.
+    await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));
+    await expect(page.getByRole("button", { name: "Movies" })).toBeHidden();
+    const reached = await page.evaluate(() => {
+      const header = document.querySelector(".app-header")!;
+      const gap = header.querySelector(".collapsible")!.getBoundingClientRect();
+      const hit = document.elementFromPoint(gap.left + gap.width / 2, gap.top + gap.height / 2);
+      return !!hit && !header.contains(hit);
+    });
+    expect(reached, "the collapsed header still catches taps").toBe(true);
+  });
+
   test("collapsing never moves the page under you", async ({ page }) => {
     // Shrinking the header instead of hiding it reflows everything below: cards move mid-tap,
     // scroll restoration misses, and the shifted scrollY flips the collapse straight back so the

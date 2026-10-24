@@ -106,7 +106,15 @@
   // Every type but a movie picks its session on a scale; a movie keeps the chips.
   const scale = $derived(sessionScale(withLength, usedPace));
   const units = $derived(type === "tv" || type === "anime" || type === "manga");
-  const waitsForMinutes = $derived(units && !fullSession(withLength));
+  const unitMinutesField = $derived(type === "manga" ? "chapter_minutes" : "episode_minutes");
+  // What to add before a session can be picked; "" once it can (a movie never waits).
+  const waitsFor = $derived.by(() => {
+    if (units) return fullSession(withLength) ? "" : LENGTH_LABELS[unitMinutesField].toLowerCase();
+    if (type === "movie" || scale) return "";
+    return missingLengthFields(type, draft)
+      .map((field) => LENGTH_LABELS[field].toLowerCase())
+      .join(" and ");
+  });
   let choice = $state<SessionChoice>(
     untrack(() => {
       // A saved plan always has its length, so the saved entry is enough here.
@@ -260,10 +268,8 @@
         pagesPerHour={usedPace}
         disabled={busy}
       />
-    {:else if waitsForMinutes}
-      <p class="sheet-hint">
-        Add the minutes per {type === "manga" ? "chapter" : "episode"} above to pick a session.
-      </p>
+    {:else if waitsFor}
+      <p class="sheet-hint">Add the {waitsFor} above to pick a session.</p>
     {:else}
       <div class="chips" role="group" aria-labelledby="{id}-session">
         {#if full}
@@ -308,7 +314,7 @@
         </button>
       </div>
     {/if}
-    {#if !scale && !waitsForMinutes && custom}
+    {#if !scale && !waitsFor && custom}
       <label class="field-label" for="{id}-minutes">Minutes per session</label>
       <input
         id="{id}-minutes"

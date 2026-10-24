@@ -276,6 +276,31 @@ describe("PlanSheet", () => {
     });
   });
 
+  it("waits for a book's pages or a game's hours before offering a session", async () => {
+    setup({ entry: entry("book", {}) });
+    expect(screen.getByText("Add the pages above to pick a session.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "1 h" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Custom" })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Pages"), "300");
+    expect(sessionGroup()).toHaveTextContent("≈ 30 pages");
+    cleanup();
+    setup({ entry: entry("game", {}) });
+    expect(
+      screen.getByText("Add the hours to finish above to pick a session."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Custom" })).not.toBeInTheDocument();
+    cleanup();
+    setup({ entry: entry("manga", { chapters: 100 }) });
+    expect(
+      screen.getByText("Add the minutes per chapter above to pick a session."),
+    ).toBeInTheDocument();
+    cleanup();
+    // A movie keeps its chips even before its runtime is known.
+    setup({ entry: entry("movie", {}) });
+    expect(screen.queryByText(/above to pick a session/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Custom" })).toBeInTheDocument();
+  });
+
   it("steps a book or a game by 30 minutes, without a Full", () => {
     setup({ entry: entry("game", { hours: 20 }) });
     expect(sessionGroup()).toHaveTextContent("1 h");

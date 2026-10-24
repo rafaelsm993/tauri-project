@@ -177,7 +177,9 @@ test("a saved item without length can add it later", async ({ page }) => {
   await page.getByRole("button", { name: /add length/i }).click();
   const sheet = page.getByRole("dialog", { name: "Edit Test movie 1" });
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByLabel(/runtime/i)).toBeFocused();
+  // The sheet takes focus, not the number field, so a phone keyboard does not cover Save.
+  await expect(sheet).toBeFocused();
+  await expect(sheet.getByLabel(/runtime/i)).not.toBeFocused();
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
 });

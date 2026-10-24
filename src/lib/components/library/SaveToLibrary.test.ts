@@ -212,6 +212,14 @@ describe("SaveToLibrary", () => {
     });
   });
 
+  it("opens the length sheet on itself, not a field, so a phone keyboard stays down", async () => {
+    const { store } = storeWith({ load: vi.fn(async () => [SAVED]) });
+    await store.hydrate();
+    render(SaveToLibrary, { item: ITEM, store, editing: true });
+    expect(screen.getByRole("dialog", { name: /^edit /i })).toHaveFocus();
+    expect(screen.getByLabelText(/^episodes/i)).not.toHaveFocus();
+  });
+
   it("closes the sheet on Escape without saving", async () => {
     const { store, client } = storeWith();
     render(SaveToLibrary, { item: ITEM, store });

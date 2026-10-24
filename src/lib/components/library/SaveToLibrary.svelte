@@ -98,7 +98,7 @@
 </div>
 
 {#if sheetOpen}
-  <Sheet label={entry ? `Edit ${item.title}` : "Add to library"} onclose={close}>
+  <Sheet label={entry ? `Edit ${item.title}` : "Add to library"} focus="sheet" onclose={close}>
     <AddSheet
       saved={!!entry}
       mediaType={item.media_type}

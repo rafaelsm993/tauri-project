@@ -56,6 +56,33 @@ for (const screen of SCREENS) {
   });
 }
 
+test.describe("the library filters", () => {
+  test("keeps every filter option reachable without a sideways swipe", async ({ page }) => {
+    await mockLibrary(page, [
+      manualItem("book", "Piranesi"),
+      manualItem("movie", "Arrival"),
+      manualItem("anime", "Frieren"),
+      manualItem("game", "Outer Wilds"),
+    ]);
+    await page.goto("/library");
+    await page.waitForLoadState("networkidle");
+
+    // Status hid 217px of its options on a 360px phone and Type hid 19px, so options like
+    // "Completed" and "Dropped" were unreachable without a swipe nothing signposted.
+    for (const label of ["Status", "Type", "View"]) {
+      const group = page.getByRole("group", { name: label });
+      await expect(group).toBeVisible();
+      const hidden = await group.evaluate((el) => el.scrollWidth - el.clientWidth);
+      expect(hidden, `${label} hides options behind a scroll`).toBeLessThanOrEqual(1);
+    }
+    for (const name of [/^All/, /^Planning/, /^In progress/, /^Completed/, /^Dropped/]) {
+      await expect(
+        page.getByRole("group", { name: "Status" }).getByRole("button", { name }),
+      ).toBeInViewport();
+    }
+  });
+});
+
 test.describe("the browse header", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");

@@ -71,6 +71,7 @@
             options={statuses}
             value={status}
             onchange={(v) => (filters.status = v)}
+            wrap
           />
           {#if types.length > 2}
             <SegmentedControl
@@ -78,6 +79,7 @@
               options={types}
               value={type}
               onchange={(v) => (filters.type = v)}
+              wrap
             />
           {/if}
           <SegmentedControl

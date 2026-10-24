@@ -66,28 +66,37 @@
     {#snippet collapsible()}
       {#if store.entries.length > 0}
         <div class="library-filters">
-          <SegmentedControl
-            label="Status"
-            options={statuses}
-            value={status}
-            onchange={(v) => (filters.status = v)}
-            wrap
-          />
-          {#if types.length > 2}
+          <div class="filter-row">
+            <span class="filter-label" aria-hidden="true">Status</span>
             <SegmentedControl
-              label="Type"
-              options={types}
-              value={type}
-              onchange={(v) => (filters.type = v)}
+              label="Status"
+              options={statuses}
+              value={status}
+              onchange={(v) => (filters.status = v)}
               wrap
             />
+          </div>
+          {#if types.length > 2}
+            <div class="filter-row">
+              <span class="filter-label" aria-hidden="true">Type</span>
+              <SegmentedControl
+                label="Type"
+                options={types}
+                value={type}
+                onchange={(v) => (filters.type = v)}
+                wrap
+              />
+            </div>
           {/if}
-          <SegmentedControl
-            label="View"
-            options={VIEW_OPTIONS}
-            value={filters.view}
-            onchange={(v) => (filters.view = v)}
-          />
+          <div class="filter-row">
+            <span class="filter-label" aria-hidden="true">View</span>
+            <SegmentedControl
+              label="View"
+              options={VIEW_OPTIONS}
+              value={filters.view}
+              onchange={(v) => (filters.view = v)}
+            />
+          </div>
         </div>
       {/if}
     {/snippet}
@@ -152,6 +161,22 @@
     flex-direction: column;
     gap: $spacing-sm;
     min-width: 0;
+  }
+
+  .filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    min-width: 0;
+  }
+
+  // Small mono caps: a label for the row, not another heading.
+  .filter-label {
+    font-family: $font-mono;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--clr-text-2);
   }
 
   .library-grid {

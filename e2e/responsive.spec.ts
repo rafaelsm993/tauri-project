@@ -56,6 +56,25 @@ for (const screen of SCREENS) {
 }
 
 test.describe("the library filters", () => {
+  test("names each row, so two 'All' pills are not mistaken for one", async ({ page }) => {
+    await mockLibrary(page, [
+      manualItem("book", "Piranesi"),
+      manualItem("movie", "Arrival"),
+      manualItem("anime", "Frieren"),
+    ]);
+    await page.goto("/library");
+    await page.waitForLoadState("networkidle");
+    for (const name of ["Status", "Type", "View"]) {
+      const group = page.getByRole("group", { name });
+      const label = page.locator(".filter-label", { hasText: name });
+      await expect(label).toBeVisible();
+      const l = (await label.boundingBox())!;
+      const g = (await group.boundingBox())!;
+      expect(l.y + l.height, `${name} label is not above its row`).toBeLessThanOrEqual(g.y + 1);
+      expect(g.y - (l.y + l.height), `${name} label is far from its row`).toBeLessThanOrEqual(8);
+    }
+  });
+
   test("keeps every filter option reachable without a sideways swipe", async ({ page }) => {
     await mockLibrary(page, [
       manualItem("book", "Piranesi"),

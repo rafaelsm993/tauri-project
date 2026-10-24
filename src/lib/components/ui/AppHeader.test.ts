@@ -3,14 +3,7 @@ import { createRawSnippet, tick } from "svelte";
 import { render, screen } from "@testing-library/svelte";
 import AppHeader from "./AppHeader.svelte";
 
-// A small stand-in for the real store: the header only asks "is there a level?"
-const gamification = (ready = true) => ({
-  ready,
-  level: { level: 3, xp: 141, into: 40, needed: 100, fraction: 0.4 },
-  title: { name: "Newcomer" },
-});
-
-const base = { gamification: gamification() };
+const base = {};
 
 const snippet = (html: string) => createRawSnippet(() => ({ render: () => html }));
 
@@ -39,19 +32,6 @@ describe("AppHeader", () => {
     scrollTo(100);
     await tick();
     expect(container.querySelector(".app-header")).toHaveAttribute("data-collapsed", "false");
-  });
-
-  it("carries the level chip, which the phone otherwise never shows", () => {
-    render(AppHeader, { ...base });
-    expect(screen.getByRole("link", { name: /Level 3/ })).toHaveAttribute(
-      "href",
-      expect.stringContaining("/profile"),
-    );
-  });
-
-  it("shows no chip before the level is known, so onboarding can use it", () => {
-    render(AppHeader, { ...base, gamification: gamification(false) });
-    expect(screen.queryByRole("link", { name: /Level/ })).not.toBeInTheDocument();
   });
 
   it("gives the page one heading, so every screen titles itself the same way", () => {

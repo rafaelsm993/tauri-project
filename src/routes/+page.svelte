@@ -182,8 +182,7 @@
 
   .search-slot {
     display: flex;
-    justify-content: center;
-    width: 100%;
+    flex: 1 1 auto;
     min-width: 0;
   }
 

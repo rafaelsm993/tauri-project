@@ -188,6 +188,4 @@
     padding-left: var(--nav-left);
     padding-bottom: calc(var(--nav-bottom) + env(safe-area-inset-bottom, 0px));
   }
-
-  // Mirrors the home page box so the chip lines up with the search bar and carousels.
 </style>

@@ -163,15 +163,10 @@
     }
 
     :global(.level-ring) {
-      display: none;
       inset: -3px auto auto 50%;
       width: 34px;
       height: 34px;
       margin-left: -17px;
-
-      @include respond-to(md) {
-        display: block;
-      }
     }
   }
 

@@ -1,31 +1,19 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import LevelChip from "./LevelChip.svelte";
   import { collapseOnScroll, type HeaderScroll } from "$lib/domain/navigation";
-  import { gamificationStore } from "$lib/stores/gamification.svelte";
-  import type { LevelInfo } from "$lib/domain/gamification";
 
-  type Progress = { ready: boolean; level: LevelInfo; title: { name: string } };
-
-  // `heading` is the page's own <h1> ("Library"); the chip's rank name comes from the store, so
-  // no page has to derive it. The store is a prop only so tests can hand in a stand-in.
+  // `heading` is the page's own <h1> ("Library"). Home has none: its search takes the first row.
   let {
     heading,
     action,
     persistent,
     collapsible,
-    gamification = gamificationStore,
   }: {
     heading?: string;
     action?: Snippet;
     persistent?: Snippet;
     collapsible?: Snippet;
-    gamification?: Progress;
   } = $props();
-
-  const progress = $derived(
-    gamification.ready ? { level: gamification.level, title: gamification.title.name } : undefined,
-  );
 
   let scroll = $state<HeaderScroll>({ y: 0, collapsed: false });
 
@@ -48,9 +36,6 @@
       {@render persistent()}
     {/if}
     {#if action}{@render action()}{/if}
-    {#if progress}
-      <span class="chip-slot"><LevelChip level={progress.level} title={progress.title} /></span>
-    {/if}
   </div>
   {#if heading && persistent}
     <div class="row">{@render persistent()}</div>
@@ -87,18 +72,9 @@
   .heading {
     @include page-title;
     margin: 0;
-    // Takes the slack so the action and chip sit at the trailing edge.
+    // Takes the slack so the action sits at the trailing edge.
     flex: 1 1 auto;
     min-width: 0;
-  }
-
-  .chip-slot {
-    flex: 0 0 auto;
-    margin-inline-start: auto;
-  }
-
-  .heading ~ .chip-slot {
-    margin-inline-start: 0;
   }
 
   .collapsible {

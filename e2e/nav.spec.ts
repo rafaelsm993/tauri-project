@@ -57,48 +57,14 @@ test("a detail page opened cold belongs to Home", async ({ page }) => {
   await expect(tab(page, "Home")).toHaveAttribute("aria-current", "page");
 });
 
-test("the level chip on desktop, the level ring on the phone Profile tab", async ({ page }) => {
+test("the level lives on the Profile tab, at every width", async ({ page }) => {
+  // The header carries no level chip any more; a ring hidden above 768px would leave desktop
+  // with no level on screen at all.
   await page.goto("/library");
-  const chip = page.getByRole("link", { name: "Level 1 · Newcomer" });
-  if (isPhone(page)) {
-    await expect(chip).toBeHidden();
-    await expect(tab(page, "Profile · Level 1")).toBeVisible();
-  } else {
-    await expect(chip).toBeVisible();
-    await expect(chip.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuetext",
-      "120 of 141 XP to level 2",
-    );
-  }
+  await expect(page.getByRole("link", { name: /^Level \d/ })).toHaveCount(0);
+  await expect(tab(page, "Profile · Level 1")).toBeVisible();
+  await expect(nav(page).locator(".level-ring")).toBeVisible();
 });
-
-test("on desktop the chip sits on the search bar's line and the carousels' right edge", async ({
-  page,
-}) => {
-  test.skip(isPhone(page), "phones show the level in the tab bar");
-  await page.goto("/");
-  const chip = (await page.getByRole("link", { name: /^Level \d+ · / }).boundingBox())!;
-  const search = (await page.locator(".search-bar").boundingBox())!;
-  const carousel = (await page.locator("section.carousel").first().boundingBox())!;
-  const mid = (b: { y: number; height: number }) => b.y + b.height / 2;
-  expect(Math.abs(mid(chip) - mid(search)), "vertical centre vs search bar").toBeLessThan(2);
-  expect(
-    Math.abs(chip.x + chip.width - (carousel.x + carousel.width)),
-    "right edge vs carousels",
-  ).toBeLessThan(2);
-  expect(chip.x >= search.x + search.width, "chip overlaps the search bar").toBe(true);
-});
-
-for (const path of ["/library", "/settings", "/profile"]) {
-  test(`on desktop the chip sits level with the title on ${path}`, async ({ page }) => {
-    test.skip(isPhone(page), "phones show the level in the tab bar");
-    await page.goto(path);
-    const chip = (await page.getByRole("link", { name: /^Level \d+ · / }).boundingBox())!;
-    const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
-    const mid = (b: { y: number; height: number }) => b.y + b.height / 2;
-    expect(Math.abs(mid(chip) - mid(title)), "vertical centre vs title").toBeLessThan(2);
-  });
-}
 
 test("the phone bar sits at the bottom, full width; the desktop rail on the left", async ({
   page,

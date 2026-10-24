@@ -154,7 +154,6 @@
     min-width: 0;
   }
 
-  // The button sits by the title: the top-right corner belongs to the level chip on desktop.
   .library-grid {
     list-style: none;
     margin: 0;

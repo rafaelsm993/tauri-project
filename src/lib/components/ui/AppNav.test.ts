@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/svelte";
 import AppNav from "./AppNav.svelte";
-import LevelChip from "./LevelChip.svelte";
 
 const LEVEL_3 = { level: 3, xp: 305, into: 45, needed: 141, fraction: 0.32 };
 
@@ -36,23 +35,6 @@ describe("AppNav", () => {
     expect(screen.getByRole("link", { name: "Profile · Level 3" })).toHaveAttribute(
       "href",
       "/profile",
-    );
-  });
-});
-
-describe("LevelChip", () => {
-  it("links to the profile and names the level and title", () => {
-    render(LevelChip, { level: LEVEL_3, title: "Curious Mind" });
-    const chip = screen.getByRole("link", { name: "Level 3 · Curious Mind" });
-    expect(chip).toHaveAttribute("href", "/profile");
-    expect(chip).toHaveTextContent("3");
-  });
-
-  it("says how far the next level is", () => {
-    render(LevelChip, { level: LEVEL_3, title: "Curious Mind" });
-    expect(screen.getByRole("progressbar", { name: "Progress to level 4" })).toHaveAttribute(
-      "aria-valuetext",
-      "45 of 141 XP to level 4",
     );
   });
 });

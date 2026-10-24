@@ -5,13 +5,13 @@ import { manualItem, mockLibrary } from "./fixtures/library";
 // a detail page and the onboarding flow own their whole viewport, and their <h1> is the thing
 // you came to read, not the name of a section.
 const SCREENS = [
-  { name: "home", path: "/", chrome: { chip: true, heading: null } },
+  { name: "home", path: "/", chrome: { heading: null } },
   { name: "detail", path: "/media/movie/1", chrome: null },
-  { name: "library", path: "/library", chrome: { chip: true, heading: "Library" } },
-  { name: "profile", path: "/profile", chrome: { chip: true, heading: "Profile" } },
-  { name: "planner", path: "/planner", chrome: { chip: true, heading: "Planner" } },
+  { name: "library", path: "/library", chrome: { heading: "Library" } },
+  { name: "profile", path: "/profile", chrome: { heading: "Profile" } },
+  { name: "planner", path: "/planner", chrome: { heading: "Planner" } },
   { name: "welcome", path: "/welcome", chrome: null },
-  { name: "settings", path: "/settings", chrome: { chip: true, heading: "Settings" } },
+  { name: "settings", path: "/settings", chrome: { heading: "Settings" } },
 ];
 
 for (const screen of SCREENS) {
@@ -28,12 +28,10 @@ for (const screen of SCREENS) {
       expect(overflow, "page is wider than the viewport").toBeLessThanOrEqual(0);
     });
 
-    test("carries exactly one level chip", async ({ page }) => {
-      // The chip used to live in a desktop-only .app-bar, so phones showed none at all. One
-      // header owns it now: two would mean a page kept its own, zero that it forgot the header.
-      await expect(page.getByRole("link", { name: /^Level \d/ })).toHaveCount(
-        screen.chrome?.chip ? 1 : 0,
-      );
+    test("carries no level chip: the Profile tab shows the level", async ({ page }) => {
+      // The header is search and filters only. The level ring on the Profile tab is the one
+      // place the level lives, so a chip here would be a second copy competing for the row.
+      await expect(page.getByRole("link", { name: /^Level \d/ })).toHaveCount(0);
     });
 
     test("titles itself through the shared header", async ({ page }) => {

@@ -100,7 +100,7 @@ $page-max-width: 1440px;
 $nav-rail-width: 80px;
 $nav-bar-height: 56px;
 
-// One frame for every screen, matching the home page and the level chip.
+// One frame for every screen, matching the home page.
 @mixin page-shell {
   max-width: $page-max-width;
   margin-inline: auto;
@@ -108,19 +108,14 @@ $nav-bar-height: 56px;
   min-width: 0;
 }
 
-// Page heading sized to sit level with the level chip, which only desktop shows.
+// Page heading, one bar tall so it lines up with the search field.
 @mixin page-title {
   display: flex;
   align-items: center;
   min-height: $bar-height;
-  padding-inline-end: calc(#{$bar-height} + #{$spacing-sm});
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--clr-text);
-
-  @include respond-to(md) {
-    padding-inline-end: 0;
-  }
 }
 
 // Truncate text with ellipsis

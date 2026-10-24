@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeFilterCount,
   continueEntries,
   continueItems,
   detailPath,
@@ -8,6 +9,7 @@ import {
   searchEntries,
   statusOptions,
   typeOptions,
+  withEmptyDisabled,
 } from "./libraryView";
 import { emptyLength } from "./length";
 import type { DueSession } from "./reminders";
@@ -185,5 +187,29 @@ describe("continueItems", () => {
   it("fills up to the cap with the rest", () => {
     const list = Array.from({ length: 14 }, (_, i) => entry(`tmdb:tv:${i}`, "tv", "in_progress"));
     expect(continueItems(list, [due(list[0], 30)])).toHaveLength(12);
+  });
+});
+
+describe("filter bar helpers", () => {
+  const options = [
+    { value: "all", label: "All", count: 3 },
+    { value: "planning", label: "Planning", count: 3 },
+    { value: "dropped", label: "Dropped", count: 0 },
+    { value: "completed", label: "Completed", count: 0 },
+  ];
+
+  it("disables options with no items, except the one picked", () => {
+    expect(withEmptyDisabled(options, "completed").map((o) => o.disabled)).toEqual([
+      false,
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it("counts the filters that narrow the library", () => {
+    expect(activeFilterCount({ status: "all", type: "all" })).toBe(0);
+    expect(activeFilterCount({ status: "planning", type: "all" })).toBe(1);
+    expect(activeFilterCount({ status: "planning", type: "tv" })).toBe(2);
   });
 });

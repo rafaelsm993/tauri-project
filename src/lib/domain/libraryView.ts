@@ -102,3 +102,14 @@ export function continueItems(
     .map((entry) => ({ entry, dueMinutes: null }));
   return [...lead, ...rest].slice(0, Math.max(max, lead.length));
 }
+
+// Zero-item options stay visible but can't be picked; the picked one can always be switched off.
+export function withEmptyDisabled<T extends string>(
+  options: FilterOption<T>[],
+  value: T,
+): (FilterOption<T> & { disabled: boolean })[] {
+  return options.map((o) => ({ ...o, disabled: o.count === 0 && o.value !== value }));
+}
+
+export const activeFilterCount = (f: { status: StatusFilter; type: TypeFilter }): number =>
+  Number(f.status !== "all") + Number(f.type !== "all");

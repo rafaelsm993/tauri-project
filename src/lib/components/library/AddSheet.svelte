@@ -13,6 +13,7 @@
     onsave,
     oncancel,
     busy = false,
+    saved = false,
   }: {
     mediaType: MediaType;
     title: string;
@@ -21,6 +22,8 @@
     onsave: (value: { length: Length; review: string | null }) => void;
     oncancel: () => void;
     busy?: boolean;
+    // Already in the library: the sheet edits it, so there is nothing to skip.
+    saved?: boolean;
   } = $props();
 
   const id = $props.id();
@@ -41,8 +44,12 @@
 </script>
 
 <div class="add-sheet">
-  <h2 class="sheet-title">Add {title}</h2>
-  <p class="sheet-hint">Optional — used to plan how long this will take. You can add it later.</p>
+  <h2 class="sheet-title">{saved ? "Edit" : "Add"} {title}</h2>
+  <p class="sheet-hint">
+    {saved
+      ? "Used to plan how long this will take."
+      : "Optional — used to plan how long this will take. You can add it later."}
+  </p>
 
   <div class="sheet-fields">
     <LengthFields {fields} bind:length={draft} disabled={busy} />
@@ -60,7 +67,9 @@
 
   <div class="sheet-actions">
     <button type="button" class="btn primary" disabled={busy} onclick={save}>Save</button>
-    <button type="button" class="btn" disabled={busy} onclick={skip}>Skip</button>
+    {#if !saved}
+      <button type="button" class="btn" disabled={busy} onclick={skip}>Skip</button>
+    {/if}
     <button type="button" class="btn ghost" disabled={busy} onclick={oncancel}>Cancel</button>
   </div>
 </div>

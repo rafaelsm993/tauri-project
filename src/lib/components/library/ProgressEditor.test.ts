@@ -80,4 +80,13 @@ describe("ProgressEditor", () => {
     await userEvent.click(screen.getByRole("button", { name: /add length/i }));
     expect(onaddlength).toHaveBeenCalledOnce();
   });
+
+  it("offers to edit the length once it is known", async () => {
+    const onaddlength = vi.fn();
+    render(ProgressEditor, { ...base, plannable: true, onaddlength });
+    await userEvent.click(screen.getByRole("button", { name: "Edit length" }));
+    expect(onaddlength).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/length unknown/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add length/i })).not.toBeInTheDocument();
+  });
 });

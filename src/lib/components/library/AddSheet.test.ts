@@ -73,4 +73,17 @@ describe("AddSheet", () => {
     await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
     expect(oncancel).toHaveBeenCalledTimes(1);
   });
+
+  it("for a saved item, says Edit and offers no Skip", () => {
+    render(AddSheet, { ...base, saved: true });
+    expect(screen.getByRole("heading", { name: "Edit Dune" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /skip/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/add it later/i)).not.toBeInTheDocument();
+  });
+
+  it("for a new item, says Add and offers Skip", () => {
+    render(AddSheet, { ...base });
+    expect(screen.getByRole("heading", { name: "Add Dune" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /skip/i })).toBeInTheDocument();
+  });
 });

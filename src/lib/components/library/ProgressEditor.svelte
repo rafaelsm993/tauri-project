@@ -74,6 +74,12 @@
         </button>
       {/if}
     </p>
+  {:else if onaddlength}
+    <p class="length-hint">
+      <button type="button" class="length-link" {disabled} onclick={onaddlength}>
+        Edit length
+      </button>
+    </p>
   {/if}
 
   {#if pct !== null}

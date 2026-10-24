@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ipcCalls, item, mockLibrary } from "./fixtures/library";
 
 // The optimistic save must undo itself visibly; this drives it with a rejecting backend.
 const DETAIL = {
@@ -174,11 +175,29 @@ test("a saved item without length can add it later", async ({ page }) => {
   ).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("button", { name: /add length/i }).click();
-  const sheet = page.getByRole("dialog", { name: /add to library/i });
+  const sheet = page.getByRole("dialog", { name: "Edit Test movie 1" });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByLabel(/runtime/i)).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
+});
+
+test("a saved item's known length can be edited from its page", async ({ page }) => {
+  await mockLibrary(page, [item(4, "tv", "Arcane", { episodes: 9, episode_minutes: 40 }, null)]);
+  await page.goto("/media/tv/4");
+  await page.getByRole("button", { name: "Edit length" }).click();
+  const sheet = page.getByRole("dialog", { name: "Edit Arcane" });
+  await expect(sheet.getByRole("button", { name: /skip/i })).toHaveCount(0);
+  await expect(sheet.getByLabel("Minutes per episode")).toHaveValue("40");
+  await sheet.getByLabel("Minutes per episode").fill("30");
+  await sheet.getByRole("button", { name: /^save/i }).click();
+  await expect(sheet).toHaveCount(0);
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({
+    key: "tmdb:tv:4",
+    patch: { length: { episodes: 9, episode_minutes: 30 } },
+  });
+  await expect(page.getByRole("button", { name: "Edit length" })).toBeVisible();
 });
 
 test("every rating pill is visible without scrolling", async ({ page }) => {

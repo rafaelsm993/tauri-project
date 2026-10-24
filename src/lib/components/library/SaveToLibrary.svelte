@@ -98,8 +98,9 @@
 </div>
 
 {#if sheetOpen}
-  <Sheet label="Add to library" onclose={close}>
+  <Sheet label={entry ? `Edit ${item.title}` : "Add to library"} onclose={close}>
     <AddSheet
+      saved={!!entry}
       mediaType={item.media_type}
       title={item.title}
       length={sheetLength}

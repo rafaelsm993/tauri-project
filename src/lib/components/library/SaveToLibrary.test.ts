@@ -199,8 +199,9 @@ describe("SaveToLibrary", () => {
     await store.hydrate();
     render(SaveToLibrary, { item: ITEM, store, editing: true });
 
-    const sheet = screen.getByRole("dialog", { name: /add to library/i });
+    const sheet = screen.getByRole("dialog", { name: /^edit /i });
     expect(sheet.contains(document.activeElement)).toBe(true);
+    expect(screen.queryByRole("button", { name: /skip/i })).not.toBeInTheDocument();
     await userEvent.type(screen.getByLabelText(/^episodes/i), "9");
     await userEvent.click(screen.getByRole("button", { name: /^save/i }));
 

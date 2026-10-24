@@ -3,6 +3,7 @@
   import {
     MAX_SESSION,
     choiceMinutes,
+    customText,
     nearestCount,
     sessionText,
     tooShortText,
@@ -81,7 +82,9 @@
         {disabled}
         oninput={read}
       />
-      <span class="step-minutes">{tooShort ? tooShortText(scale) : text.detail}</span>
+      <span class="step-minutes"
+        >{tooShort ? tooShortText(scale) : customText(scale, minutes, pagesPerHour)}</span
+      >
     </div>
   {:else if scale.full}
     <button

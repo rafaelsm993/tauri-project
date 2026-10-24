@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyLength } from "./length";
 import {
   choiceMinutes,
+  customText,
   choiceOk,
   openAt,
   sessionScale,
@@ -111,15 +112,20 @@ describe("sessionText", () => {
     expect(sessionText(scale, 72, 30)).toEqual({ title: "3 episodes", detail: "1 h 12 min" });
   });
 
-  it("gives minutes that are not whole episodes as their nearest episodes", () => {
-    expect(sessionText(scale, 50, 30)).toEqual({ title: "50 min", detail: "≈ 2 episodes" });
-    expect(sessionText(scale, 30, 30)).toEqual({ title: "30 min", detail: "≈ 1 episode" });
-  });
-
   it("gives a book's time in pages at the reading pace, and a game's time alone", () => {
     expect(sessionText(book, 60, 30)).toEqual({ title: "1 h", detail: "≈ 30 pages" });
     expect(sessionText(book, 50, 30)).toEqual({ title: "50 min", detail: "≈ 25 pages" });
     expect(sessionText(game, 90, 30)).toEqual({ title: "1 h 30 min", detail: "" });
+  });
+
+  it("Custom says what typed minutes are worth in units and in time", () => {
+    const manga = sessionScale(entry("manga", { chapters: 232, chapter_minutes: 20 }), 30)!;
+    expect(customText(manga, 120, 30)).toBe("6 chapters · 2 h");
+    expect(customText(manga, 50, 30)).toBe("≈ 3 chapters · 50 min");
+    expect(customText(scale, 30, 30)).toBe("≈ 1 episode · 30 min");
+    expect(customText(scale, 24, 30)).toBe("1 episode · 24 min");
+    expect(customText(book, 50, 30)).toBe("≈ 25 pages · 50 min");
+    expect(customText(game, 90, 30)).toBe("1 h 30 min");
   });
 
   it("says what the floor is", () => {

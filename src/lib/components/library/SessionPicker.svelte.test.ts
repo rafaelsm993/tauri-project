@@ -58,7 +58,10 @@ describe("SessionPicker", () => {
     await userEvent.clear(input);
     await userEvent.type(input, "50");
     expect(props.choice).toEqual({ count: 1, custom: true, typed: 50 });
-    expect(group()).toHaveTextContent("≈ 2 episodes");
+    expect(group()).toHaveTextContent("≈ 2 episodes · 50 min");
+    await userEvent.clear(input);
+    await userEvent.type(input, "120");
+    expect(group()).toHaveTextContent("5 episodes · 2 h");
     await userEvent.clear(input);
     await userEvent.type(input, "20");
     expect(group()).toHaveTextContent("At least one episode (24 min).");

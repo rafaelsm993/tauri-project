@@ -95,7 +95,10 @@ export function openAt(scale: SessionScale, minutes: number, snap: boolean): Ses
   return { count, custom: true, typed: minutes };
 }
 
-// The centre's two lines.
+const pagesIn = (minutes: number, pagesPerHour: number) =>
+  `≈ ${plural(Math.round((minutes * pagesPerHour) / 60), "page")}`;
+
+// The centre's two lines for whole steps.
 export function sessionText(
   scale: SessionScale,
   minutes: number,
@@ -103,21 +106,26 @@ export function sessionText(
 ): { title: string; detail: string } {
   if (scale.kind === "units") {
     const n = minutes / scale.step;
-    if (Number.isInteger(n)) {
-      return {
-        title: n === 1 && scale.full ? scale.full : plural(n, scale.noun),
-        detail: formatMinutes(minutes),
-      };
-    }
     return {
-      title: formatMinutes(minutes),
-      detail: `≈ ${plural(Math.max(1, Math.round(n)), scale.noun)}`,
+      title: n === 1 && scale.full ? scale.full : plural(n, scale.noun),
+      detail: formatMinutes(minutes),
     };
   }
   return {
     title: formatMinutes(minutes),
-    detail: scale.pages ? `≈ ${plural(Math.round((minutes * pagesPerHour) / 60), "page")}` : "",
+    detail: scale.pages ? pagesIn(minutes, pagesPerHour) : "",
   };
+}
+
+// Under Custom's typed minutes: what they are worth in units, and in time.
+export function customText(scale: SessionScale, minutes: number, pagesPerHour: number): string {
+  const time = formatMinutes(minutes);
+  if (scale.kind === "units") {
+    const n = minutes / scale.step;
+    const units = plural(Math.max(1, Math.round(n)), scale.noun);
+    return `${Number.isInteger(n) ? "" : "≈ "}${units} · ${time}`;
+  }
+  return scale.pages ? `${pagesIn(minutes, pagesPerHour)} · ${time}` : time;
 }
 
 export function tooShortText(scale: SessionScale): string {

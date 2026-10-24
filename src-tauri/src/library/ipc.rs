@@ -74,6 +74,17 @@ pub async fn library_edit_manual(
 }
 
 #[tauri::command]
+pub async fn library_retype_manual(
+    state: State<'_, LibraryState>,
+    key: String,
+    draft: ManualDraft,
+    length: Length,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    commands::retype_manual(&state, &key, &draft, length, event).await
+}
+
+#[tauri::command]
 pub async fn library_update(
     state: State<'_, LibraryState>,
     key: String,
@@ -212,7 +223,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_v1_library_loads_with_no_merges_and_is_saved_again_as_v2() {
+    async fn a_v1_library_loads_with_no_merges_and_is_saved_again_as_v3() {
         let dir = scratch("ipc-v1");
         let path = dir.join("library.json");
         std::fs::write(
@@ -229,8 +240,9 @@ mod tests {
         );
         let saved: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
-        assert_eq!(saved["schema_version"], 2);
+        assert_eq!(saved["schema_version"], 3);
         assert_eq!(saved["data"]["merged"], serde_json::json!({}));
+        assert_eq!(saved["data"]["retyped"], serde_json::json!({}));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

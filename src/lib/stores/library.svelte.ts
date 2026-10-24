@@ -28,6 +28,7 @@ export type LibraryClient = {
   mergePreview: (key: MediaKey, item: MediaItem, length: Length) => Promise<MergePreview>;
   merge: (key: MediaKey, item: MediaItem, length: Length) => Promise<LibraryEntry>;
   unmerge: (key: MediaKey) => Promise<Unmerged>;
+  retypeManual: (key: MediaKey, draft: ManualDraft, length: Length) => Promise<LibraryEntry>;
 };
 
 export const STATUSES: LibraryStatus[] = ["planning", "in_progress", "completed", "dropped"];
@@ -249,6 +250,28 @@ export class LibraryStore {
       return saved;
     } catch (e) {
       this.error = errorMessage(e, "Failed to use this match.");
+      return null;
+    } finally {
+      this.mark(key, false);
+    }
+  }
+
+  // Not optimistic: the moved entry and its new key come from Rust. Null with `error` set.
+  async retypeManual(
+    key: MediaKey,
+    draft: ManualDraft,
+    length: Length,
+  ): Promise<LibraryEntry | null> {
+    if (!this.map.has(key)) return null;
+    this.error = "";
+    this.mark(key, true);
+    try {
+      const saved = await this.client.retypeManual(key, draft, length);
+      this.drop(key);
+      this.write(saved.key, saved);
+      return saved;
+    } catch (e) {
+      this.error = errorMessage(e, "Failed to change the type.");
       return null;
     } finally {
       this.mark(key, false);

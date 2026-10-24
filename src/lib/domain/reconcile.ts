@@ -17,7 +17,7 @@ export function asAliases(raw: unknown): Aliases {
   );
 }
 
-// The saved aliases plus merges and undos heard since they were read.
+// The saved aliases plus merges, undos and type changes heard since they were read.
 export function withAliasEvents(saved: Aliases, heard: LibraryEvent[]): Aliases {
   const out: Record<MediaKey, MediaKey> = { ...saved };
   for (const e of heard) {
@@ -25,6 +25,11 @@ export function withAliasEvents(saved: Aliases, heard: LibraryEvent[]): Aliases 
     if (!into) continue;
     if (e.kind === "library_merge") out[e.media_key] = into;
     if (e.kind === "library_unmerge") delete out[e.media_key];
+    if (e.kind === "library_retype") {
+      // The new key is live again, so a record leaving it would make a loop.
+      delete out[into];
+      out[e.media_key] = into;
+    }
   }
   return out;
 }

@@ -376,6 +376,27 @@ describe("a merged manual item", () => {
     expect(store.xp).toBe(0);
   });
 
+  it("follows a type change heard while the app runs", async () => {
+    const MOVED = "manual:book:m1";
+    let emit: (e: LibraryEvent) => void = () => {};
+    const store = new GamificationStore(
+      {
+        events: async () => history,
+        aliases: async () => ({}),
+        onEvent: (fn) => ((emit = fn), () => {}),
+      },
+      () => [],
+      () => "2026-09-20",
+    );
+    await store.load();
+    const before = store.xp;
+    emit({ ...ev("t", { into: MOVED }), kind: "library_retype", media_key: MANUAL });
+    expect(store.xp).toBe(before);
+    expect(store.awards.every((a) => a.media_key === MOVED)).toBe(true);
+    emit({ ...ev("r2", null), kind: "library_remove", media_key: MOVED });
+    expect(store.xp).toBe(0);
+  });
+
   it("still counts XP when the aliases can't be read", async () => {
     const store = new GamificationStore(
       {

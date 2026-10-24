@@ -15,13 +15,21 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // library.json upgrade steps, oldest first; adding one bumps SCHEMA_VERSION.
-pub const MIGRATIONS: &[Migration] = &[add_merged];
+pub const MIGRATIONS: &[Migration] = &[add_merged, add_retyped];
 pub const SCHEMA_VERSION: u32 = current_version(MIGRATIONS);
 
 // v1 → v2: merged-away manual items; an older app must refuse the file, not drop them on save.
 fn add_merged(mut v: serde_json::Value) -> Result<serde_json::Value, String> {
     let map = v.as_object_mut().ok_or("library is not an object")?;
     map.entry("merged").or_insert_with(|| serde_json::json!({}));
+    Ok(v)
+}
+
+// v2 → v3: manual items moved to another type; an older app would drop the record on save.
+fn add_retyped(mut v: serde_json::Value) -> Result<serde_json::Value, String> {
+    let map = v.as_object_mut().ok_or("library is not an object")?;
+    map.entry("retyped")
+        .or_insert_with(|| serde_json::json!({}));
     Ok(v)
 }
 
@@ -32,6 +40,9 @@ pub struct LibraryFile {
     pub entries: BTreeMap<String, LibraryEntry>,
     #[serde(default)]
     pub merged: BTreeMap<String, Tombstone>,
+    // A manual item's old key → its key after a type change, so its history follows it.
+    #[serde(default)]
+    pub retyped: BTreeMap<String, String>,
 }
 
 // Single owner of library.json, the event log path and the poster cache folder.
@@ -298,6 +309,80 @@ pub async fn edit_manual(
     Ok(entry)
 }
 
+/// Moves a manual item to another type under `manual:<type>:<same id>`. Progress counts the old
+/// type's units, so it starts over (a finished item stays finished); the plan goes; the length
+/// is the one given for the new type. `retyped` keeps old → new for its history and XP.
+pub async fn retype_manual(
+    state: &LibraryState,
+    key: &str,
+    draft: &ManualDraft,
+    length: Length,
+    event: Event,
+) -> Result<LibraryEntry, String> {
+    check_event(&event, key, &[EventKind::LibraryRetype])?;
+    let parsed = MediaKey::parse(key)?;
+    if parsed.provider != ProviderId::Manual {
+        return Err("only manual items can change type".into());
+    }
+    if parsed.media_type == draft.media_type {
+        return Err("the type is the same; edit the item instead".into());
+    }
+    let into = manual::manual_key(draft.media_type, &parsed.id);
+    let mut snapshot = manual::snapshot(draft, &into)?;
+    let at = event.at_utc.clone();
+    let entry = state
+        .store
+        .commit(|f| {
+            if f.entries.contains_key(&into) || f.merged.contains_key(&into) {
+                return Err(format!("{into} is already in the library"));
+            }
+            let old = f
+                .entries
+                .remove(key)
+                .ok_or_else(|| format!("{key} is not in the library"))?;
+            let user = retyped_user(draft.media_type, &old.user, length);
+            validate_user_data(draft.media_type, &user)?;
+            snapshot.poster_path = old.snapshot.poster_path;
+            snapshot.poster_file = old.snapshot.poster_file;
+            let entry = LibraryEntry {
+                key: into.clone(),
+                snapshot,
+                user,
+                created_at: old.created_at,
+                updated_at: at,
+            };
+            f.entries.insert(into.clone(), entry.clone());
+            // The new key is live again, so a record leaving it would make a loop.
+            f.retyped.remove(&into);
+            f.retyped.insert(key.to_string(), into);
+            Ok(entry)
+        })
+        .await?;
+    log_event(state, event).await;
+    Ok(entry)
+}
+
+// Same status, rating and review; progress from zero, or the whole new total when finished.
+fn retyped_user(to: MediaType, user: &UserData, length: Length) -> UserData {
+    let total = match to {
+        MediaType::Movie => Some(1),
+        MediaType::Tv | MediaType::Anime => length.episodes,
+        MediaType::Manga => length.chapters,
+        MediaType::Book => length.pages,
+        MediaType::Game => length.hours,
+    };
+    let progress = match user.status {
+        Status::Completed => total.unwrap_or(0),
+        _ => 0,
+    };
+    UserData {
+        progress,
+        plan: None,
+        length,
+        ..user.clone()
+    }
+}
+
 /// Patches the user fields of an existing entry; unknown key is an error.
 pub async fn update(
     state: &LibraryState,
@@ -420,7 +505,7 @@ pub async fn unmerge(
     })
 }
 
-/// Manual key → catalog key for every merge saved in the library file.
+/// Manual key → where its history now lives: a catalog match or a type change.
 pub async fn aliases(state: &LibraryState) -> BTreeMap<String, String> {
     state.store.read(reconcile::aliases).await
 }
@@ -1517,6 +1602,290 @@ mod tests {
         assert!(wrong_kind.is_err());
         assert_eq!(saved(&dir), before);
         assert_eq!(events_in(&dir).len(), 2, "only the two adds are logged");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    const MANGA_KEY: &str = "manual:manga:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
+
+    fn as_manga() -> ManualDraft {
+        ManualDraft {
+            media_type: MediaType::Manga,
+            ..dune()
+        }
+    }
+
+    fn manga_length() -> Length {
+        Length {
+            chapters: Some(100),
+            chapter_minutes: Some(6),
+            ..Length::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn retype_manual_moves_the_item_and_starts_its_progress_over() {
+        let dir = scratch("retype-move");
+        let state = state_in(&dir);
+        let user = UserData {
+            status: Status::InProgress,
+            progress: 40,
+            rating: Some(8),
+            review: Some("good".into()),
+            length: Length {
+                pages: Some(412),
+                ..Length::default()
+            },
+            plan: Some(Plan {
+                days: vec![0],
+                max_session_minutes: 45,
+                since: "2026-09-28".into(),
+            }),
+        };
+        add_manual(&state, ID, &dune(), user, unkeyed("library_add", "a", "t1"))
+            .await
+            .unwrap();
+        assert!(attach_poster(&state, BOOK_KEY, "mine.jpg").await);
+        let entry = retype_manual(
+            &state,
+            BOOK_KEY,
+            &as_manga(),
+            manga_length(),
+            ev("library_retype", BOOK_KEY, "r", "t2"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(entry.key, MANGA_KEY);
+        assert_eq!(entry.snapshot.media_key, MANGA_KEY);
+        assert_eq!(entry.snapshot.media_type, MediaType::Manga);
+        assert_eq!(entry.snapshot.creator.as_deref(), Some("Frank Herbert"));
+        assert_eq!(entry.snapshot.poster_file.as_deref(), Some("mine.jpg"));
+        assert_eq!(entry.user.status, Status::InProgress);
+        assert_eq!(entry.user.progress, 0);
+        assert_eq!(entry.user.plan, None);
+        assert_eq!(entry.user.length, manga_length());
+        assert_eq!(entry.user.rating, Some(8));
+        assert_eq!(entry.user.review.as_deref(), Some("good"));
+        assert_eq!(
+            (entry.created_at.as_str(), entry.updated_at.as_str()),
+            ("t1", "t2")
+        );
+        let file = saved(&dir);
+        assert!(!file.entries.contains_key(BOOK_KEY));
+        assert_eq!(file.entries[MANGA_KEY], entry);
+        assert_eq!(file.retyped[BOOK_KEY], MANGA_KEY);
+        assert_eq!(aliases(&state).await[BOOK_KEY], MANGA_KEY);
+        let last = events_in(&dir).pop().unwrap();
+        assert_eq!(
+            (last.kind.as_str(), last.media_key.as_str()),
+            ("library_retype", BOOK_KEY)
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn retype_manual_keeps_a_finished_item_finished_at_its_new_total() {
+        let dir = scratch("retype-done");
+        let state = state_in(&dir);
+        let user = UserData {
+            status: Status::Completed,
+            progress: 412,
+            ..UserData::default()
+        };
+        add_manual(&state, ID, &dune(), user, unkeyed("library_add", "a", "t1"))
+            .await
+            .unwrap();
+        let entry = retype_manual(
+            &state,
+            BOOK_KEY,
+            &as_manga(),
+            manga_length(),
+            ev("library_retype", BOOK_KEY, "r", "t2"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            (entry.user.status, entry.user.progress),
+            (Status::Completed, 100)
+        );
+        let as_movie = ManualDraft {
+            media_type: MediaType::Movie,
+            ..dune()
+        };
+        let movie = retype_manual(
+            &state,
+            MANGA_KEY,
+            &as_movie,
+            Length::default(),
+            ev("library_retype", MANGA_KEY, "r2", "t3"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            (movie.user.status, movie.user.progress),
+            (Status::Completed, 1)
+        );
+        let as_game = ManualDraft {
+            media_type: MediaType::Game,
+            ..dune()
+        };
+        let movie_key = movie.key.clone();
+        let game = retype_manual(
+            &state,
+            &movie_key,
+            &as_game,
+            Length::default(),
+            ev("library_retype", &movie_key, "r3", "t4"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            (game.user.status, game.user.progress),
+            (Status::Completed, 0)
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn retyping_back_leaves_no_loop_in_the_records() {
+        let dir = scratch("retype-back");
+        let state = state_in(&dir);
+        add_manual(
+            &state,
+            ID,
+            &dune(),
+            UserData::default(),
+            unkeyed("library_add", "a", "t1"),
+        )
+        .await
+        .unwrap();
+        retype_manual(
+            &state,
+            BOOK_KEY,
+            &as_manga(),
+            manga_length(),
+            ev("library_retype", BOOK_KEY, "r1", "t2"),
+        )
+        .await
+        .unwrap();
+        let back = retype_manual(
+            &state,
+            MANGA_KEY,
+            &dune(),
+            Length::default(),
+            ev("library_retype", MANGA_KEY, "r2", "t3"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(back.key, BOOK_KEY);
+        let file = saved(&dir);
+        assert_eq!(
+            file.retyped,
+            BTreeMap::from([(MANGA_KEY.to_string(), BOOK_KEY.to_string())])
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn retype_manual_refuses_and_changes_nothing() {
+        let dir = scratch("retype-refused");
+        let state = state_in(&dir);
+        add(
+            &state,
+            &item(MediaType::Tv),
+            UserData::default(),
+            event("p"),
+        )
+        .await
+        .unwrap();
+        add_manual(
+            &state,
+            ID,
+            &dune(),
+            UserData::default(),
+            unkeyed("library_add", "a", "t1"),
+        )
+        .await
+        .unwrap();
+        let before = saved(&dir);
+        let try_retype = |key: &'static str,
+                          draft: ManualDraft,
+                          length: Length,
+                          kind: &'static str| {
+            let state = state.clone();
+            async move { retype_manual(&state, key, &draft, length, ev(kind, key, "r", "t2")).await }
+        };
+        let as_movie = ManualDraft {
+            media_type: MediaType::Movie,
+            ..dune()
+        };
+        let err = try_retype(
+            "tmdb:tv:7",
+            as_movie.clone(),
+            Length::default(),
+            "library_retype",
+        )
+        .await;
+        assert!(err.unwrap_err().contains("only manual"));
+        let err = try_retype(BOOK_KEY, dune(), Length::default(), "library_retype").await;
+        assert!(err.unwrap_err().contains("same"));
+        let gone = "manual:book:ffffffff-ffff-4fff-8fff-ffffffffffff";
+        let err = try_retype(gone, as_movie.clone(), Length::default(), "library_retype").await;
+        assert!(err.unwrap_err().contains("not in the library"));
+        let err = try_retype(
+            BOOK_KEY,
+            as_movie.clone(),
+            Length::default(),
+            "library_edit",
+        )
+        .await;
+        assert!(err.is_err());
+        let blank = ManualDraft {
+            title: "".into(),
+            ..as_manga()
+        };
+        assert!(
+            try_retype(BOOK_KEY, blank, manga_length(), "library_retype")
+                .await
+                .is_err()
+        );
+        assert_eq!(saved(&dir), before);
+        assert_eq!(events_in(&dir).len(), 2, "only the two adds are logged");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn retype_manual_refuses_a_key_already_taken() {
+        let dir = scratch("retype-taken");
+        let state = state_in(&dir);
+        add_manual(
+            &state,
+            ID,
+            &dune(),
+            UserData::default(),
+            unkeyed("library_add", "a", "t1"),
+        )
+        .await
+        .unwrap();
+        add_manual(
+            &state,
+            ID,
+            &as_manga(),
+            UserData::default(),
+            unkeyed("library_add", "b", "t1"),
+        )
+        .await
+        .unwrap();
+        let before = saved(&dir);
+        let err = retype_manual(
+            &state,
+            BOOK_KEY,
+            &as_manga(),
+            manga_length(),
+            ev("library_retype", BOOK_KEY, "r", "t2"),
+        )
+        .await;
+        assert!(err.unwrap_err().contains("already in the library"));
+        assert_eq!(saved(&dir), before);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

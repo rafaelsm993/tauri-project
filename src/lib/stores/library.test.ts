@@ -63,6 +63,7 @@ function fakeClient(over: Partial<LibraryClient> = {}): LibraryClient {
     mergePreview: vi.fn(async () => ({ entry: entry(), combined: false })),
     merge: vi.fn(async () => entry()),
     unmerge: vi.fn(async () => ({ manual: entry(), into: "tmdb:tv:7", catalog: null })),
+    retypeManual: vi.fn(async () => entry()),
     ...over,
   };
 }
@@ -515,5 +516,47 @@ describe("unmerge", () => {
     expect(await store.unmerge(MANUAL)).toBeNull();
     expect(store.has("tmdb:tv:7")).toBe(true);
     expect(store.error).toMatch(/changed after the match/);
+  });
+});
+
+describe("retypeManual", () => {
+  const BOOK = "manual:book:m1";
+  const MANGA = "manual:manga:m1";
+  const book = entry({ key: BOOK, snapshot: { ...entry().snapshot, media_key: BOOK } });
+  const manga = entry({
+    key: MANGA,
+    snapshot: { ...entry().snapshot, media_key: MANGA, media_type: "manga" },
+  });
+  const draft = { media_type: "manga" as const, title: "Dune" };
+
+  it("swaps the item for the one saved under its new key", async () => {
+    const retypeManual = vi.fn(async () => manga);
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [book]), retypeManual }));
+    await store.hydrate();
+    expect(await store.retypeManual(BOOK, draft, emptyLength())).toEqual(manga);
+    expect(retypeManual).toHaveBeenCalledWith(BOOK, draft, emptyLength());
+    expect(store.has(BOOK)).toBe(false);
+    expect(store.get(MANGA)).toEqual(manga);
+    expect(store.isPending(BOOK)).toBe(false);
+  });
+
+  it("changes nothing and says why when the backend refuses", async () => {
+    const retypeManual = vi.fn(async () => {
+      throw "manual:manga:m1 is already in the library";
+    });
+    const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [book]), retypeManual }));
+    await store.hydrate();
+    expect(await store.retypeManual(BOOK, draft, emptyLength())).toBeNull();
+    expect(store.get(BOOK)).toEqual(book);
+    expect(store.has(MANGA)).toBe(false);
+    expect(store.error).toMatch(/already in the library/);
+  });
+
+  it("refuses an item that is not in the library without asking the backend", async () => {
+    const client = fakeClient();
+    const store = new LibraryStore(client);
+    await store.hydrate();
+    expect(await store.retypeManual(BOOK, draft, emptyLength())).toBeNull();
+    expect(client.retypeManual).not.toHaveBeenCalled();
   });
 });

@@ -42,6 +42,7 @@ async function storeWith(list: LibraryEntry[]) {
     mergePreview: vi.fn(),
     merge: vi.fn(),
     unmerge: vi.fn(),
+    retypeManual: vi.fn(),
   });
   await store.hydrate();
   return store;

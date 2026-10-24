@@ -76,6 +76,37 @@ describe("a manual item matched to the catalog", () => {
   });
 });
 
+describe("a manual item that changed type", () => {
+  const BOOK = "manual:book:m1";
+  const MANGA = "manual:manga:m1";
+  const moved = { [BOOK]: MANGA };
+  const history = [
+    add(BOOK, null, "2026-09-18"),
+    upd(BOOK, { status: "completed", rating: 8 }, "2026-09-19"),
+  ];
+  const retype = ev("library_retype", BOOK, { into: MANGA }, "2026-09-20");
+
+  it("keeps its XP and active days, filed under the new key; the change pays nothing", () => {
+    const after = rekey([...history, retype], moved);
+    expect(reasons(after)).toEqual(["add", "rating", "completion"]);
+    expect(awards(after).every((a) => a.media_key === MANGA)).toBe(true);
+    expect(activeDays(after)).toEqual(activeDays(history));
+  });
+
+  it("does not pay again for what it already earned under the old type", () => {
+    const again = [
+      ...history,
+      retype,
+      upd(MANGA, { status: "completed", rating: 9 }, "2026-09-21"),
+    ];
+    expect(reasons(rekey(again, moved))).toEqual(["add", "rating", "completion"]);
+  });
+
+  it("loses all of it when the moved item is removed", () => {
+    expect(xpOf(rekey([...history, retype, del(MANGA)], moved))).toBe(0);
+  });
+});
+
 describe("awards", () => {
   it("pays for an add once per item while it stays in the library", () => {
     expect(xpOf([add(MOVIE)])).toBe(XP.add);

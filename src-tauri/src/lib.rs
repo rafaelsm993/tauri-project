@@ -92,6 +92,7 @@ pub fn run() {
             library::ipc::library_add,
             library::ipc::library_add_manual,
             library::ipc::library_edit_manual,
+            library::ipc::library_retype_manual,
             library::ipc::library_update,
             library::ipc::library_remove,
             library::ipc::library_events,

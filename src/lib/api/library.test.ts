@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { library } from "./library";
+import { emptyLength } from "$lib/domain/length";
 import type { ManualDraft } from "$lib/types/library";
 import type { MediaItem } from "$lib/types/media";
 
@@ -152,6 +153,25 @@ describe("manual items", () => {
     expect(seen).toEqual([event]);
   });
 
+  it("retypeManual sends the key, draft and length with a library_retype event naming the new key", async () => {
+    const calls = record({ key: "manual:manga:0b6f1c1e" });
+    const seen: unknown[] = [];
+    const stop = library.onEvent((e) => seen.push(e));
+    const length = { ...emptyLength(), chapters: 100 };
+    const manga = { ...DRAFT, media_type: "manga" as const };
+    await library.retypeManual("manual:book:0b6f1c1e", manga, length);
+    stop();
+    expect(calls[0].cmd).toBe("library_retype_manual");
+    expect(calls[0].args).toMatchObject({ key: "manual:book:0b6f1c1e", draft: manga, length });
+    const event = calls[0].args.event as { kind: string; media_key: string; payload: unknown };
+    expect(event).toMatchObject({
+      kind: "library_retype",
+      media_key: "manual:book:0b6f1c1e",
+      payload: { into: "manual:manga:0b6f1c1e" },
+    });
+    expect(seen).toEqual([event]);
+  });
+
   it("a refused manual save tells no listener", async () => {
     mockIPC(() => {
       throw new Error("a title is required");
@@ -160,6 +180,7 @@ describe("manual items", () => {
     const stop = library.onEvent((e) => seen.push(e));
     await expect(library.addManual({ media_type: "book", title: "" })).rejects.toThrow("title");
     await expect(library.editManual(KEY, DRAFT)).rejects.toThrow("title");
+    await expect(library.retypeManual(KEY, DRAFT, emptyLength())).rejects.toThrow("title");
     stop();
     expect(seen).toEqual([]);
   });

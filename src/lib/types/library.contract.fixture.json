@@ -51,7 +51,8 @@
     "library_remove",
     "library_edit",
     "library_merge",
-    "library_unmerge"
+    "library_unmerge",
+    "library_retype"
   ],
   "manual_snapshot": {
     "creator": "Small Studio",

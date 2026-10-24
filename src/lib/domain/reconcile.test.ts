@@ -16,6 +16,16 @@ describe("aliases", () => {
     expect(withAliasEvents(merged, [ev("library_unmerge", M, { into: C })])).toEqual({});
   });
 
+  it("follows a type change heard after the load, and a change back leaves no loop", () => {
+    const M2 = "manual:manga:m1";
+    const moved = withAliasEvents({}, [ev("library_retype", M, { into: M2 })]);
+    expect(moved).toEqual({ [M]: M2 });
+    const back = withAliasEvents(moved, [ev("library_retype", M2, { into: M }, "r2")]);
+    expect(back).toEqual({ [M2]: M });
+    expect(resolve(M, back)).toBe(M);
+    expect(resolve(M2, back)).toBe(M);
+  });
+
   it("keeps the saved aliases and ignores other kinds and payloads without a key", () => {
     const saved = { "manual:movie:x": "tmdb:movie:1" };
     const heard = [

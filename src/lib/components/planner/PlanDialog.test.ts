@@ -49,6 +49,7 @@ async function setup(
     mergePreview: vi.fn(),
     merge: vi.fn(),
     unmerge: vi.fn(),
+    retypeManual: vi.fn(),
     ...over,
   };
   const library = new LibraryStore(client);
@@ -152,6 +153,7 @@ describe("PlanDialog", () => {
       mergePreview: vi.fn(),
       merge: vi.fn(),
       unmerge: vi.fn(),
+      retypeManual: vi.fn(),
     };
     const library = new LibraryStore(client);
     await library.hydrate();
@@ -184,6 +186,7 @@ describe("PlanDialog", () => {
       mergePreview: vi.fn(),
       merge: vi.fn(),
       unmerge: vi.fn(),
+      retypeManual: vi.fn(),
     });
     await library.hydrate();
     const prefs = new PrefsStore({

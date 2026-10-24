@@ -83,6 +83,13 @@ function editManual(key: MediaKey, draft: ManualDraft): Promise<LibraryEntry> {
   return saved(event, invoke<LibraryEntry>("library_edit_manual", { key, draft, event }));
 }
 
+// Moves a manual item to `draft.media_type`; Rust keeps its id, so the new key is known here.
+function retypeManual(key: MediaKey, draft: ManualDraft, length: Length): Promise<LibraryEntry> {
+  const into = `manual:${draft.media_type}:${key.split(":").slice(2).join(":")}`;
+  const event = stamp("library_retype", key, { into });
+  return saved(event, invoke<LibraryEntry>("library_retype_manual", { key, draft, length, event }));
+}
+
 function update(key: MediaKey, patch: UserPatch): Promise<LibraryEntry> {
   const event = stamp("library_update", key, patch);
   return saved(event, invoke<LibraryEntry>("library_update", { key, patch, event }));
@@ -142,7 +149,7 @@ async function unmerge(key: MediaKey): Promise<Unmerged> {
   return saved({ ...event, payload: { into: back.into } }, Promise.resolve(back));
 }
 
-// Manual key → catalog key, so a merged item's history keeps counting.
+// Manual key → where its history lives now: a catalog match or a type change.
 function aliases(): Promise<Record<MediaKey, MediaKey>> {
   return invoke<Record<MediaKey, MediaKey>>("library_aliases");
 }
@@ -152,6 +159,7 @@ export const library = {
   add,
   addManual,
   editManual,
+  retypeManual,
   update,
   plan,
   remove,

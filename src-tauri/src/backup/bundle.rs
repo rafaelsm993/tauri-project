@@ -226,8 +226,8 @@ fn versioned<T: DeserializeOwned>(
     })
 }
 
-// Every entry is keyed by its own media key and holds valid user data; every merge record
-// names a manual key that is not also a saved entry.
+// Every entry is keyed by its own media key and holds valid user data; every merge or type
+// change record names a manual key that is not also a saved entry.
 fn validate(library: &LibraryFile) -> Result<(), String> {
     for (key, e) in &library.entries {
         if *key != e.key || e.key != e.snapshot.media_key {
@@ -240,6 +240,12 @@ fn validate(library: &LibraryFile) -> Result<(), String> {
         let manual = MediaKey::parse(key).is_ok_and(|k| k.provider == ProviderId::Manual);
         if !manual || t.entry.key != *key || library.entries.contains_key(key) {
             return Err(format!("the backup has a broken merge record: {key}"));
+        }
+    }
+    for (key, into) in &library.retyped {
+        let manual = MediaKey::parse(key).is_ok_and(|k| k.provider == ProviderId::Manual);
+        if !manual || key == into || library.entries.contains_key(key) {
+            return Err(format!("the backup has a broken type change record: {key}"));
         }
     }
     Ok(())
@@ -487,6 +493,49 @@ pub(crate) mod tests {
             let err = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap_err();
             assert!(
                 err.starts_with("the backup has a broken merge record"),
+                "{err}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_type_change_record_survives_a_backup() {
+        let mut b = sample();
+        b.library
+            .retyped
+            .insert("manual:book:m3".into(), "manual:manga:m3".into());
+        let back = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap();
+        assert_eq!(back.library.retyped, b.library.retyped);
+    }
+
+    #[test]
+    fn a_backup_with_a_broken_type_change_record_is_refused() {
+        let mut manual = entry(3, "t1");
+        manual.key = "manual:movie:m3".into();
+        manual.snapshot.media_key = manual.key.clone();
+        let mut still_saved = sample();
+        still_saved
+            .library
+            .entries
+            .insert(manual.key.clone(), manual.clone());
+        still_saved
+            .library
+            .retyped
+            .insert(manual.key.clone(), "manual:book:m3".into());
+        let mut not_manual = sample();
+        not_manual
+            .library
+            .retyped
+            .insert("tmdb:movie:9".into(), "manual:book:m3".into());
+        let mut itself = sample();
+        itself
+            .library
+            .retyped
+            .insert("manual:book:m4".into(), "manual:book:m4".into());
+        for b in [still_saved, not_manual, itself] {
+            let err = read(&build(&b).unwrap(), &Limits::DEFAULT).unwrap_err();
+            assert!(
+                err.starts_with("the backup has a broken type change record"),
                 "{err}"
             );
         }

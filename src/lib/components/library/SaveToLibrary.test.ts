@@ -57,6 +57,7 @@ function storeWith(over: Partial<LibraryClient> = {}) {
     mergePreview: vi.fn(),
     merge: vi.fn(),
     unmerge: vi.fn(),
+    retypeManual: vi.fn(),
     ...over,
   };
   return { store: new LibraryStore(client), client };

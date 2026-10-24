@@ -188,11 +188,16 @@ pub fn unmerge(file: &mut LibraryFile, from: &str) -> Result<Tombstone, String> 
     Ok(t)
 }
 
-// Manual key → the catalog key it became, straight from the tombstones.
+// Manual key → the key its history now lives under: a catalog match or a type change.
 pub fn aliases(file: &LibraryFile) -> BTreeMap<String, String> {
     file.merged
         .iter()
         .map(|(from, t)| (from.clone(), t.into.clone()))
+        .chain(
+            file.retyped
+                .iter()
+                .map(|(from, into)| (from.clone(), into.clone())),
+        )
         .collect()
 }
 
@@ -274,6 +279,17 @@ mod tests {
             entries: entries.into_iter().map(|e| (e.key.clone(), e)).collect(),
             ..LibraryFile::default()
         }
+    }
+
+    #[test]
+    fn aliases_follow_merges_and_type_changes() {
+        let mut file = LibraryFile::default();
+        file.retyped
+            .insert("manual:book:1".into(), "manual:manga:1".into());
+        assert_eq!(
+            aliases(&file),
+            BTreeMap::from([("manual:book:1".to_string(), "manual:manga:1".to_string())])
+        );
     }
 
     #[test]

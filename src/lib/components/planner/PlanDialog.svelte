@@ -48,11 +48,12 @@
   }
 </script>
 
-<Sheet label="Plan {entry.snapshot.title}" {onclose}>
+<Sheet label="Plan {entry.snapshot.title}" focus="sheet" {onclose}>
   <PlanSheet
     {entry}
     {today}
     pagesPerHour={prefs.prefs.reading_pages_per_hour}
+    chapterMinutes={prefs.prefs.manga_chapter_minutes}
     {busy}
     onsave={save}
     onclear={clear}

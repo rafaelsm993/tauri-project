@@ -45,6 +45,7 @@ function setup(over: Record<string, unknown> = {}) {
     entry: TV,
     today: TODAY,
     pagesPerHour: null,
+    chapterMinutes: null,
     onsave: vi.fn(),
     onclear: vi.fn(),
     oncancel: vi.fn(),
@@ -220,10 +221,47 @@ describe("PlanSheet", () => {
     expect(onsave.mock.calls[0][0].pagesPerHour).toBe(60);
   });
 
-  it("does not ask the pace again once it is saved", () => {
-    setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 45 });
-    expect(screen.queryByLabelText(/pages per hour/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/at 45 pages an hour/i)).toBeInTheDocument();
+  it("always shows the book pace, prefilled, and sends it only when changed", async () => {
+    const { onsave } = setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 45 });
+    const pace = screen.getByLabelText(/pages per hour/i);
+    expect(pace).toHaveValue(45);
+    expect(screen.getByText("Kept for every book. Also in Settings.")).toBeInTheDocument();
+    await userEvent.click(day(/mon/i));
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[0][0].pagesPerHour).toBeNull();
+    await userEvent.clear(pace);
+    await userEvent.type(pace, "60");
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[1][0].pagesPerHour).toBe(60);
+  });
+
+  it("previews with the pace being typed", async () => {
+    setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 30 });
+    await userEvent.click(day(/mon/i));
+    await userEvent.click(screen.getByRole("button", { name: "1 h" }));
+    expect(screen.getByText(/^10 sessions/)).toBeInTheDocument();
+    const pace = screen.getByLabelText(/pages per hour/i);
+    await userEvent.clear(pace);
+    await userEvent.type(pace, "60");
+    expect(screen.getByText(/^5 sessions/)).toBeInTheDocument();
+  });
+
+  it("prefills a manga's missing minutes per chapter from the Settings default", async () => {
+    const { onsave } = setup({ entry: entry("manga", { chapters: 100 }), chapterMinutes: 6 });
+    expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(6);
+    expect(screen.getByRole("button", { name: "Full chapter · 6 min" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(day(/mon/i));
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[0][0].length?.chapter_minutes).toBe(6);
+  });
+
+  it("keeps a manga's own minutes per chapter over the Settings default", () => {
+    setup({ entry: entry("manga", { chapters: 100, chapter_minutes: 9 }), chapterMinutes: 6 });
+    expect(screen.queryByLabelText("Minutes per chapter")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Full chapter · 9 min" })).toBeInTheDocument();
   });
 
   it("editing a plan says how the finish line moves, never that you are behind", async () => {

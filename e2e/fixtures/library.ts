@@ -56,13 +56,15 @@ export interface LibraryFake {
   // Whether the Animations setting is on; the animated reward slots need it.
   motion?: boolean;
   now?: string;
+  // Saved preferences to start from, over the defaults below.
+  prefs?: Record<string, unknown>;
 }
 
 // A stateful fake: library_update merges its patch, so a saved plan shows up on the page.
 export async function mockLibrary(page: Page, entries: object[], fake: LibraryFake = {}) {
   await page.clock.setFixedTime(new Date(fake.now ?? "2026-10-01T10:00:00"));
   await page.addInitScript(
-    ({ list, events, seenLevel, motion, emptyLength, results }) => {
+    ({ list, events, seenLevel, motion, emptyLength, results, savedPrefs }) => {
       const library = structuredClone(list) as {
         key: string;
         user: Record<string, unknown>;
@@ -73,6 +75,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         motion,
         seen_level: seenLevel,
         reading_pages_per_hour: null,
+        manga_chapter_minutes: null,
         theme: "system",
         welcomed: !(window as { __freshInstall?: boolean }).__freshInstall,
         welcome_beat: 0,
@@ -83,6 +86,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         motif: "default",
         garden: "default",
         particle_count: 12,
+        ...savedPrefs,
       };
       type Hit = { media_key: string; media_type: string; title: string; provider: string };
       const calls: { cmd: string; args: unknown }[] = [];
@@ -260,6 +264,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
       motion: fake.motion ?? true,
       emptyLength: LENGTH,
       results: fake.results ?? [],
+      savedPrefs: fake.prefs ?? {},
     },
   );
 }

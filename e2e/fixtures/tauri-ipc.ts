@@ -114,6 +114,7 @@ export const test = base.extend({
         motion: true,
         seen_level: 0,
         reading_pages_per_hour: null,
+        manga_chapter_minutes: null,
         theme: "system",
         welcomed: !(window as { __freshInstall?: boolean }).__freshInstall,
         welcome_beat: 0,

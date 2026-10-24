@@ -31,9 +31,13 @@ const BOOK = {
   updated_at: "",
 } as LibraryEntry;
 
-async function setup(over: Partial<LibraryClient> = {}) {
+async function setup(
+  over: Partial<LibraryClient> = {},
+  entry: LibraryEntry = BOOK,
+  saved: Partial<typeof DEFAULT_PREFS> = {},
+) {
   const client: LibraryClient = {
-    load: vi.fn(async () => [BOOK]),
+    load: vi.fn(async () => [entry]),
     add: vi.fn(),
     update: vi.fn(async () => BOOK),
     plan: vi.fn(async (_k, plan) => ({ ...BOOK, user: { ...BOOK.user, plan } })),
@@ -50,10 +54,13 @@ async function setup(over: Partial<LibraryClient> = {}) {
   const library = new LibraryStore(client);
   await library.hydrate();
   const prefsUpdate = vi.fn(async (patch) => ({ ...DEFAULT_PREFS, ...patch }));
-  const prefs = new PrefsStore({ load: vi.fn(async () => DEFAULT_PREFS), update: prefsUpdate });
+  const prefs = new PrefsStore({
+    load: vi.fn(async () => ({ ...DEFAULT_PREFS, ...saved })),
+    update: prefsUpdate,
+  });
   await prefs.hydrate();
   const onclose = vi.fn();
-  render(PlanDialog, { entry: BOOK, today: "2026-10-01", library, prefs, onclose });
+  render(PlanDialog, { entry, today: "2026-10-01", library, prefs, onclose });
   return { client, prefsUpdate, onclose };
 }
 
@@ -63,6 +70,12 @@ describe("PlanDialog", () => {
     expect(screen.getByRole("dialog", { name: "Plan Dune" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(onclose).toHaveBeenCalled();
+  });
+
+  it("opens on the sheet, not the pace field, so a phone keyboard stays down", async () => {
+    await setup({}, BOOK, { reading_pages_per_hour: 45 });
+    expect(screen.getByRole("dialog", { name: "Plan Dune" })).toHaveFocus();
+    expect(screen.getByLabelText(/pages per hour/i)).not.toHaveFocus();
   });
 
   it("saves the reading pace once, then the plan, then closes", async () => {
@@ -76,6 +89,31 @@ describe("PlanDialog", () => {
       since: "2026-10-01",
     });
     expect(onclose).toHaveBeenCalled();
+  });
+
+  it("saves no pace when the saved one was kept", async () => {
+    const { client, prefsUpdate } = await setup({}, BOOK, { reading_pages_per_hour: 45 });
+    await userEvent.click(screen.getByRole("button", { name: /save plan/i }));
+    expect(prefsUpdate).not.toHaveBeenCalled();
+    expect(client.plan).toHaveBeenCalled();
+  });
+
+  it("gives a manga without minutes per chapter the Settings default, and saves it", async () => {
+    const manga = {
+      ...BOOK,
+      key: "anilist:manga:1",
+      snapshot: { ...BOOK.snapshot, media_key: "anilist:manga:1", media_type: "manga" },
+      user: { ...BOOK.user, length: { ...emptyLength(), chapters: 100 }, plan: null },
+    } as LibraryEntry;
+    const { client } = await setup({ update: vi.fn(async () => manga) }, manga, {
+      manga_chapter_minutes: 6,
+    });
+    expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(6);
+    await userEvent.click(screen.getByRole("button", { name: "Mon" }));
+    await userEvent.click(screen.getByRole("button", { name: /save plan/i }));
+    expect(client.update).toHaveBeenCalledWith(manga.key, {
+      length: expect.objectContaining({ chapter_minutes: 6 }),
+    });
   });
 
   it("stays open and saves no plan when a step fails", async () => {

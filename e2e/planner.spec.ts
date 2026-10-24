@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ipcCalls, item, mockLibrary } from "./fixtures/library";
+import { ipcCalls, item, mockLibrary, type LibraryFake } from "./fixtures/library";
 
 const MWF = { days: [0, 2, 4], max_session_minutes: 60, since: "2026-09-28" };
 const LIBRARY = [
@@ -21,7 +21,8 @@ const LIBRARY = [
   item(4, "tv", "Arcane", { episodes: 9, episode_minutes: 40 }, null),
 ];
 
-const mockPlanner = (page: Page, entries: object[] = LIBRARY) => mockLibrary(page, entries);
+const mockPlanner = (page: Page, entries: object[] = LIBRARY, fake: LibraryFake = {}) =>
+  mockLibrary(page, entries, fake);
 
 const noOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -117,6 +118,45 @@ test("a plan that needs a length asks for it and then joins the week", async ({ 
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("list", { name: "Needs a length" })).toBeHidden();
   await expect(page.getByRole("list", { name: "Plans" })).toContainText("Berserk");
+});
+
+test("minutes per chapter set in Settings prefill a manga's plan", async ({ page }) => {
+  await mockPlanner(page);
+  await page.goto("/settings");
+  const chapter = page.getByLabel("Minutes per chapter (manga)");
+  await chapter.fill("6");
+  await chapter.blur();
+  await expect
+    .poll(async () => (await ipcCalls(page)).filter((c) => c.cmd === "prefs_update").at(-1)?.args)
+    .toMatchObject({ patch: { manga_chapter_minutes: 6 } });
+  // In-app navigation: a reload would restart the fake with its default prefs.
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "Planner" })
+    .click();
+  await page.getByRole("button", { name: "Plan Berserk" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Berserk" });
+  await expect(dialog.getByLabel(/minutes per chapter/i)).toHaveValue("6");
+  await dialog.getByRole("button", { name: "Save plan" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("list", { name: "Plans" })).toContainText("Berserk");
+});
+
+test("a book's reading pace can be changed in its plan", async ({ page }) => {
+  await mockPlanner(page, [...LIBRARY, item(5, "book", "Dune", { pages: 300 }, null)], {
+    prefs: { reading_pages_per_hour: 30 },
+  });
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Dune" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Dune" });
+  const pace = dialog.getByLabel("Pages per hour");
+  await expect(pace).toHaveValue("30");
+  await pace.fill("60");
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Mon" }).click();
+  await dialog.getByRole("button", { name: "Save plan" }).click();
+  await expect(dialog).toBeHidden();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "prefs_update");
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { reading_pages_per_hour: 60 } });
 });
 
 test("the plan sheet never talks about being behind", async ({ page }) => {

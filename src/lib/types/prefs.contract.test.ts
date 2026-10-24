@@ -6,6 +6,7 @@ const PREFS_KEYS = {
   motion: 0,
   seen_level: 0,
   reading_pages_per_hour: 0,
+  manga_chapter_minutes: 0,
   theme: 0,
   welcomed: 0,
   welcome_beat: 0,

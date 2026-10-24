@@ -73,4 +73,59 @@ describe("SettingsView", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("read-only disk");
     expect(animations()).toHaveAttribute("aria-checked", "true");
   });
+
+  describe("reading pace", () => {
+    const pace = () => screen.getByLabelText("Pages per hour (books)");
+    const chapter = () => screen.getByLabelText("Minutes per chapter (manga)");
+
+    it("shows both, empty until set, and saves each on its own", async () => {
+      const { store, update } = storeWith();
+      render(SettingsView, { store });
+      expect(pace()).toHaveValue(null);
+      expect(chapter()).toHaveValue(null);
+      await userEvent.type(pace(), "40");
+      await userEvent.tab();
+      expect(update).toHaveBeenCalledWith({ reading_pages_per_hour: 40 });
+      await userEvent.type(chapter(), "6");
+      await userEvent.tab();
+      expect(update).toHaveBeenCalledWith({ manga_chapter_minutes: 6 });
+      expect(update).toHaveBeenCalledTimes(2);
+    });
+
+    it("shows what is saved, and an emptied field clears it", async () => {
+      const { store, update } = storeWith();
+      store.prefs = { ...store.prefs, reading_pages_per_hour: 30, manga_chapter_minutes: 6 };
+      render(SettingsView, { store });
+      expect(pace()).toHaveValue(30);
+      expect(chapter()).toHaveValue(6);
+      await userEvent.clear(chapter());
+      await userEvent.tab();
+      expect(update).toHaveBeenCalledWith({ manga_chapter_minutes: null });
+    });
+
+    it("refuses a number out of range or not whole, says why, and saves nothing", async () => {
+      const { store, update } = storeWith();
+      render(SettingsView, { store });
+      await userEvent.type(pace(), "999");
+      await userEvent.tab();
+      expect(screen.getByText("Use 5-300.")).toBeInTheDocument();
+      await userEvent.type(chapter(), "0");
+      await userEvent.tab();
+      expect(screen.getByText("Use 1-120.")).toBeInTheDocument();
+      expect(update).not.toHaveBeenCalled();
+      await userEvent.clear(pace());
+      await userEvent.type(pace(), "45");
+      await userEvent.tab();
+      expect(screen.queryByText("Use 5-300.")).not.toBeInTheDocument();
+      expect(update).toHaveBeenCalledWith({ reading_pages_per_hour: 45 });
+    });
+
+    it("waits for the saved prefs before it can be edited", () => {
+      const { store } = storeWith();
+      store.ready = false;
+      render(SettingsView, { store });
+      expect(pace()).toBeDisabled();
+      expect(chapter()).toBeDisabled();
+    });
+  });
 });

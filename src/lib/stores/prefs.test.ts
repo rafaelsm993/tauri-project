@@ -53,6 +53,7 @@ describe("PrefsStore", () => {
       motion: true,
       seen_level: 0,
       reading_pages_per_hour: null,
+      manga_chapter_minutes: null,
       theme: "system",
       welcomed: false,
       welcome_beat: 0,
@@ -97,6 +98,16 @@ describe("PrefsStore", () => {
     load.mockResolvedValue({ reading_pages_per_hour: "fast" } as never);
     await store.reload();
     expect(store.prefs.reading_pages_per_hour).toBeNull();
+  });
+
+  it("keeps saved minutes per chapter and drops ones that are not a whole number", async () => {
+    const load = vi.fn(async () => ({ manga_chapter_minutes: 6 }) as never);
+    const store = new PrefsStore(fakeClient({ load }));
+    await store.hydrate();
+    expect(store.prefs.manga_chapter_minutes).toBe(6);
+    load.mockResolvedValue({ manga_chapter_minutes: 2.5 } as never);
+    await store.reload();
+    expect(store.prefs.manga_chapter_minutes).toBeNull();
   });
 
   it("keeps a saved level and drops one that is not a whole number", async () => {

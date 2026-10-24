@@ -20,6 +20,7 @@
     entry,
     today,
     pagesPerHour,
+    chapterMinutes = null,
     busy = false,
     onsave,
     onclear,
@@ -28,6 +29,8 @@
     entry: LibraryEntry;
     today: string;
     pagesPerHour: number | null;
+    // The Settings default for a manga's minutes per chapter; null when unset.
+    chapterMinutes?: number | null;
     busy?: boolean;
     onsave: (value: PlanSave) => void;
     onclear: () => void;
@@ -45,7 +48,15 @@
 
   // Local copies, so editing never touches the saved entry until Save.
   let days = $state<number[]>(untrack(() => [...(entry.user.plan?.days ?? [])]));
-  let draft = $state<Length>(untrack(() => ({ ...entry.user.length })));
+  // A manga missing its minutes per chapter starts from the Settings default.
+  let draft = $state<Length>(
+    untrack(() => {
+      const length = { ...entry.user.length };
+      if (entry.snapshot.media_type === "manga" && !length.chapter_minutes && chapterMinutes)
+        length.chapter_minutes = chapterMinutes;
+      return length;
+    }),
+  );
   // A new plan follows one whole unit once its minutes are known; an existing one only if it is one.
   const startFull = untrack(() => {
     if (!entry.user.plan) return true;
@@ -63,7 +74,7 @@
     missingLengthFields(entry.snapshot.media_type, entry.user.length),
   );
   const asksPace = $derived(type === "book" && pagesPerHour === null);
-  const usedPace = $derived(asksPace ? pace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
+  const usedPace = $derived(type === "book" ? pace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
   const withLength = $derived({ ...entry, user: { ...entry.user, length: draft } });
   const full = $derived.by(() => {
@@ -77,7 +88,7 @@
   const sessionOk = $derived(
     Number.isInteger(session) && session >= MIN_SESSION && session <= MAX_SESSION,
   );
-  const paceOk = $derived(!asksPace || (Number.isInteger(pace) && pace >= 5 && pace <= 300));
+  const paceOk = $derived(type !== "book" || (Number.isInteger(pace) && pace >= 5 && pace <= 300));
   const plan = $derived<Plan>({
     days: [...days].sort(),
     max_session_minutes: session,
@@ -128,7 +139,7 @@
     onsave({
       plan,
       length: lengthChanged ? { ...draft } : null,
-      pagesPerHour: asksPace ? pace : null,
+      pagesPerHour: type === "book" && pace !== pagesPerHour ? pace : null,
     });
   }
 </script>
@@ -144,26 +155,26 @@
   {/if}
 
   {#if type === "book"}
-    {#if asksPace}
-      <div class="sheet-block">
-        <label class="field-label" for="{id}-pace">Pages per hour</label>
-        <input
-          id="{id}-pace"
-          class="field-input"
-          type="number"
-          min="5"
-          max="300"
-          step="1"
-          inputmode="numeric"
-          value={pace}
-          disabled={busy}
-          oninput={(event) => (pace = readInt(event))}
-        />
-        <p class="sheet-hint">Asked once and kept for every book.</p>
-      </div>
-    {:else}
-      <p class="sheet-hint">At {pagesPerHour} pages an hour.</p>
-    {/if}
+    <div class="sheet-block">
+      <label class="field-label" for="{id}-pace">Pages per hour</label>
+      <input
+        id="{id}-pace"
+        class="field-input"
+        type="number"
+        min="5"
+        max="300"
+        step="1"
+        inputmode="numeric"
+        value={pace}
+        disabled={busy}
+        oninput={(event) => (pace = readInt(event))}
+      />
+      <p class="sheet-hint">
+        {asksPace
+          ? "Asked once and kept for every book."
+          : "Kept for every book. Also in Settings."}
+      </p>
+    </div>
   {/if}
 
   <div class="sheet-block">

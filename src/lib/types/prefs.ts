@@ -6,6 +6,8 @@ export interface Prefs {
   seen_level: number;
   // Asked the first time a book is planned; null until then.
   reading_pages_per_hour: number | null;
+  // Default minutes per manga chapter, prefilled when a manga's own length lacks it; null = unset.
+  manga_chapter_minutes: number | null;
   // The colour scheme; "system" follows the OS light/dark setting.
   theme: Theme;
   // The first run is over: shown once, then never again unless replayed from settings.
@@ -34,6 +36,7 @@ export const DEFAULT_PREFS: Prefs = {
   motion: true,
   seen_level: 0,
   reading_pages_per_hour: null,
+  manga_chapter_minutes: null,
   theme: "system",
   welcomed: false,
   welcome_beat: 0,

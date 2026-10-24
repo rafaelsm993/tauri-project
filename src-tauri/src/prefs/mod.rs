@@ -37,6 +37,8 @@ pub struct Prefs {
     pub seen_level: u32,
     // Asked the first time a book is planned; None until then.
     pub reading_pages_per_hour: Option<u32>,
+    // Default minutes per manga chapter, prefilled when a manga's own length lacks it; None = unset.
+    pub manga_chapter_minutes: Option<u32>,
     pub theme: Theme,
     // The first run is over: shown once, then never again unless replayed from settings.
     pub welcomed: bool,
@@ -61,6 +63,7 @@ impl Default for Prefs {
             motion: true,
             seen_level: 0,
             reading_pages_per_hour: None,
+            manga_chapter_minutes: None,
             theme: Theme::System,
             welcomed: false,
             welcome_beat: 0,
@@ -83,6 +86,8 @@ pub struct PrefsPatch {
     pub seen_level: Option<u32>,
     #[serde(default, deserialize_with = "crate::store::present")]
     pub reading_pages_per_hour: Option<Option<u32>>,
+    #[serde(default, deserialize_with = "crate::store::present")]
+    pub manga_chapter_minutes: Option<Option<u32>>,
     pub theme: Option<Theme>,
     pub welcomed: Option<bool>,
     pub welcome_beat: Option<u8>,
@@ -110,12 +115,17 @@ pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
             return Err(format!("{n} particles is above the {MAX_PARTICLES} cap"));
         }
     }
-    match patch.reading_pages_per_hour {
-        Some(Some(n)) if !(5..=300).contains(&n) => {
-            Err(format!("{n} pages an hour is outside 5–300"))
+    if let Some(Some(n)) = patch.reading_pages_per_hour {
+        if !(5..=300).contains(&n) {
+            return Err(format!("{n} pages an hour is outside 5–300"));
         }
-        _ => Ok(()),
     }
+    if let Some(Some(n)) = patch.manga_chapter_minutes {
+        if !(1..=120).contains(&n) {
+            return Err(format!("{n} minutes a chapter is outside 1–120"));
+        }
+    }
+    Ok(())
 }
 
 pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
@@ -127,6 +137,9 @@ pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
     }
     if let Some(pace) = patch.reading_pages_per_hour {
         prefs.reading_pages_per_hour = pace;
+    }
+    if let Some(each) = patch.manga_chapter_minutes {
+        prefs.manga_chapter_minutes = each;
     }
     if let Some(theme) = patch.theme {
         prefs.theme = theme;
@@ -343,6 +356,41 @@ mod tests {
             serde_json::from_value(json!({ "reading_pages_per_hour": null })).unwrap();
         apply_patch(&mut p, clear);
         assert_eq!(p.reading_pages_per_hour, None);
+    }
+
+    #[test]
+    fn an_older_prefs_file_has_no_chapter_minutes_and_a_patch_sets_and_clears_them() {
+        let mut p: Prefs = serde_json::from_value(json!({ "seen_level": 2 })).unwrap();
+        assert_eq!(p.manga_chapter_minutes, None);
+        let set: PrefsPatch =
+            serde_json::from_value(json!({ "manga_chapter_minutes": 6 })).unwrap();
+        apply_patch(&mut p, set);
+        assert_eq!(p.manga_chapter_minutes, Some(6));
+        apply_patch(&mut p, PrefsPatch::default());
+        assert_eq!(p.manga_chapter_minutes, Some(6));
+        let clear: PrefsPatch =
+            serde_json::from_value(json!({ "manga_chapter_minutes": null })).unwrap();
+        apply_patch(&mut p, clear);
+        assert_eq!(p.manga_chapter_minutes, None);
+    }
+
+    #[test]
+    fn minutes_per_chapter_outside_1_to_120_are_rejected() {
+        let each = |n| PrefsPatch {
+            manga_chapter_minutes: Some(Some(n)),
+            ..PrefsPatch::default()
+        };
+        assert!(validate_patch(&each(0)).is_err());
+        assert!(validate_patch(&each(121)).is_err());
+        assert!(validate_patch(&each(1)).is_ok());
+        assert!(validate_patch(&each(120)).is_ok());
+        // Each range is checked on its own.
+        let both = PrefsPatch {
+            reading_pages_per_hour: Some(Some(30)),
+            manga_chapter_minutes: Some(Some(0)),
+            ..PrefsPatch::default()
+        };
+        assert!(validate_patch(&both).is_err());
     }
 
     #[test]

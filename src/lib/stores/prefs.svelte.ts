@@ -16,6 +16,10 @@ function normalize(raw: unknown): Prefs {
       Number.isInteger(r.reading_pages_per_hour) && (r.reading_pages_per_hour as number) > 0
         ? (r.reading_pages_per_hour as number)
         : DEFAULT_PREFS.reading_pages_per_hour,
+    manga_chapter_minutes:
+      Number.isInteger(r.manga_chapter_minutes) && (r.manga_chapter_minutes as number) > 0
+        ? (r.manga_chapter_minutes as number)
+        : DEFAULT_PREFS.manga_chapter_minutes,
     theme: THEMES.includes(r.theme as Theme) ? (r.theme as Theme) : DEFAULT_PREFS.theme,
     welcomed: typeof r.welcomed === "boolean" ? r.welcomed : DEFAULT_PREFS.welcomed,
     welcome_beat:

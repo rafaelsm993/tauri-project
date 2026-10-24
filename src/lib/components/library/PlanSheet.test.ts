@@ -301,6 +301,16 @@ describe("PlanSheet", () => {
     expect(screen.getByRole("button", { name: "Custom" })).toBeInTheDocument();
   });
 
+  it("keeps the book's session readable while the pace is cleared", async () => {
+    setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 30 });
+    await userEvent.click(day(/mon/i));
+    await userEvent.clear(screen.getByLabelText(/pages per hour/i));
+    expect(sessionGroup()).not.toHaveTextContent("NaN");
+    expect(sessionGroup()).toHaveTextContent("1 h");
+    expect(sessionGroup()).toHaveTextContent("≈ 30 pages");
+    expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
+  });
+
   it("steps a book or a game by 30 minutes, without a Full", () => {
     setup({ entry: entry("game", { hours: 20 }) });
     expect(sessionGroup()).toHaveTextContent("1 h");

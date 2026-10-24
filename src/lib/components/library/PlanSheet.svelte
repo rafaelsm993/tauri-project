@@ -95,6 +95,7 @@
   // Asked of the catalog and still unknown; empty when the catalog was never asked.
   const gap = untrack(() => (found ? askedFields.filter((field) => draft[field] === null) : []));
   const asksPace = $derived(type === "book" && pagesPerHour === null);
+  const paceOk = $derived(type !== "book" || (Number.isInteger(pace) && pace >= 5 && pace <= 300));
   const usedPace = $derived(type === "book" ? pace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
   const withLength = $derived({ ...entry, user: { ...entry.user, length: draft } });
@@ -104,7 +105,9 @@
   });
   const fullOn = $derived(fullPicked && full !== null);
   // Every type but a movie picks its session on a scale; a movie keeps the chips.
-  const scale = $derived(sessionScale(withLength, usedPace));
+  // A pace being typed only counts once it is valid; until then the saved one sizes the session.
+  const sessionPace = $derived(paceOk ? usedPace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
+  const scale = $derived(sessionScale(withLength, sessionPace));
   const units = $derived(type === "tv" || type === "anime" || type === "manga");
   const unitMinutesField = $derived(type === "manga" ? "chapter_minutes" : "episode_minutes");
   // What to add before a session can be picked; "" once it can (a movie never waits).
@@ -134,7 +137,6 @@
       ? choiceOk(scale, session)
       : Number.isInteger(session) && session >= MIN_SESSION && session <= MAX_SESSION,
   );
-  const paceOk = $derived(type !== "book" || (Number.isInteger(pace) && pace >= 5 && pace <= 300));
   const plan = $derived<Plan>({
     days: [...days].sort(),
     max_session_minutes: session,
@@ -265,7 +267,7 @@
         {scale}
         bind:choice
         label="Up to, per session"
-        pagesPerHour={usedPace}
+        pagesPerHour={sessionPace}
         disabled={busy}
       />
     {:else if waitsFor}

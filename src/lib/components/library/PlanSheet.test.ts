@@ -92,6 +92,82 @@ describe("PlanSheet", () => {
     ).toBeInTheDocument();
   });
 
+  it("starts a new plan at one full episode when its length is known", async () => {
+    const { onsave } = setup();
+    expect(screen.getByRole("button", { name: "Full episode · 45 min" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "1 h" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(day(/mon/i));
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(45);
+  });
+
+  it("offers a full movie, and a preset still wins once picked", async () => {
+    const { onsave } = setup({ entry: entry("movie", { runtime_minutes: 130 }) });
+    const full = screen.getByRole("button", { name: "Full movie · 2 h 10 min" });
+    expect(full).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "1 h" }));
+    expect(full).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(day(/sat/i));
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(60);
+  });
+
+  it("Custom turns Full off, and Full can be picked again", async () => {
+    setup();
+    const full = screen.getByRole("button", { name: "Full episode · 45 min" });
+    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
+    expect(full).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(full);
+    expect(full).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Custom" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("follows the per-episode minutes typed in the sheet until a length is picked", async () => {
+    setup({ entry: entry("anime", { episodes: 12 }) });
+    expect(screen.queryByRole("button", { name: /^Full episode/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1 h" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.type(screen.getByLabelText("Minutes per episode"), "24");
+    expect(screen.getByRole("button", { name: "Full episode · 24 min" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("opens an existing one-episode plan on Full", () => {
+    const plan: Plan = { days: [0], max_session_minutes: 45, since: "2026-09-28" };
+    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, plan) });
+    expect(screen.getByRole("button", { name: "Full episode · 45 min" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("an existing plan of another length keeps it", () => {
+    const plan: Plan = { days: [0], max_session_minutes: 90, since: "2026-09-28" };
+    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, plan) });
+    expect(screen.getByRole("button", { name: "Full episode · 45 min" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "1 h 30 min" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("offers no Full for a book or a game", () => {
+    setup({ entry: entry("game", { hours: 20 }) });
+    expect(screen.queryByRole("button", { name: /^Full / })).not.toBeInTheDocument();
+  });
+
+  it("offers no Full when one chapter is shorter than the shortest session", () => {
+    setup({ entry: entry("manga", { chapters: 100, chapter_minutes: 3 }) });
+    expect(screen.queryByRole("button", { name: /^Full / })).not.toBeInTheDocument();
+  });
+
   it("saves the chosen days, session length and today as the start", async () => {
     const { onsave } = setup();
     await userEvent.click(day(/sat/i));

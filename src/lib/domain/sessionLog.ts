@@ -3,6 +3,7 @@ import { DEFAULT_PAGES_PER_HOUR, estimate } from "./estimate";
 import { resolveTotal } from "./length";
 import { planFor } from "./planner";
 import type { LibraryEntry, LibraryStatus, Plan } from "$lib/types/library";
+import type { MediaType } from "$lib/types/media";
 
 export interface LogPreview {
   // Units this session adds (episodes, chapters, pages, hours; 1 for a movie).
@@ -36,6 +37,20 @@ export function minutesPerUnit(
     case "movie":
       return length.runtime_minutes || null;
   }
+}
+
+const FULL_LABEL: Partial<Record<MediaType, string>> = {
+  movie: "Full movie",
+  tv: "Full episode",
+  anime: "Full episode",
+  manga: "Full chapter",
+};
+
+// One whole unit as a session; null for books and games, or without the unit's minutes.
+export function fullSession(entry: LibraryEntry): { label: string; minutes: number } | null {
+  const label = FULL_LABEL[entry.snapshot.media_type];
+  const minutes = label ? minutesPerUnit(entry) : null;
+  return label && minutes ? { label, minutes } : null;
 }
 
 // Whole units `minutes` is worth, nearest (half up), capped at what is left. Without a length one

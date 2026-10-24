@@ -4,6 +4,7 @@
   import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
   import { LENGTH_LABELS, missingLengthFields } from "$lib/domain/length";
   import { finishShift, planFor } from "$lib/domain/planner";
+  import { fullSession } from "$lib/domain/sessionLog";
   import { formatDay, formatMinutes, plural } from "$lib/utils/format";
   import type { Length, LibraryEntry, Plan } from "$lib/types/library";
 
@@ -44,9 +45,18 @@
 
   // Local copies, so editing never touches the saved entry until Save.
   let days = $state<number[]>(untrack(() => [...(entry.user.plan?.days ?? [])]));
-  let minutes = $state(untrack(() => entry.user.plan?.max_session_minutes ?? 60));
-  let custom = $state(untrack(() => !PRESETS.includes(entry.user.plan?.max_session_minutes ?? 60)));
   let draft = $state<Length>(untrack(() => ({ ...entry.user.length })));
+  // A new plan follows one whole unit once its minutes are known; an existing one only if it is one.
+  const startFull = untrack(() => {
+    if (!entry.user.plan) return true;
+    return entry.user.plan.max_session_minutes === fullSession(entry)?.minutes;
+  });
+  let minutes = $state(untrack(() => entry.user.plan?.max_session_minutes ?? 60));
+  // Picking a preset or Custom turns it off.
+  let fullPicked = $state(startFull);
+  let custom = $state(
+    untrack(() => !startFull && !PRESETS.includes(entry.user.plan?.max_session_minutes ?? 60)),
+  );
   let pace = $state(untrack(() => pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
   const askedFields = untrack(() =>
@@ -55,16 +65,24 @@
   const asksPace = $derived(type === "book" && pagesPerHour === null);
   const usedPace = $derived(asksPace ? pace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
+  const withLength = $derived({ ...entry, user: { ...entry.user, length: draft } });
+  const full = $derived.by(() => {
+    const f = fullSession(withLength);
+    return f && f.minutes >= MIN_SESSION && f.minutes <= MAX_SESSION ? f : null;
+  });
+  const fullOn = $derived(fullPicked && full !== null);
+  // What gets previewed and saved.
+  const session = $derived(fullOn && full ? full.minutes : minutes);
+
   const sessionOk = $derived(
-    Number.isInteger(minutes) && minutes >= MIN_SESSION && minutes <= MAX_SESSION,
+    Number.isInteger(session) && session >= MIN_SESSION && session <= MAX_SESSION,
   );
   const paceOk = $derived(!asksPace || (Number.isInteger(pace) && pace >= 5 && pace <= 300));
   const plan = $derived<Plan>({
     days: [...days].sort(),
-    max_session_minutes: minutes,
+    max_session_minutes: session,
     since: today,
   });
-  const withLength = $derived({ ...entry, user: { ...entry.user, length: draft } });
   const preview = $derived(
     days.length > 0 && sessionOk && paceOk ? planFor(withLength, plan, today, usedPace) : null,
   );
@@ -95,6 +113,7 @@
 
   function pick(value: number) {
     custom = false;
+    fullPicked = false;
     minutes = value;
   }
 
@@ -168,12 +187,27 @@
   <div class="sheet-block">
     <span class="field-label" id="{id}-session">Up to, per session</span>
     <div class="chips" role="group" aria-labelledby="{id}-session">
+      {#if full}
+        <button
+          type="button"
+          class="chip"
+          class:active={fullOn}
+          aria-pressed={fullOn}
+          disabled={busy}
+          onclick={() => {
+            custom = false;
+            fullPicked = true;
+          }}
+        >
+          {full.label} · {formatMinutes(full.minutes)}
+        </button>
+      {/if}
       {#each PRESETS as value (value)}
         <button
           type="button"
           class="chip"
-          class:active={!custom && minutes === value}
-          aria-pressed={!custom && minutes === value}
+          class:active={!custom && !fullOn && minutes === value}
+          aria-pressed={!custom && !fullOn && minutes === value}
           disabled={busy}
           onclick={() => pick(value)}
         >
@@ -183,10 +217,13 @@
       <button
         type="button"
         class="chip"
-        class:active={custom}
-        aria-pressed={custom}
+        class:active={custom && !fullOn}
+        aria-pressed={custom && !fullOn}
         disabled={busy}
-        onclick={() => (custom = true)}
+        onclick={() => {
+          custom = true;
+          fullPicked = false;
+        }}
       >
         Custom
       </button>

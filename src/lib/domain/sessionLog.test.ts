@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultMinutes, logPreview, minutesPerUnit } from "./sessionLog";
+import { defaultMinutes, fullSession, logPreview, minutesPerUnit } from "./sessionLog";
 import { emptyLength } from "./length";
 import type { LibraryEntry, LibraryStatus, Length, Plan } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
@@ -108,5 +108,29 @@ describe("defaultMinutes", () => {
     expect(defaultMinutes(FRIEREN, MON_THU, TODAY, null)).toBe(45);
     const unplannable = entry("anime", {});
     expect(defaultMinutes(unplannable, MON_THU, TODAY, null)).toBe(45);
+  });
+});
+
+describe("fullSession", () => {
+  it("is one whole movie, episode or chapter when its minutes are known", () => {
+    expect(fullSession(entry("movie", { runtime_minutes: 130 }))).toEqual({
+      label: "Full movie",
+      minutes: 130,
+    });
+    expect(fullSession(FRIEREN)).toEqual({ label: "Full episode", minutes: 24 });
+    expect(fullSession(entry("tv", { episodes: 8, episode_minutes: 50 }))?.label).toBe(
+      "Full episode",
+    );
+    expect(fullSession(entry("manga", { chapters: 100, chapter_minutes: 6 }))).toEqual({
+      label: "Full chapter",
+      minutes: 6,
+    });
+  });
+
+  it("is null for books and games, and without the unit's minutes", () => {
+    expect(fullSession(entry("book", { pages: 300 }))).toBeNull();
+    expect(fullSession(entry("game", { hours: 20 }))).toBeNull();
+    expect(fullSession(entry("anime", { episodes: 28 }))).toBeNull();
+    expect(fullSession(entry("movie", {}))).toBeNull();
   });
 });

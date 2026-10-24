@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { item, mockLibrary } from "./fixtures/library";
+import { ipcCalls, item, mockLibrary } from "./fixtures/library";
 
 const MWF = { days: [0, 2, 4], max_session_minutes: 60, since: "2026-09-28" };
 const LIBRARY = [
@@ -89,6 +89,22 @@ test("planning from the library card shows up in the planner", async ({ page }) 
     .getByRole("link", { name: "Planner" })
     .click();
   await expect(page.getByRole("list", { name: "Plans" })).toContainText("Arcane");
+});
+
+test("a new plan for an episode-length item starts at one full episode", async ({ page }) => {
+  await mockPlanner(page);
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Arcane" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Arcane" });
+  await expect(dialog.getByRole("button", { name: "Full episode · 40 min" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Tue" }).click();
+  await dialog.getByRole("button", { name: "Save plan" }).click();
+  await expect(dialog).toBeHidden();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 40 } } });
 });
 
 test("a plan that needs a length asks for it and then joins the week", async ({ page }) => {

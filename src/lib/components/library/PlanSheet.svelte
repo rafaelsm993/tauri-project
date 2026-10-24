@@ -174,7 +174,12 @@
           {/if}
         </p>
       {/if}
-      <LengthFields fields={askedFields} bind:length={draft} disabled={busy} />
+      <LengthFields
+        fields={askedFields}
+        bind:length={draft}
+        mediaType={entry.snapshot.media_type}
+        disabled={busy}
+      />
     </div>
   {/if}
 

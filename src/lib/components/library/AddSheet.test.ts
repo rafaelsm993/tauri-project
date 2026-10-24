@@ -27,6 +27,22 @@ describe("AddSheet", () => {
     expect(screen.getByLabelText(/minutes per episode/i)).toBeInTheDocument();
   });
 
+  it("saves a typical episode length picked with one tap", async () => {
+    const onsave = vi.fn();
+    render(AddSheet, {
+      ...base,
+      mediaType: "tv",
+      length: { ...emptyLength(), episodes: 73 },
+      onsave,
+    });
+    await userEvent.click(screen.getByRole("button", { name: "60 min" }));
+    await userEvent.click(screen.getByRole("button", { name: /^save/i }));
+    expect(onsave).toHaveBeenCalledWith({
+      length: { ...emptyLength(), episodes: 73, episode_minutes: 60 },
+      review: null,
+    });
+  });
+
   it("prefills what the provider already knows", () => {
     render(AddSheet, { ...base, mediaType: "tv", length: { ...emptyLength(), episodes: 24 } });
     expect(screen.getByLabelText(/^episodes/i)).toHaveValue(24);

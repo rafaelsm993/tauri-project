@@ -52,7 +52,7 @@
   </p>
 
   <div class="sheet-fields">
-    <LengthFields {fields} bind:length={draft} disabled={busy} />
+    <LengthFields {fields} bind:length={draft} {mediaType} disabled={busy} />
 
     <div class="sheet-field">
       <label class="field-label" for="{id}-review">Review</label>

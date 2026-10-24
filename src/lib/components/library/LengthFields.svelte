@@ -1,13 +1,20 @@
 <script lang="ts">
-  import { LENGTH_LABELS, type LengthField } from "$lib/domain/length";
+  import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import { EPISODE_MINUTE_PRESETS, LENGTH_LABELS, type LengthField } from "$lib/domain/length";
   import type { Length } from "$lib/types/library";
+  import type { MediaType } from "$lib/types/media";
 
   // Edits `length` in place for each field listed; blanks and junk become null.
   let {
     fields,
     length = $bindable(),
+    mediaType,
     disabled = false,
-  }: { fields: LengthField[]; length: Length; disabled?: boolean } = $props();
+  }: { fields: LengthField[]; length: Length; mediaType: MediaType; disabled?: boolean } = $props();
+
+  const presets = $derived(
+    (EPISODE_MINUTE_PRESETS[mediaType] ?? []).map((m) => ({ value: String(m), label: `${m} min` })),
+  );
 
   const id = $props.id();
 
@@ -34,6 +41,20 @@
     />
   </div>
 {/each}
+
+<!-- A wrapper the parent row can size: a side-by-side column is too narrow for the pills. -->
+{#if fields.includes("episode_minutes") && presets.length}
+  <div class="length-presets">
+    <SegmentedControl
+      label="Common episode lengths"
+      options={presets}
+      value={String(length.episode_minutes ?? "")}
+      onchange={(m) => (length.episode_minutes = Number(m))}
+      {disabled}
+      fill
+    />
+  </div>
+{/if}
 
 <style lang="scss">
   .length-field {

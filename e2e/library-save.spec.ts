@@ -345,3 +345,23 @@ test("with the default accent the warning follows the default accent token", asy
   const text = await note.getByRole("button").evaluate((b) => getComputedStyle(b).color);
   expect(text).toMatch(/^rgb\((255, 255, 255|245, 245, 241)\)$/);
 });
+
+test("a typical episode length fills the field in one tap, without the keyboard", async ({
+  page,
+}) => {
+  await mockLibrary(page, [STRANGER], { details: NO_RUNTIME });
+  await page.goto("/media/tv/66");
+  await page.getByRole("note").getByRole("button", { name: "Add length" }).click();
+  const sheet = page.getByRole("dialog", { name: "Edit Stranger Things" });
+  const lengths = sheet.getByRole("group", { name: "Common episode lengths" });
+  await lengths.getByRole("button", { name: "45 min" }).click();
+  await expect(sheet.getByLabel("Minutes per episode")).toHaveValue("45");
+  await expect(sheet.getByLabel("Minutes per episode")).not.toBeFocused();
+  await expect(lengths.getByRole("button", { name: "45 min" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await sheet.getByRole("button", { name: /^save/i }).click();
+  await expect(page.getByRole("note")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit length" })).toBeVisible();
+});

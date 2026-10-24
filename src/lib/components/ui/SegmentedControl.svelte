@@ -6,6 +6,7 @@
     onchange,
     disabled = false,
     wrap = false,
+    fill = false,
   }: {
     label: string;
     options: { value: T; label: string; count?: number }[];
@@ -14,10 +15,12 @@
     disabled?: boolean;
     /** Wrap onto more rows instead of scrolling; for long option sets like a 1–10 rating. */
     wrap?: boolean;
+    /** Share the row equally with tighter padding, wrapping only when even that won't fit. */
+    fill?: boolean;
   } = $props();
 </script>
 
-<div class="segmented" class:wrap role="group" aria-label={label}>
+<div class="segmented" class:wrap class:fill role="group" aria-label={label}>
   {#each options as option (option.value)}
     <button
       type="button"
@@ -43,9 +46,17 @@
     scrollbar-width: none;
     min-width: 0;
 
-    &.wrap {
+    &.wrap,
+    &.fill {
       flex-wrap: wrap;
       overflow-x: visible;
+    }
+
+    &.fill .segment {
+      flex: 1 1 0;
+      min-width: max-content;
+      justify-content: center;
+      padding-inline: $spacing-sm;
     }
   }
 

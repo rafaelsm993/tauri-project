@@ -211,7 +211,12 @@
     </div>
 
     <div class="field-row">
-      <LengthFields fields={REQUIRED_LENGTH_FIELDS[mediaType]} bind:length disabled={busy} />
+      <LengthFields
+        fields={REQUIRED_LENGTH_FIELDS[mediaType]}
+        bind:length
+        {mediaType}
+        disabled={busy}
+      />
     </div>
   </div>
 
@@ -323,6 +328,11 @@
 
     > :global(*) {
       flex: 1 1 8rem;
+    }
+
+    // The typical episode lengths get a row of their own under both fields.
+    > :global(.length-presets) {
+      flex-basis: 100%;
     }
   }
 

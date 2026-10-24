@@ -311,3 +311,32 @@ test.describe("removing an item", () => {
     expect(xpOf(before) - xpOf(await xpLine(page).getAttribute("aria-label"))).toBe(lost);
   });
 });
+
+test("a hand-made show's typical episode lengths sit on one row under both fields", async ({
+  page,
+}) => {
+  await mockLibrary(page, []);
+  await page.goto("/library");
+  // Android's default text scale renders the root font at 18.4 px, as on the test phone.
+  await page.addStyleTag({ content: "html { font-size: 18.4px !important; }" });
+  await page.getByRole("button", { name: "Add manually" }).first().click();
+  await dialog(page)
+    .getByRole("group", { name: "Type" })
+    .getByRole("button", { name: "TV" })
+    .click();
+  const lengths = dialog(page).getByRole("group", { name: "Common episode lengths" });
+  await lengths.getByRole("button", { name: "30 min" }).click();
+  await expect(dialog(page).getByLabel("Minutes per episode")).toHaveValue("30");
+  const tops = await lengths
+    .getByRole("button")
+    .evaluateAll(
+      (pills) => new Set(pills.map((p) => Math.round(p.getBoundingClientRect().top))).size,
+    );
+  expect(tops).toBe(1);
+  const left = async (name: string) => (await dialog(page).getByLabel(name).boundingBox())!.x;
+  expect(Math.round((await lengths.boundingBox())!.x)).toBe(Math.round(await left("Episodes")));
+  // The pills share the row, so the last one ends where the row does.
+  const row = (await lengths.boundingBox())!;
+  const last = (await lengths.getByRole("button", { name: "60 min" }).boundingBox())!;
+  expect(Math.round(last.x + last.width)).toBe(Math.round(row.x + row.width));
+});

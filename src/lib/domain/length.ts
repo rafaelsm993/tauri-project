@@ -23,6 +23,12 @@ export const LENGTH_LABELS: Record<LengthField, string> = {
   hours: "Hours to finish",
 };
 
+// One-tap minutes per episode: sitcom, streaming half hour, network drama, prestige hour; anime short and standard.
+export const EPISODE_MINUTE_PRESETS: Partial<Record<MediaType, number[]>> = {
+  tv: [22, 30, 45, 60],
+  anime: [12, 24],
+};
+
 export function emptyLength(): Length {
   return {
     runtime_minutes: null,

@@ -2,13 +2,17 @@ const GAP = 6;
 const EDGE = 8;
 const MIN_HEIGHT = 160;
 
-// Where a panel of `width` goes under `trigger`: right-aligned, clamped inside the viewport.
+export type Align = "start" | "end";
+
+// Where a panel of `width` goes under `trigger`: aligned to its right (or left) edge, clamped inside the viewport.
 export function placeBelow(
   trigger: DOMRect,
   width: number,
   viewport: { width: number; height: number },
+  align: Align = "end",
 ): { left: number; top: number; maxHeight: number } {
-  const left = Math.min(Math.max(EDGE, trigger.right - width), viewport.width - width - EDGE);
+  const wanted = align === "start" ? trigger.left : trigger.right - width;
+  const left = Math.min(Math.max(EDGE, wanted), viewport.width - width - EDGE);
   const top = trigger.bottom + GAP;
   return {
     left: Math.max(EDGE, left),
@@ -18,12 +22,18 @@ export function placeBelow(
 }
 
 // Re-places `panel` under `trigger` now and on resize/scroll; returns a stop fn.
-export function followTrigger(trigger: HTMLElement, panel: HTMLElement): () => void {
+export function followTrigger(
+  trigger: HTMLElement,
+  panel: HTMLElement,
+  align: Align = "end",
+): () => void {
   const place = () => {
-    const p = placeBelow(trigger.getBoundingClientRect(), panel.offsetWidth, {
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
+    const p = placeBelow(
+      trigger.getBoundingClientRect(),
+      panel.offsetWidth,
+      { width: window.innerWidth, height: window.innerHeight },
+      align,
+    );
     panel.style.left = `${p.left}px`;
     panel.style.top = `${p.top}px`;
     panel.style.maxHeight = `${p.maxHeight}px`;

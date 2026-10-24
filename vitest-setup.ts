@@ -36,3 +36,6 @@ if (typeof globalThis.ResizeObserver === "undefined") {
     disconnect() {}
   } as unknown as typeof ResizeObserver;
 }
+
+// jsdom has no Web Animations; Svelte's animate:flip asks for the running ones.
+Element.prototype.getAnimations ??= () => [];

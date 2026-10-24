@@ -158,6 +158,22 @@ $nav-bar-height: 56px;
 }
 
 // Visually hidden (accessible)
+// A count on a chip: a small pill tinted with the current accent.
+@mixin count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  padding: 0.05em 0.4em;
+  border-radius: $radius-full;
+  background: rgb(var(--clr-primary-rgb) / 0.16);
+  color: var(--clr-primary);
+  font-family: $font-mono;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 @mixin sr-only {
   position: absolute;
   width: 1px;

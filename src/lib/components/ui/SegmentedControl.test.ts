@@ -60,4 +60,18 @@ describe("SegmentedControl", () => {
     });
     expect(screen.getByRole("group", { name: "Rating" })).toHaveClass("wrap");
   });
+
+  it("disables a single option and leaves the rest pickable", () => {
+    render(SegmentedControl, {
+      label: "Status",
+      options: [
+        { value: "a", label: "A", count: 2 },
+        { value: "b", label: "B", count: 0, disabled: true },
+      ],
+      value: "a",
+      onchange: vi.fn(),
+    });
+    expect(screen.getByRole("button", { name: "B 0" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "A 2" })).toBeEnabled();
+  });
 });

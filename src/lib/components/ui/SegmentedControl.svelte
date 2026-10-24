@@ -9,7 +9,7 @@
     fill = false,
   }: {
     label: string;
-    options: { value: T; label: string; count?: number }[];
+    options: { value: T; label: string; count?: number; disabled?: boolean }[];
     value: T;
     onchange: (value: T) => void;
     disabled?: boolean;
@@ -26,8 +26,9 @@
       type="button"
       class="segment"
       class:active={option.value === value}
+      class:empty={option.disabled}
       aria-pressed={option.value === value}
-      {disabled}
+      disabled={disabled || option.disabled}
       onclick={() => onchange(option.value)}
     >
       {option.label}
@@ -86,6 +87,12 @@
       cursor: progress;
     }
 
+    // Nothing to show under it: visible, but not pickable.
+    &.empty:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
     &:focus-visible {
       outline: 2px solid var(--clr-accent);
       outline-offset: -2px;
@@ -102,13 +109,18 @@
     }
   }
 
+  // A small badge in the accent picked in Achievements.
   .segment-count {
-    font-family: $font-mono;
-    font-size: 0.72rem;
-    color: var(--clr-text-3);
+    @include count-badge;
 
     .active & {
-      color: var(--clr-text);
+      background: rgb(var(--clr-on-primary-rgb) / 0.22);
+      color: var(--clr-on-primary);
+    }
+
+    .empty & {
+      background: rgb(var(--clr-ink-rgb) / 0.08);
+      color: var(--clr-text-3);
     }
   }
 </style>

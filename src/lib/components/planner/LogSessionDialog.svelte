@@ -108,7 +108,7 @@
   }
 </script>
 
-<Sheet label="Log a session of {entry.snapshot.title}" {onclose}>
+<Sheet label="Log a session of {entry.snapshot.title}" focus="sheet" {onclose}>
   <form
     class="log-sheet"
     onsubmit={(event) => {

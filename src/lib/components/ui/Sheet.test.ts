@@ -35,6 +35,13 @@ describe("Sheet", () => {
     expect(screen.getByLabelText("Minutes")).toHaveFocus();
   });
 
+  it("can open on the sheet itself, so a phone keyboard stays down until a field is tapped", () => {
+    render(Sheet, { label: "Log Dune", onclose: vi.fn(), focus: "sheet", children: fields });
+    const dialog = screen.getByRole("dialog", { name: "Log Dune" });
+    expect(dialog).toHaveFocus();
+    expect(screen.getByLabelText("Minutes")).not.toHaveFocus();
+  });
+
   it("asks to close on Escape", async () => {
     const { onclose } = open();
     await userEvent.keyboard("{Escape}");

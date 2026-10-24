@@ -11,12 +11,15 @@
     onclose,
     onclosed,
     size = "fit",
+    focus = "field",
     children,
   }: {
     label: string;
     onclose: () => void;
     onclosed?: () => void;
     size?: "fit" | "full";
+    // "sheet" keeps the cursor out of the fields: on a phone that keeps the keyboard down.
+    focus?: "field" | "sheet";
     children: Snippet;
   } = $props();
 
@@ -37,7 +40,8 @@
     dialog.showModal();
     untrack(() => pushState("", { sheet: label }));
     addEventListener("popstate", back);
-    dialog.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
+    const first = dialog.querySelector<HTMLElement>("input, textarea, select, button");
+    (untrack(() => focus) === "sheet" ? dialog : first)?.focus();
     return () => {
       viewport?.removeEventListener("resize", fit);
       removeEventListener("popstate", back);
@@ -89,6 +93,7 @@
   class="sheet"
   class:full={size === "full"}
   aria-label={label}
+  tabindex="-1"
   style:--sheet-drag="{dragY}px"
   {@attach modal}
   oncancel={ask}
@@ -114,6 +119,11 @@
     background: none;
     border: none;
     color: inherit;
+
+    // Focused only as a starting point for keyboard and screen reader users, never to show.
+    &:focus {
+      outline: none;
+    }
 
     &::backdrop {
       background: rgb(var(--clr-shade-rgb) / 0.6);

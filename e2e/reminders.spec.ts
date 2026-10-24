@@ -95,6 +95,8 @@ test("Log session on a Library card confirms, then saves the progress", async ({
   await page.getByRole("button", { name: "Log a session of Frieren" }).click();
   const sheet = page.getByRole("dialog", { name: "Log a session of Frieren" });
   await expect(sheet.getByLabel("Session length (minutes)")).toHaveValue("45");
+  // The cursor stays out of the field: on a phone the keyboard would cover the rest.
+  await expect(sheet).toBeFocused();
   await expect(sheet).toContainText("+2 episodes · 2 of 28 episodes");
   await expect(sheet).toContainText("14 sessions · 10 h 24 min");
   // 45 min is 1.875 episodes: the user may record 1 instead.

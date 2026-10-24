@@ -68,6 +68,12 @@ describe("LogSessionDialog", () => {
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
+  it("opens without focusing the length, so the phone keyboard does not cover the sheet", async () => {
+    await setup();
+    expect(screen.getByRole("dialog", { name: "Log a session of Frieren" })).toHaveFocus();
+    expect(minutes()).not.toHaveFocus();
+  });
+
   it("offers round down or up when the minutes split an episode, nearest first", async () => {
     const { library } = await setup(); // 45 min = 1.875 episodes
     const group = screen.getByRole("group", { name: "Round" });

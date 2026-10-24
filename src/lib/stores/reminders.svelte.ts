@@ -1,4 +1,4 @@
-import { addDays, localDay } from "$lib/domain/calendar";
+import { localDay } from "$lib/domain/calendar";
 import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
 import {
   shouldToast,
@@ -10,15 +10,12 @@ import {
 import { gamificationStore } from "$lib/stores/gamification.svelte";
 import { libraryStore } from "$lib/stores/library.svelte";
 import { prefsStore } from "$lib/stores/prefs.svelte";
-import type { LibraryEntry, LibraryEvent, Plan } from "$lib/types/library";
-import type { MediaKey } from "$lib/types/media";
+import type { LibraryEntry, LibraryEvent } from "$lib/types/library";
 
 export interface ReminderDeps {
   library: {
     entries: LibraryEntry[];
     ready: boolean;
-    error: string;
-    plan: (key: MediaKey, plan: Plan | null) => Promise<boolean>;
   };
   game: { history: LibraryEvent[]; ready: boolean; moment: unknown };
   pace: () => number;
@@ -37,7 +34,6 @@ export class ReminderStore {
   // eslint-disable-next-line svelte/prefer-svelte-reactivity -- not UI state
   private toastedAt = new Map<string, number>();
   private snoozedUntil = 0;
-  private saving = $state<string[]>([]);
 
   today = $state("");
   toast = $state<DueSession | null>(null);
@@ -57,10 +53,6 @@ export class ReminderStore {
   // A level-up owns the toast slot first.
   get visibleToast(): DueSession | null {
     return this.deps.game.moment ? null : this.toast;
-  }
-
-  busy(key: string): boolean {
-    return this.saving.includes(key);
   }
 
   check(): void {
@@ -89,29 +81,6 @@ export class ReminderStore {
     if (this.toast) this.deps.log(`[reminder] snoozed ${this.toast.entry.key}`);
     this.snoozedUntil = this.clock().getTime() + SNOOZE_MS;
     this.toast = null;
-  }
-
-  done(key: string): Promise<void> {
-    return this.resumeTomorrow(key, "done");
-  }
-
-  nextSession(key: string): Promise<void> {
-    return this.resumeTomorrow(key, "next session");
-  }
-
-  private async resumeTomorrow(key: string, action: string): Promise<void> {
-    const { library } = this.deps;
-    const plan = library.entries.find((e) => e.key === key)?.user.plan;
-    if (!plan || this.busy(key)) return;
-    this.saving = [...this.saving, key];
-    const saved = await library
-      .plan(key, { ...plan, since: addDays(this.today, 1) })
-      .finally(() => {
-        this.saving = this.saving.filter((k) => k !== key);
-      });
-    if (!saved) return;
-    if (this.toast?.entry.key === key) this.toast = null;
-    this.deps.log(`[reminder] ${action} ${key}`);
   }
 }
 

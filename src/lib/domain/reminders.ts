@@ -35,7 +35,8 @@ export const LOOKBACK_DAYS = 7;
 const patchOf = (payload: unknown): Record<string, unknown> =>
   payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
 
-// Progress or a status change that day, or a plan moved past it (Done / Next session).
+// Progress or a status change that day, or a plan moved past it (the old Done / Next session
+// buttons did that; their events stay in the log).
 export function didSession(events: LibraryEvent[], key: string, day: string): boolean {
   return events.some((e) => {
     if (e.media_key !== key || e.local_date !== day) return false;

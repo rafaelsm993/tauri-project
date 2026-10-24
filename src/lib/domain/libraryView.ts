@@ -1,5 +1,6 @@
 import { STATUSES, STATUS_LABELS } from "$lib/stores/library.svelte";
 import { MEDIA_LABELS, type MediaType } from "$lib/types/media";
+import type { DueSession } from "./reminders";
 import type { LibraryEntry, LibraryStatus } from "$lib/types/library";
 
 export type StatusFilter = LibraryStatus | "all";
@@ -79,4 +80,25 @@ export function continueEntries(entries: LibraryEntry[], max = 12): LibraryEntry
     .filter((e) => e.user.status === "in_progress")
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, max);
+}
+
+export interface ContinueItem {
+  entry: LibraryEntry;
+  // Today's planned minutes when the item has a session today.
+  dueMinutes: number | null;
+}
+
+// Today's sessions lead, in the planner's order; then what you are in the middle of. A due
+// session is never cut by the cap, and a Planning item with one is included.
+export function continueItems(
+  entries: LibraryEntry[],
+  due: DueSession[],
+  max = 12,
+): ContinueItem[] {
+  const dueKeys = new Set(due.map((d) => d.entry.key));
+  const lead = due.map((d) => ({ entry: d.entry, dueMinutes: d.minutes }));
+  const rest = continueEntries(entries, max)
+    .filter((e) => !dueKeys.has(e.key))
+    .map((entry) => ({ entry, dueMinutes: null }));
+  return [...lead, ...rest].slice(0, Math.max(max, lead.length));
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   continueEntries,
+  continueItems,
   detailPath,
   filterEntries,
   normalizeTitle,
@@ -9,6 +10,7 @@ import {
   typeOptions,
 } from "./libraryView";
 import { emptyLength } from "./length";
+import type { DueSession } from "./reminders";
 import type { LibraryEntry, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
 
@@ -142,5 +144,46 @@ describe("continueEntries", () => {
     expect(out).toHaveLength(12);
     expect(out[0].key).toBe("tmdb:movie:13");
     expect(out.every((e) => e.user.status === "in_progress")).toBe(true);
+  });
+});
+
+describe("continueItems", () => {
+  const due = (e: LibraryEntry, minutes: number): DueSession => ({
+    entry: e,
+    family: "screen",
+    minutes,
+    finish: "2026-10-30",
+  });
+
+  it("puts today's sessions first, in the planner's order, then the rest without repeats", () => {
+    const a = { ...entry("tmdb:tv:1", "tv", "in_progress"), updated_at: "2026-10-20T00:00:00Z" };
+    const b = { ...entry("tmdb:tv:2", "tv", "in_progress"), updated_at: "2026-10-21T00:00:00Z" };
+    const c = { ...entry("tmdb:tv:3", "tv", "in_progress"), updated_at: "2026-10-22T00:00:00Z" };
+    const out = continueItems([a, b, c], [due(a, 90), due(b, 30)]);
+    expect(out.map((i) => i.entry.key)).toEqual(["tmdb:tv:1", "tmdb:tv:2", "tmdb:tv:3"]);
+    expect(out.map((i) => i.dueMinutes)).toEqual([90, 30, null]);
+  });
+
+  it("includes a Planning item that has a session today", () => {
+    // Continue alone lists In progress only; its Log session would exist nowhere on Home.
+    const planned = entry("tmdb:movie:5", "movie", "planning");
+    expect(continueItems([planned], [due(planned, 45)]).map((i) => i.entry.key)).toEqual([
+      "tmdb:movie:5",
+    ]);
+  });
+
+  it("never drops a due session to the 12-card cap", () => {
+    const list = Array.from({ length: 14 }, (_, i) => entry(`tmdb:tv:${i}`, "tv", "in_progress"));
+    const out = continueItems(
+      list,
+      list.slice(0, 13).map((e) => due(e, 30)),
+    );
+    expect(out).toHaveLength(13);
+    expect(out.every((i) => i.dueMinutes !== null)).toBe(true);
+  });
+
+  it("fills up to the cap with the rest", () => {
+    const list = Array.from({ length: 14 }, (_, i) => entry(`tmdb:tv:${i}`, "tv", "in_progress"));
+    expect(continueItems(list, [due(list[0], 30)])).toHaveLength(12);
   });
 });

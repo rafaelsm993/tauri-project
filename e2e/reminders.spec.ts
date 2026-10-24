@@ -24,7 +24,9 @@ const MONDAY = {
 };
 
 const reminder = (page: Page) => page.getByRole("status", { name: "Reminder" });
-const today = (page: Page) => page.getByRole("region", { name: "Today" });
+const continueRow = (page: Page) => page.getByRole("region", { name: "Continue" });
+const card = (page: Page, title: string) =>
+  continueRow(page).getByRole("listitem").filter({ hasText: title });
 const SHAME = /behind|late\b|overdue|missed|fail/i;
 
 const focus = (page: Page) => page.evaluate(() => window.dispatchEvent(new Event("focus")));
@@ -33,10 +35,11 @@ test("opening the app shows today's session once, as a toast and on Home", async
   await mockLibrary(page, LIBRARY, { events: [MONDAY] });
   await page.goto("/");
   await expect(reminder(page)).toContainText("45 min of Frieren planned for today");
-  await expect(today(page).getByRole("listitem")).toHaveCount(1);
-  await expect(today(page)).toContainText("Frieren");
-  await expect(today(page)).toContainText("2 earlier sessions re-planned");
-  await expect(today(page)).not.toContainText("Hades");
+  await expect(continueRow(page).getByRole("listitem").first()).toContainText("Frieren");
+  await expect(card(page, "Frieren")).toContainText("45 min today");
+  await expect(continueRow(page)).toContainText("2 earlier sessions re-planned");
+  // Hades is planned for weekends only: today it has no time to show.
+  await expect(continueRow(page).getByText(/min today$/)).toHaveCount(1);
   await expect(page.locator("body")).not.toContainText(SHAME);
 });
 
@@ -46,7 +49,7 @@ test("Later keeps the toast away for three hours, then it may return", async ({ 
   await page.goto("/");
   await reminder(page).getByRole("button", { name: "Later" }).click();
   await expect(reminder(page)).toBeEmpty();
-  await expect(today(page)).toContainText("Frieren");
+  await expect(card(page, "Frieren")).toContainText("45 min today");
   await page.clock.fastForward("02:00:00");
   await focus(page);
   await expect(reminder(page)).toBeEmpty();
@@ -55,18 +58,34 @@ test("Later keeps the toast away for three hours, then it may return", async ({ 
   await expect(reminder(page)).toContainText("Frieren");
 });
 
-test("Done in the strip resumes the plan tomorrow and clears the session", async ({ page }) => {
+test("Log session from Continue closes the reminder and clears today's time", async ({ page }) => {
   await mockLibrary(page, LIBRARY);
   await page.goto("/");
   await expect(reminder(page)).toContainText("Frieren");
-  await today(page).getByRole("button", { name: "Done: Frieren" }).click();
-  await expect(page.getByRole("region", { name: "Today" })).toHaveCount(0);
+  await card(page, "Frieren").getByRole("button", { name: "Log a session of Frieren" }).click();
+  await page
+    .getByRole("dialog", { name: "Log a session of Frieren" })
+    .getByRole("button", { name: "Log session", exact: true })
+    .click();
   await expect(reminder(page)).toBeEmpty();
+  await expect(card(page, "Frieren")).not.toContainText("min today");
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
-  expect(saved.at(-1)?.args).toMatchObject({
-    key: FRIEREN.key,
-    patch: { plan: { ...MON_THU, since: "2026-10-02" } },
-  });
+  expect(saved.at(-1)?.args).toMatchObject({ key: FRIEREN.key, patch: { progress: 2 } });
+});
+
+test("a Planning item with a session today leads Continue", async ({ page }) => {
+  // Continue lists In progress only; without this its Log session would be nowhere on Home.
+  const PLANNED = { ...FRIEREN, user: { ...FRIEREN.user, status: "planning" } };
+  await mockLibrary(page, [PLANNED, HADES]);
+  await page.goto("/");
+  await expect(continueRow(page).getByRole("listitem").first()).toContainText("Frieren");
+  await card(page, "Frieren").getByRole("button", { name: "Log a session of Frieren" }).click();
+  await page
+    .getByRole("dialog", { name: "Log a session of Frieren" })
+    .getByRole("button", { name: "Log session", exact: true })
+    .click();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { progress: 2, status: "in_progress" } });
 });
 
 test("Log session on a Library card confirms, then saves the progress", async ({ page }) => {
@@ -152,10 +171,11 @@ test("a level-up goes first; the reminder follows when it closes", async ({ page
   await expect(reminder(page)).toContainText("Frieren");
 });
 
-test("nothing planned for today means no toast and no strip", async ({ page }) => {
+test("nothing planned for today means no toast and no time for today", async ({ page }) => {
   await mockLibrary(page, [HADES]);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Today" })).toHaveCount(0);
+  await expect(card(page, "Hades")).toBeVisible();
+  await expect(page.getByText(/min today$/)).toHaveCount(0);
   await page.waitForTimeout(300);
   await expect(reminder(page)).toBeEmpty();
 });
@@ -182,10 +202,7 @@ test("nothing is checked while the app is in the background", async ({ page }) =
   await expect(reminder(page)).toContainText("Frieren");
 });
 
-test("the toast and strip buttons are touch-sized and the strip fits", async ({
-  page,
-  isMobile,
-}) => {
+test("the toast and card buttons are touch-sized and fit", async ({ page, isMobile }) => {
   test.skip(!isMobile, "touch targets apply to coarse pointers");
   const THU = { days: [3], max_session_minutes: 60, since: "2026-09-28" };
   const busy = [
@@ -200,18 +217,28 @@ test("the toast and strip buttons are touch-sized and the strip fits", async ({
     reminder(page).getByRole("button", { name: "Start" }),
     reminder(page).getByRole("button", { name: "Later" }),
     reminder(page).getByRole("button", { name: "Close reminder" }),
-    today(page).getByRole("button", { name: "Done: Frieren" }),
-    today(page).getByRole("button", { name: "Next session: Frieren" }),
+    card(page, "Frieren").getByRole("button", { name: "Log a session of Frieren" }),
   ];
   for (const b of buttons) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const width = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(width).toBeLessThanOrEqual(0);
-  const strip = (await today(page).boundingBox())!;
-  expect(strip.x).toBeGreaterThanOrEqual(0);
-  expect(strip.x + strip.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-  await expect(today(page).getByRole("heading", { name: "Today" })).toBeInViewport();
+  const c = (await card(page, "Frieren").boundingBox())!;
+  const log = (await buttons[3].boundingBox())!;
+  expect(log.x + log.width, "Log session spills out of its card").toBeLessThanOrEqual(
+    c.x + c.width + 1,
+  );
+  // The cover icon is 30px to the eye; its hit area reaches 44px.
+  const iconButton = card(page, "Frieren").getByRole("button", { name: "Edit plan for Frieren" });
+  // Further along the rail on a phone: hit-testing only sees what is on screen.
+  await iconButton.scrollIntoViewIfNeeded();
+  const icon = (await iconButton.boundingBox())!;
+  const hit = await page.evaluate(
+    ([x, y]) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"),
+    [icon.x + icon.width / 2, icon.y + icon.height + 6],
+  );
+  expect(hit, "the plan icon is too small to hit").toBe("Edit plan for Frieren");
   const box = (await reminder(page).locator(".toast").boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);

@@ -168,7 +168,8 @@
       &::after {
         content: "";
         position: absolute;
-        inset: -7px;
+        // Measured from inside the border, so 100% is the padding box: this lands on 44px exactly.
+        inset: calc((100% - #{$touch-target}) / 2);
       }
     }
   }

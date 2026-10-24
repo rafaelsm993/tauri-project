@@ -1,18 +1,30 @@
 <script lang="ts">
-  import LibraryCard from "$lib/components/library/LibraryCard.svelte";
-  import type { LibraryEntry } from "$lib/types/library";
+  import PlannableCard from "$lib/components/library/PlannableCard.svelte";
+  import type { ContinueItem } from "$lib/domain/libraryView";
 
-  let { entries, posterDir }: { entries: LibraryEntry[]; posterDir: string | null } = $props();
+  let {
+    items,
+    posterDir,
+    note = null,
+  }: {
+    items: ContinueItem[];
+    posterDir: string | null;
+    // "2 earlier sessions re-planned · ...", shown under the title.
+    note?: string | null;
+  } = $props();
 </script>
 
-{#if entries.length > 0}
+{#if items.length > 0 || note}
   <section class="continue" aria-labelledby="continue-title">
     <h2 id="continue-title" class="continue-title">Continue</h2>
-    <ul class="rail">
-      {#each entries as entry (entry.key)}
-        <li class="rail-item"><LibraryCard {entry} {posterDir} /></li>
-      {/each}
-    </ul>
+    {#if note}<p class="continue-note">{note}</p>{/if}
+    {#if items.length > 0}
+      <ul class="rail">
+        {#each items as { entry, dueMinutes } (entry.key)}
+          <li class="rail-item"><PlannableCard {entry} {posterDir} {dueMinutes} /></li>
+        {/each}
+      </ul>
+    {/if}
   </section>
 {/if}
 
@@ -32,6 +44,13 @@
     margin: 0;
     padding: 0 $spacing-xs;
     color: var(--clr-text);
+  }
+
+  .continue-note {
+    margin: 0;
+    padding: 0 $spacing-xs;
+    font-size: 0.85rem;
+    color: var(--clr-text-2);
   }
 
   .rail {

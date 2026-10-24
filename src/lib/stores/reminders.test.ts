@@ -50,7 +50,7 @@ function entry(id: number, title: string, plan: Plan | null = DAILY): LibraryEnt
 function setup(entries: LibraryEntry[] = [entry(1, "Dune")], ready = true) {
   let now = new Date(2026, 9, 1, 10, 0);
   const deps = {
-    library: { entries, ready, error: "", plan: vi.fn(async () => true) },
+    library: { entries, ready },
     game: { history: [] as LibraryEvent[], ready, moment: null as unknown },
     pace: () => 40,
     log: vi.fn(),
@@ -142,44 +142,6 @@ describe("ReminderStore", () => {
     expect(store.toast?.entry.key).toBe("tmdb:tv:1");
     store.logged("tmdb:tv:1");
     expect(store.toast).toBeNull();
-  });
-
-  it("Done resumes the plan tomorrow and closes its toast", async () => {
-    const { store, deps } = setup();
-    store.check();
-    await store.done("tmdb:tv:1");
-    expect(deps.library.plan).toHaveBeenCalledWith("tmdb:tv:1", { ...DAILY, since: "2026-10-02" });
-    expect(store.toast).toBeNull();
-    expect(deps.log).toHaveBeenCalledWith("[reminder] done tmdb:tv:1");
-  });
-
-  it("Next session saves the same way and logs its own line", async () => {
-    const { store, deps } = setup();
-    await store.nextSession("tmdb:tv:1");
-    expect(deps.library.plan).toHaveBeenCalledWith("tmdb:tv:1", { ...DAILY, since: "2026-10-02" });
-    expect(deps.log).toHaveBeenCalledWith("[reminder] next session tmdb:tv:1");
-  });
-
-  it("keeps the toast when the save fails", async () => {
-    const { store, deps } = setup();
-    deps.library.plan.mockResolvedValue(false);
-    store.check();
-    await store.done("tmdb:tv:1");
-    expect(store.toast?.entry.key).toBe("tmdb:tv:1");
-    expect(deps.log).not.toHaveBeenCalledWith("[reminder] done tmdb:tv:1");
-  });
-
-  it("marks an item busy while its save runs", async () => {
-    const { store, deps } = setup();
-    let finish = () => {};
-    deps.library.plan.mockImplementation(
-      () => new Promise<boolean>((r) => (finish = () => r(true))),
-    );
-    const saving = store.done("tmdb:tv:1");
-    expect(store.busy("tmdb:tv:1")).toBe(true);
-    finish();
-    await saving;
-    expect(store.busy("tmdb:tv:1")).toBe(false);
   });
 
   it("moves to the new day after midnight", () => {

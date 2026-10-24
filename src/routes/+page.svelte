@@ -7,13 +7,13 @@
   import { prefsStore as prefs } from "$lib/stores/prefs.svelte";
   import { firstCategory } from "$lib/domain/taste";
   import { libraryStore } from "$lib/stores/library.svelte";
-  import { continueEntries } from "$lib/domain/libraryView";
+  import { continueItems } from "$lib/domain/libraryView";
+  import { replannedText } from "$lib/domain/reminders";
   import { onReconnect } from "$lib/stores/online.svelte";
   import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import CategoryTabs from "$lib/components/ui/CategoryTabs.svelte";
   import NoKeyNote from "$lib/components/media/NoKeyNote.svelte";
-  import TodayStrip from "$lib/components/planner/TodayStrip.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import GenreCarousel from "$lib/components/ui/GenreCarousel.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
@@ -33,7 +33,10 @@
       : (browse.genres.find((g) => g.id === browse.activeGenre)?.name ?? "genre"),
   );
 
-  const continuing = $derived(continueEntries(libraryStore.entries));
+  const continuing = $derived(continueItems(libraryStore.entries, reminderStore.data.due));
+  const replanned = $derived(
+    reminderStore.data.replanned ? replannedText(reminderStore.data.replanned) : null,
+  );
 
   let typed = $state(browse.query);
 
@@ -96,19 +99,11 @@
       <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)} />
     {/snippet}
   </AppHeader>
-  <header class="page-header">
-    <TodayStrip
-      today={reminderStore.data}
-      busy={(key) => reminderStore.busy(key)}
-      ondone={(key) => void reminderStore.done(key)}
-      onnext={(key) => void reminderStore.nextSession(key)}
-    />
-  </header>
 
   <div class="page-body">
     <main class="main-col">
       {#if !browse.isSearch}
-        <ContinueRow entries={continuing} posterDir={libraryStore.posterDir} />
+        <ContinueRow items={continuing} posterDir={libraryStore.posterDir} note={replanned} />
       {/if}
 
       <BrowseContext
@@ -172,14 +167,6 @@
   }
 
   // ── Header ──────────────────────────────────────────────
-  .page-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $spacing-sm;
-    padding-bottom: $spacing-lg;
-  }
-
   .search-slot {
     display: flex;
     flex: 1 1 auto;
@@ -190,6 +177,8 @@
   .page-body {
     display: flex;
     min-width: 0;
+    // Air between the header and the first section, whichever section that is.
+    padding-top: $spacing-lg;
   }
 
   .main-col {

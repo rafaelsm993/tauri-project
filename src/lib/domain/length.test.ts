@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  withChapterDefault,
   REQUIRED_LENGTH_FIELDS,
   catalogCanFill,
   catalogGap,
@@ -190,5 +191,25 @@ describe("lengthGapNote", () => {
     expect(lengthGapNote("TMDB", "Severance", ["episodes", "episode_minutes"])).toBe(
       "TMDB doesn't list the episodes or minutes per episode for Severance. Add it yourself: your plan is only as accurate as this number.",
     );
+  });
+});
+
+describe("withChapterDefault", () => {
+  const manga = (chapter_minutes: number | null): Length => ({
+    ...emptyLength(),
+    chapters: 100,
+    chapter_minutes,
+  });
+
+  it("fills a manga without minutes per chapter from Settings", () => {
+    expect(withChapterDefault("manga", manga(null), 22).chapter_minutes).toBe(22);
+  });
+
+  it("keeps a manga's own minutes, other types, and a missing default", () => {
+    const own = manga(20);
+    expect(withChapterDefault("manga", own, 22)).toBe(own);
+    expect(withChapterDefault("manga", manga(null), null).chapter_minutes).toBeNull();
+    const show = { ...emptyLength(), episodes: 8 };
+    expect(withChapterDefault("tv", show, 22)).toBe(show);
   });
 });

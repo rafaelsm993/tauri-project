@@ -8,6 +8,7 @@
   import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { isBinary } from "$lib/domain/progress";
   import { libraryStore, LibraryStore, STATUSES, STATUS_LABELS } from "$lib/stores/library.svelte";
+  import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import type { Length, LibraryStatus } from "$lib/types/library";
   import type { MediaDetail, MediaItem, MediaKey } from "$lib/types/media";
 
@@ -15,12 +16,14 @@
     item,
     detail = null,
     store = libraryStore,
+    prefs = prefsStore,
     editing = $bindable(false),
     xpOf = (key: MediaKey) => xpOfItem(gamificationStore.awards, key),
   }: {
     item: MediaItem;
     detail?: MediaDetail | null;
     store?: LibraryStore;
+    prefs?: PrefsStore;
     editing?: boolean;
     // What an item has earned, shown before it is removed.
     xpOf?: (key: MediaKey) => number;
@@ -106,6 +109,7 @@
       title={item.title}
       length={sheetLength}
       review={sheetReview}
+      chapterMinutes={prefs.prefs.manga_chapter_minutes}
       {busy}
       onsave={saveFromSheet}
       oncancel={close}

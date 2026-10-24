@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import LengthFields from "./LengthFields.svelte";
-  import { REQUIRED_LENGTH_FIELDS } from "$lib/domain/length";
+  import { REQUIRED_LENGTH_FIELDS, withChapterDefault } from "$lib/domain/length";
   import type { Length } from "$lib/types/library";
   import type { MediaType } from "$lib/types/media";
 
@@ -14,6 +14,7 @@
     oncancel,
     busy = false,
     saved = false,
+    chapterMinutes = null,
   }: {
     mediaType: MediaType;
     title: string;
@@ -24,13 +25,21 @@
     busy?: boolean;
     // Already in the library: the sheet edits it, so there is nothing to skip.
     saved?: boolean;
+    chapterMinutes?: number | null;
   } = $props();
 
   const id = $props.id();
   const fields = $derived(REQUIRED_LENGTH_FIELDS[mediaType as MediaType]);
 
   // A local copy, so typing never mutates the caller's prefill.
-  let draft = $state<Length>(untrack(() => ({ ...length })));
+  let draft = $state<Length>(
+    untrack(() => ({ ...withChapterDefault(mediaType, length, chapterMinutes) })),
+  );
+  const fromSettings = untrack(() =>
+    draft.chapter_minutes === length.chapter_minutes
+      ? {}
+      : { chapter_minutes: draft.chapter_minutes },
+  );
   let note = $state(untrack(() => review ?? ""));
 
   function save() {
@@ -52,7 +61,7 @@
   </p>
 
   <div class="sheet-fields">
-    <LengthFields {fields} bind:length={draft} {mediaType} disabled={busy} />
+    <LengthFields {fields} bind:length={draft} {mediaType} {fromSettings} disabled={busy} />
 
     <div class="sheet-field">
       <label class="field-label" for="{id}-review">Review</label>

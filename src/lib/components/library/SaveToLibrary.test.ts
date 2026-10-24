@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import SaveToLibrary from "./SaveToLibrary.svelte";
 import { LibraryStore, type LibraryClient } from "$lib/stores/library.svelte";
 import { emptyLength } from "$lib/domain/length";
+import { PrefsStore } from "$lib/stores/prefs.svelte";
+import { DEFAULT_PREFS } from "$lib/types/prefs";
 import type { LibraryEntry } from "$lib/types/library";
 import type { MediaDetail, MediaItem } from "$lib/types/media";
 
@@ -64,6 +66,23 @@ function storeWith(over: Partial<LibraryClient> = {}) {
 }
 
 describe("SaveToLibrary", () => {
+  it("adds a manga with its minutes per chapter from Settings", async () => {
+    const { store, client } = storeWith();
+    const prefs = new PrefsStore({
+      load: vi.fn(async () => ({ ...DEFAULT_PREFS, manga_chapter_minutes: 22 })),
+      update: vi.fn(),
+    } as never);
+    await prefs.hydrate();
+    const manga = { ...ITEM, media_key: "anilist:manga:7", media_type: "manga" } as MediaItem;
+    render(SaveToLibrary, { item: manga, store, prefs });
+    await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
+    expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(22);
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(vi.mocked(client.add).mock.calls[0][1]).toMatchObject({
+      length: { chapter_minutes: 22 },
+    });
+  });
+
   it("offers to add an item that is not saved", () => {
     const { store } = storeWith();
     render(SaveToLibrary, { item: ITEM, store });

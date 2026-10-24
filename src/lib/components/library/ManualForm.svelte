@@ -2,7 +2,7 @@
   import { untrack } from "svelte";
   import LengthFields from "./LengthFields.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
-  import { emptyLength, REQUIRED_LENGTH_FIELDS } from "$lib/domain/length";
+  import { emptyLength, REQUIRED_LENGTH_FIELDS, withChapterDefault } from "$lib/domain/length";
   import { CREATOR_LABEL, duplicateOf, splitTags } from "$lib/domain/manual";
   import { TYPE_ORDER } from "$lib/domain/libraryView";
   import { MEDIA_LABELS, type MediaType } from "$lib/types/media";
@@ -19,6 +19,7 @@
     onsave,
     onopen,
     oncancel,
+    chapterMinutes = null,
   }: {
     type: MediaType;
     title: string;
@@ -30,6 +31,7 @@
     onsave: (draft: ManualDraft, user: Partial<UserData>) => void;
     onopen: (entry: LibraryEntry) => void;
     oncancel: () => void;
+    chapterMinutes?: number | null;
   } = $props();
 
   const id = $props.id();
@@ -42,7 +44,17 @@
   let genres = $state((start?.genres ?? []).join(", "));
   let platforms = $state((start?.platforms ?? []).join(", "));
   let overview = $state(start?.overview ?? "");
-  let length = $state<Length>(untrack(() => (edit ? { ...edit.user.length } : emptyLength())));
+  // A new length starts empty, except a manga's minutes per chapter (Settings).
+  const fresh = (t: MediaType) => withChapterDefault(t, emptyLength(), chapterMinutes);
+  let length = $state<Length>(
+    untrack(() => (edit ? { ...edit.user.length } : fresh(start?.media_type ?? type))),
+  );
+  // Noted only where the form filled it: a new item, or a saved one turned into a manga.
+  const fromSettings = $derived(
+    chapterMinutes && mediaType !== edit?.snapshot.media_type
+      ? { chapter_minutes: chapterMinutes }
+      : {},
+  );
   let tried = $state(false);
   let lookalike = $state<LibraryEntry | null>(null);
 
@@ -117,8 +129,8 @@
         onchange={(t) => {
           mediaType = t;
           // Each type counts its length differently; its own saved length comes back with it.
-          if (edit)
-            length = t === edit.snapshot.media_type ? { ...edit.user.length } : emptyLength();
+          if (edit) length = t === edit.snapshot.media_type ? { ...edit.user.length } : fresh(t);
+          else length = withChapterDefault(t, length, chapterMinutes);
           changed();
         }}
       />
@@ -215,6 +227,7 @@
         fields={REQUIRED_LENGTH_FIELDS[mediaType]}
         bind:length
         {mediaType}
+        {fromSettings}
         disabled={busy}
       />
     </div>

@@ -52,6 +52,20 @@ function form(props: Partial<Parameters<typeof render<typeof ManualForm>>[1]> = 
 const save = () => screen.getByRole("button", { name: "Save" });
 
 describe("ManualForm", () => {
+  it("starts a hand-made manga's minutes per chapter from Settings and says so", async () => {
+    form({ type: "manga", chapterMinutes: 22 });
+    expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(22);
+    expect(
+      screen.getByText("Filled in from Settings. Change it here for just this manga."),
+    ).toBeInTheDocument();
+  });
+
+  it("fills the Settings minutes per chapter when a new item becomes a manga", async () => {
+    form({ type: "movie", chapterMinutes: 22 });
+    await userEvent.click(screen.getByRole("button", { name: "Manga" }));
+    expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(22);
+  });
+
   it("starts from the prefilled type and title", () => {
     form({ type: "book", title: "Dune" });
     expect(screen.getByRole("button", { name: "Book" })).toHaveAttribute("aria-pressed", "true");

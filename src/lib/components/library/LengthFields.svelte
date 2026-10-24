@@ -11,6 +11,7 @@
     mediaType,
     disabled = false,
     required = false,
+    fromSettings = {},
   }: {
     fields: LengthField[];
     length: Length;
@@ -18,7 +19,12 @@
     disabled?: boolean;
     // The Plan sheet can't plan without these: tag them and outline the empty ones.
     required?: boolean;
+    // Values the parent filled from Settings; noted while they stand.
+    fromSettings?: Partial<Length>;
   } = $props();
+
+  const filled = (field: LengthField) =>
+    fromSettings[field] != null && length[field] === fromSettings[field];
 
   const presets = $derived(
     (EPISODE_MINUTE_PRESETS[mediaType] ?? []).map((m) => ({ value: String(m), label: `${m} min` })),
@@ -51,9 +57,15 @@
       value={length[field] ?? ""}
       class:missing={required && !length[field]}
       aria-required={required || undefined}
+      aria-describedby={filled(field) ? `${id}-${field}-settings` : undefined}
       {disabled}
       oninput={(event) => change(field, event)}
     />
+    {#if filled(field)}
+      <p class="length-settings" id="{id}-{field}-settings">
+        Filled in from Settings. Change it here for just this {mediaType}.
+      </p>
+    {/if}
   </div>
 {/each}
 
@@ -72,6 +84,11 @@
 {/if}
 
 <style lang="scss">
+  .length-settings {
+    font-size: 0.75rem;
+    color: var(--clr-text-3);
+  }
+
   .length-field {
     display: flex;
     flex-direction: column;

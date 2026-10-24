@@ -8,6 +8,7 @@
     fillMissing,
     lengthGapNote,
     missingLengthFields,
+    withChapterDefault,
   } from "$lib/domain/length";
   import { finishShift, planFor } from "$lib/domain/planner";
   import { fullSession } from "$lib/domain/sessionLog";
@@ -70,9 +71,7 @@
   let draft = $state<Length>(
     untrack(() => {
       const length = found ? fillMissing(entry.user.length, found) : { ...entry.user.length };
-      if (entry.snapshot.media_type === "manga" && !length.chapter_minutes && chapterMinutes)
-        length.chapter_minutes = chapterMinutes;
-      return length;
+      return withChapterDefault(entry.snapshot.media_type, length, chapterMinutes);
     }),
   );
   // A new plan follows one whole unit once its minutes are known; an existing one only if it is one.
@@ -88,6 +87,12 @@
   );
   let pace = $state(untrack(() => pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
+  // Filled from Settings, never from the item or the catalog.
+  const fromSettings = untrack(() =>
+    draft.chapter_minutes && !entry.user.length.chapter_minutes && !found?.chapter_minutes
+      ? { chapter_minutes: draft.chapter_minutes }
+      : {},
+  );
   const askedFields = untrack(() =>
     missingLengthFields(entry.snapshot.media_type, entry.user.length),
   );
@@ -213,6 +218,7 @@
         fields={askedFields}
         bind:length={draft}
         mediaType={entry.snapshot.media_type}
+        {fromSettings}
         disabled={busy}
         required
       />

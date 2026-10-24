@@ -416,6 +416,9 @@ describe("PlanSheet", () => {
     const { onsave } = setup({ entry: entry("manga", { chapters: 100 }), chapterMinutes: 6 });
     expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(6);
     expect(center()).toHaveAccessibleName("Full chapter 6 min");
+    expect(
+      screen.getByText("Filled in from Settings. Change it here for just this manga."),
+    ).toBeInTheDocument();
     expect(center()).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(day(/mon/i));
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));

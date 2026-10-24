@@ -66,7 +66,7 @@ export function missingLengthFields(type: MediaType, length: Length): LengthFiel
   return REQUIRED_LENGTH_FIELDS[type].filter((field) => !known(length[field]));
 }
 
-// What lengthFromDetail can ever fill; pages and minutes per chapter are always the user's.
+// What lengthFromDetail can ever fill; pages and minutes per chapter come from the user (or Settings).
 const CATALOG_FIELDS: LengthField[] = [
   "runtime_minutes",
   "episodes",
@@ -125,4 +125,14 @@ export function resolveTotal(
 ): number | null {
   if (type === "movie") return 1;
   return known(length[TOTAL_FIELD[type]]) ?? totalFor(type, detail);
+}
+
+// No provider publishes minutes per chapter, so a manga without its own starts from Settings.
+export function withChapterDefault(
+  type: MediaType,
+  length: Length,
+  minutes: number | null,
+): Length {
+  if (type !== "manga" || known(length.chapter_minutes) || !minutes) return length;
+  return { ...length, chapter_minutes: minutes };
 }

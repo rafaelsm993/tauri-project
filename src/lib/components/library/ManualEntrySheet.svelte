@@ -4,6 +4,7 @@
   import Toast from "$lib/components/ui/Toast.svelte";
   import { emptyLength } from "$lib/domain/length";
   import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
+  import { prefsStore } from "$lib/stores/prefs.svelte";
   import { manualEntry, ManualEntryStore } from "$lib/stores/manualEntry.svelte";
   import { motionStore } from "$lib/stores/motion.svelte";
   import type { LibraryEntry, ManualDraft, UserData } from "$lib/types/library";
@@ -67,6 +68,7 @@
       onsave={save}
       onopen={(found) => entry.openExisting(found)}
       oncancel={close}
+      chapterMinutes={prefsStore.prefs.manga_chapter_minutes}
     />
   </Sheet>
 {/if}

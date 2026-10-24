@@ -14,6 +14,42 @@ const base = {
 };
 
 describe("AddSheet", () => {
+  it("starts a manga's minutes per chapter from Settings and says so", async () => {
+    const onsave = vi.fn();
+    render(AddSheet, {
+      ...base,
+      mediaType: "manga",
+      length: { ...emptyLength(), chapters: 232 },
+      chapterMinutes: 22,
+      onsave,
+    });
+    const field = screen.getByLabelText("Minutes per chapter");
+    expect(field).toHaveValue(22);
+    expect(field).toHaveAccessibleDescription(
+      "Filled in from Settings. Change it here for just this manga.",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^save/i }));
+    expect(onsave.mock.calls[0][0].length.chapter_minutes).toBe(22);
+    await userEvent.clear(field);
+    await userEvent.type(field, "25");
+    expect(
+      screen.queryByText("Filled in from Settings. Change it here for just this manga."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps a manga's own minutes per chapter, with no note", () => {
+    render(AddSheet, {
+      ...base,
+      mediaType: "manga",
+      length: { ...emptyLength(), chapters: 232, chapter_minutes: 20 },
+      chapterMinutes: 22,
+    });
+    expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(20);
+    expect(
+      screen.queryByText("Filled in from Settings. Change it here for just this manga."),
+    ).not.toBeInTheDocument();
+  });
+
   it("asks only for the fields its family needs", () => {
     render(AddSheet, { ...base });
     expect(screen.getByLabelText(/pages/i)).toBeInTheDocument();

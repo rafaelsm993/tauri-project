@@ -194,6 +194,10 @@ test("planner and plan sheet controls are touch-sized", async ({ page, isMobile 
     expect(box?.width).toBeGreaterThanOrEqual(44);
   }
   await targets[2].click();
+  // Mid slide-up the translated box measures 43.9999px; size it once the sheet has landed.
+  await page
+    .getByRole("dialog")
+    .evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   const chips = page.getByRole("dialog").getByRole("group").getByRole("button");
   for (const h of await chips.evaluateAll((els) =>
     els.map((e) => e.getBoundingClientRect().height),

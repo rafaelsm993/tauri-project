@@ -8,10 +8,18 @@
     fillMissing,
     lengthGapNote,
     missingLengthFields,
-    resolveTotal,
   } from "$lib/domain/length";
   import { finishShift, planFor } from "$lib/domain/planner";
   import { fullSession } from "$lib/domain/sessionLog";
+  import {
+    MAX_SESSION,
+    choiceMinutes,
+    choiceOk,
+    openAt,
+    sessionScale,
+    type SessionChoice,
+  } from "$lib/domain/sessionScale";
+  import SessionPicker from "./SessionPicker.svelte";
   import { formatDay, formatMinutes, plural } from "$lib/utils/format";
   import type { Length, LibraryEntry, Plan } from "$lib/types/library";
   import { PROVIDER_LABELS } from "$lib/types/media";
@@ -51,7 +59,6 @@
   const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const PRESETS = [15, 30, 45, 60, 90, 120];
   const MIN_SESSION = 5;
-  const MAX_SESSION = 720;
 
   const id = $props.id();
   const type = $derived(entry.snapshot.media_type);
@@ -76,25 +83,8 @@
   let minutes = $state(untrack(() => entry.user.plan?.max_session_minutes ?? 60));
   // Picking a preset or Custom turns it off.
   let fullPicked = $state(startFull);
-  // Shows and anime plan whole episodes; an existing plan that isn't whole episodes opens on Custom.
-  const episodic = untrack(
-    () => entry.snapshot.media_type === "tv" || entry.snapshot.media_type === "anime",
-  );
-  const opened = untrack(() => {
-    const per = fullSession(entry)?.minutes;
-    const saved = entry.user.plan?.max_session_minutes;
-    if (!per || !saved || saved < per) return { episodes: 1, custom: false };
-    return saved % per === 0
-      ? { episodes: saved / per, custom: false }
-      : { episodes: 1, custom: true };
-  });
-  let episodes = $state(opened.episodes);
   let custom = $state(
-    untrack(() =>
-      episodic
-        ? opened.custom
-        : !startFull && !PRESETS.includes(entry.user.plan?.max_session_minutes ?? 60),
-    ),
+    untrack(() => !startFull && !PRESETS.includes(entry.user.plan?.max_session_minutes ?? 60)),
   );
   let pace = $state(untrack(() => pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
@@ -113,32 +103,28 @@
     return f && f.minutes >= MIN_SESSION && f.minutes <= MAX_SESSION ? f : null;
   });
   const fullOn = $derived(fullPicked && full !== null);
-  // Whole episodes around Full episode: at least one, at most 12 h of them or what is left.
-  const stepper = $derived(episodic && full !== null);
-  const waitsForMinutes = $derived(episodic && !draft.episode_minutes);
-  const left = $derived.by(() => {
-    const total = resolveTotal(type, null, draft);
-    return total === null ? Infinity : total - entry.user.progress;
-  });
-  const maxEpisodes = $derived(
-    full ? Math.max(1, Math.min(Math.floor(MAX_SESSION / full.minutes), left)) : 1,
+  // Every type but a movie picks its session on a scale; a movie keeps the chips.
+  const scale = $derived(sessionScale(withLength, usedPace));
+  const units = $derived(type === "tv" || type === "anime" || type === "manga");
+  const waitsForMinutes = $derived(units && !fullSession(withLength));
+  let choice = $state<SessionChoice>(
+    untrack(() => {
+      // A saved plan always has its length, so the saved entry is enough here.
+      const saved = entry.user.plan?.max_session_minutes;
+      const start = saved ? sessionScale(entry, pagesPerHour ?? DEFAULT_PAGES_PER_HOUR) : null;
+      if (start && saved) return openAt(start, saved, false);
+      // A new plan: one unit, or an hour of a book or game.
+      return { count: units ? 1 : 2, custom: false, typed: Number.NaN };
+    }),
   );
-  const count = $derived(Math.min(episodes, maxEpisodes));
-  // The shortest session allowed: one episode for shows, else the global floor.
-  const floor = $derived(stepper && full ? full.minutes : MIN_SESSION);
   // What gets previewed and saved.
   const session = $derived(
-    stepper && full
-      ? custom
-        ? minutes
-        : count * full.minutes
-      : fullOn && full
-        ? full.minutes
-        : minutes,
+    scale ? choiceMinutes(scale, choice) : fullOn && full ? full.minutes : minutes,
   );
-
   const sessionOk = $derived(
-    Number.isInteger(session) && session >= floor && session <= MAX_SESSION,
+    scale
+      ? choiceOk(scale, session)
+      : Number.isInteger(session) && session >= MIN_SESSION && session <= MAX_SESSION,
   );
   const paceOk = $derived(type !== "book" || (Number.isInteger(pace) && pace >= 5 && pace <= 300));
   const plan = $derived<Plan>({
@@ -172,17 +158,6 @@
 
   function toggle(day: number) {
     days = days.includes(day) ? days.filter((d) => d !== day) : [...days, day];
-  }
-
-  function step(to: number) {
-    custom = false;
-    episodes = to;
-  }
-
-  // Custom starts from the episodes on screen, not a stale default.
-  function pickCustom(perEpisode: number) {
-    custom = true;
-    minutes = count * perEpisode;
   }
 
   function pick(value: number) {
@@ -277,44 +252,18 @@
 
   <div class="sheet-block">
     <span class="field-label" id="{id}-session">Up to, per session</span>
-    {#if stepper && full}
-      <div class="stepper" role="group" aria-labelledby="{id}-session">
-        <button
-          type="button"
-          class="step"
-          aria-label="Fewer episodes"
-          disabled={busy || count <= 1}
-          onclick={() => step(count - 1)}>‹</button
-        >
-        <button
-          type="button"
-          class="step-value"
-          class:active={!custom}
-          aria-pressed={!custom}
-          disabled={busy}
-          onclick={() => step(1)}
-        >
-          <span class="step-title">{count === 1 ? full.label : plural(count, "episode")}</span>
-          <span class="step-minutes">{formatMinutes(count * full.minutes)}</span>
-        </button>
-        <button
-          type="button"
-          class="step"
-          aria-label="More episodes"
-          disabled={busy || count >= maxEpisodes}
-          onclick={() => step(count + 1)}>›</button
-        >
-        <button
-          type="button"
-          class="step-custom"
-          class:active={custom}
-          aria-pressed={custom}
-          disabled={busy}
-          onclick={() => pickCustom(full.minutes)}>Custom</button
-        >
-      </div>
+    {#if scale}
+      <SessionPicker
+        {scale}
+        bind:choice
+        label="Up to, per session"
+        pagesPerHour={usedPace}
+        disabled={busy}
+      />
     {:else if waitsForMinutes}
-      <p class="sheet-hint">Add the minutes per episode above to pick a session.</p>
+      <p class="sheet-hint">
+        Add the minutes per {type === "manga" ? "chapter" : "episode"} above to pick a session.
+      </p>
     {:else}
       <div class="chips" role="group" aria-labelledby="{id}-session">
         {#if full}
@@ -359,13 +308,13 @@
         </button>
       </div>
     {/if}
-    {#if custom}
+    {#if !scale && !waitsForMinutes && custom}
       <label class="field-label" for="{id}-minutes">Minutes per session</label>
       <input
         id="{id}-minutes"
         class="field-input"
         type="number"
-        min={floor}
+        min={MIN_SESSION}
         max={MAX_SESSION}
         step="1"
         inputmode="numeric"
@@ -373,9 +322,6 @@
         disabled={busy}
         oninput={(event) => (minutes = readInt(event))}
       />
-      {#if stepper && full && Number.isFinite(minutes) && minutes < full.minutes}
-        <p class="sheet-hint">At least one episode ({formatMinutes(full.minutes)}).</p>
-      {/if}
     {/if}
   </div>
 
@@ -457,113 +403,6 @@
     &:focus-visible {
       outline: 2px solid var(--clr-accent);
       outline-offset: 1px;
-    }
-
-    @include touch {
-      min-height: $touch-target;
-    }
-  }
-
-  .stepper {
-    display: grid;
-    grid-template-columns: $touch-target 1fr $touch-target;
-    align-items: center;
-    gap: $spacing-xs $spacing-sm;
-  }
-
-  .step {
-    width: $touch-target;
-    height: $touch-target;
-    border-radius: $radius-full;
-    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
-    background: none;
-    color: var(--clr-text);
-    font-size: 1.4rem;
-    line-height: 1;
-    cursor: pointer;
-
-    &:disabled {
-      opacity: 0.35;
-      cursor: default;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--clr-accent);
-      outline-offset: 2px;
-    }
-
-    @include hover-capable {
-      &:hover:not(:disabled) {
-        border-color: var(--clr-accent);
-      }
-    }
-  }
-
-  .step-value {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: $touch-target;
-    padding: $spacing-xs $spacing-md;
-    border-radius: $radius-lg;
-    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
-    background: none;
-    color: var(--clr-text-2);
-    cursor: pointer;
-
-    &.active {
-      background: var(--clr-primary);
-      border-color: transparent;
-      color: var(--clr-on-primary);
-
-      .step-minutes {
-        color: rgb(var(--clr-on-primary-rgb) / 0.75);
-      }
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--clr-accent);
-      outline-offset: 2px;
-    }
-  }
-
-  .step-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-  }
-
-  .step-minutes {
-    font-size: 0.72rem;
-    color: var(--clr-text-3);
-  }
-
-  // Discreet: plain underlined text until picked, then a small filled pill.
-  .step-custom {
-    grid-column: 3;
-    justify-self: end;
-    min-height: 32px;
-    padding: 0 $spacing-sm;
-    border: none;
-    border-radius: $radius-full;
-    background: none;
-    color: var(--clr-text-3);
-    font-size: 0.75rem;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    white-space: nowrap;
-    cursor: pointer;
-
-    &.active {
-      background: var(--clr-primary);
-      color: var(--clr-on-primary);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--clr-accent);
-      outline-offset: 2px;
     }
 
     @include touch {

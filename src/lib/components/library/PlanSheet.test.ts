@@ -59,10 +59,13 @@ const day = (name: RegExp) =>
   within(screen.getByRole("group", { name: /days/i })).getByRole("button", { name });
 const sessionGroup = () => screen.getByRole("group", { name: "Up to, per session" });
 const center = () =>
-  within(sessionGroup()).getByRole("button", { name: /^(Full episode|\d+ episodes)/ });
-const more = () => screen.getByRole("button", { name: "More episodes" });
-const fewer = () => screen.getByRole("button", { name: "Fewer episodes" });
+  within(sessionGroup()).getByRole("button", {
+    name: /^(Full (episode|chapter)|\d+ (episodes|chapters))/,
+  });
+const more = () => screen.getByRole("button", { name: /^More (episodes|chapters)$/ });
+const fewer = () => screen.getByRole("button", { name: /^Fewer (episodes|chapters)$/ });
 const customBtn = () => within(sessionGroup()).getByRole("button", { name: "Custom" });
+const customInput = () => within(sessionGroup()).getByLabelText("Minutes per session");
 
 describe("PlanSheet", () => {
   it("offers the seven days as toggles and cannot save without one", async () => {
@@ -118,11 +121,13 @@ describe("PlanSheet", () => {
     expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(60);
   });
 
-  it("Custom turns the episode picker off, and the centre turns it back on", async () => {
+  it("Custom puts minutes in the centre, and Custom again goes back", async () => {
     setup();
     await userEvent.click(customBtn());
-    expect(center()).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(center());
+    expect(customInput()).toHaveFocus();
+    expect(within(sessionGroup()).queryByRole("button", { name: /^Full episode/ })).toBeNull();
+    await userEvent.click(customBtn());
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
     expect(center()).toHaveAttribute("aria-pressed", "true");
     expect(customBtn()).toHaveAttribute("aria-pressed", "false");
   });
@@ -183,8 +188,7 @@ describe("PlanSheet", () => {
     const { onsave } = setup();
     await userEvent.click(customBtn());
     expect(customBtn()).toHaveAttribute("aria-pressed", "true");
-    expect(center()).toHaveAttribute("aria-pressed", "false");
-    const input = screen.getByLabelText("Minutes per session");
+    const input = customInput();
     expect(input).toHaveAttribute("min", "45");
     await userEvent.click(day(/mon/i));
     await userEvent.clear(input);
@@ -204,7 +208,7 @@ describe("PlanSheet", () => {
     setup();
     await userEvent.click(more());
     await userEvent.click(customBtn());
-    expect(screen.getByLabelText("Minutes per session")).toHaveValue(90);
+    expect(customInput()).toHaveValue(90);
   });
 
   it("opens an existing plan on its episodes, or on Custom when it is not whole episodes", () => {
@@ -215,7 +219,7 @@ describe("PlanSheet", () => {
     const odd: Plan = { days: [0], max_session_minutes: 60, since: "2026-09-28" };
     setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, odd) });
     expect(customBtn()).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByLabelText("Minutes per session")).toHaveValue(60);
+    expect(customInput()).toHaveValue(60);
     cleanup();
     const short: Plan = { days: [0], max_session_minutes: 15, since: "2026-09-28" };
     setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, short) });
@@ -272,14 +276,25 @@ describe("PlanSheet", () => {
     });
   });
 
-  it("offers no Full for a book or a game", () => {
+  it("steps a book or a game by 30 minutes, without a Full", () => {
     setup({ entry: entry("game", { hours: 20 }) });
+    expect(sessionGroup()).toHaveTextContent("1 h");
     expect(screen.queryByRole("button", { name: /^Full / })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "30 min more" })).toBeInTheDocument();
   });
 
-  it("offers no Full when one chapter is shorter than the shortest session", () => {
+  it("steps a manga of 3-minute chapters by chapters", () => {
     setup({ entry: entry("manga", { chapters: 100, chapter_minutes: 3 }) });
-    expect(screen.queryByRole("button", { name: /^Full / })).not.toBeInTheDocument();
+    expect(center()).toHaveAccessibleName("Full chapter 3 min");
+  });
+
+  it("shows the pages a book's session is worth at the pace being typed", async () => {
+    setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 30 });
+    expect(sessionGroup()).toHaveTextContent("≈ 30 pages");
+    const pace = screen.getByLabelText(/pages per hour/i);
+    await userEvent.clear(pace);
+    await userEvent.type(pace, "60");
+    expect(sessionGroup()).toHaveTextContent("≈ 60 pages");
   });
 
   it("saves the chosen days, session length and today as the start", async () => {
@@ -294,11 +309,15 @@ describe("PlanSheet", () => {
     });
   });
 
-  it("takes a custom session length between 5 and 720 minutes", async () => {
+  it("takes a custom session length between 30 and 720 minutes", async () => {
     const { onsave } = setup({ entry: entry("game", { hours: 20 }) });
     await userEvent.click(day(/mon/i));
-    await userEvent.click(screen.getByRole("button", { name: /custom/i }));
-    const input = screen.getByLabelText(/minutes per session/i);
+    await userEvent.click(customBtn());
+    const input = customInput();
+    await userEvent.clear(input);
+    await userEvent.type(input, "20");
+    expect(screen.getByText("At least 30 min.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
     await userEvent.clear(input);
     await userEvent.type(input, "800");
     expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
@@ -351,7 +370,6 @@ describe("PlanSheet", () => {
   it("previews with the pace being typed", async () => {
     setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 30 });
     await userEvent.click(day(/mon/i));
-    await userEvent.click(screen.getByRole("button", { name: "1 h" }));
     expect(screen.getByText(/^10 sessions/)).toBeInTheDocument();
     const pace = screen.getByLabelText(/pages per hour/i);
     await userEvent.clear(pace);
@@ -362,10 +380,8 @@ describe("PlanSheet", () => {
   it("prefills a manga's missing minutes per chapter from the Settings default", async () => {
     const { onsave } = setup({ entry: entry("manga", { chapters: 100 }), chapterMinutes: 6 });
     expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(6);
-    expect(screen.getByRole("button", { name: "Full chapter · 6 min" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(center()).toHaveAccessibleName("Full chapter 6 min");
+    expect(center()).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(day(/mon/i));
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].length?.chapter_minutes).toBe(6);
@@ -374,7 +390,7 @@ describe("PlanSheet", () => {
   it("keeps a manga's own minutes per chapter over the Settings default", () => {
     setup({ entry: entry("manga", { chapters: 100, chapter_minutes: 9 }), chapterMinutes: 6 });
     expect(screen.queryByLabelText("Minutes per chapter")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Full chapter · 9 min" })).toBeInTheDocument();
+    expect(center()).toHaveAccessibleName("Full chapter 9 min");
   });
 
   it("editing a plan says how the finish line moves, never that you are behind", async () => {

@@ -280,10 +280,40 @@ test("an anime plans whole episodes around Full episode, with a quiet Custom", a
   expect(Math.round(customBox.x + customBox.width)).toBe(Math.round(moreBox.x + moreBox.width));
   expect(await noOverflow(page)).toBeLessThanOrEqual(0);
   await picker.getByRole("button", { name: "Custom" }).click();
+  // Custom types straight into the centre.
+  await expect(picker.getByLabel("Minutes per session")).toBeFocused();
   await dialog.getByLabel("Minutes per session").fill("100");
   await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Sat" }).click();
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toHaveCount(0);
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
   expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 100 } } });
+});
+
+test("a book plans by the hour and shows the pages", async ({ page }) => {
+  const dune = item(3, "book", "Dune", { pages: 600 }, null);
+  await mockLibrary(page, [dune]);
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Dune" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Dune" });
+  const picker = dialog.getByRole("group", { name: "Up to, per session" });
+  await expect(picker).toContainText("1 h");
+  await expect(picker).toContainText("≈ 30 pages");
+  await picker.getByRole("button", { name: "30 min more" }).click();
+  await expect(picker).toContainText("≈ 45 pages");
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Mon" }).click();
+  await dialog.getByRole("button", { name: "Save plan" }).click();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 90 } } });
+});
+
+test("a manga plans whole chapters", async ({ page }) => {
+  const csm = item(8, "manga", "Chainsaw Man", { chapters: 232, chapter_minutes: 20 }, null);
+  await mockLibrary(page, [csm]);
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Chainsaw Man" }).click();
+  const picker = page.getByRole("dialog").getByRole("group", { name: "Up to, per session" });
+  await expect(picker.getByRole("button", { name: "Full chapter 20 min" })).toBeVisible();
+  await picker.getByRole("button", { name: "More chapters" }).click();
+  await expect(picker.getByRole("button", { name: "2 chapters 40 min" })).toBeVisible();
 });

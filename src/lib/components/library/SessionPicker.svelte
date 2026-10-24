@@ -239,6 +239,14 @@
     font-size: 0.95rem;
     font-weight: 600;
     text-align: center;
+    // No spinner: the arrows beside it already step, and it pushes the number off centre.
+    appearance: textfield;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      appearance: none;
+      margin: 0;
+    }
 
     &:focus-visible {
       outline: none;

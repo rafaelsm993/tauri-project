@@ -105,6 +105,22 @@ test.describe("the browse header", () => {
     await expect(tabs).toBeVisible();
   });
 
+  test("still steps the filters aside with animations off", async ({ page }) => {
+    // The phone this shipped to has Animations off. Hiding a row in one step is not motion,
+    // and gating it left a 44%-of-screen header pinned for the whole scroll.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const tabs = page.getByRole("button", { name: "Movies" });
+    await expect(tabs).toBeVisible();
+
+    await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));
+    await expect(tabs).toBeHidden();
+
+    await page.evaluate(() => scrollTo({ top: 1100, behavior: "instant" }));
+    await expect(tabs).toBeVisible();
+  });
+
   test("collapsing never moves the page under you", async ({ page }) => {
     // Shrinking the header instead of hiding it reflows everything below: cards move mid-tap,
     // scroll restoration misses, and the shifted scrollY flips the collapse straight back so the

@@ -3,14 +3,14 @@ import { createRawSnippet, tick } from "svelte";
 import { render, screen } from "@testing-library/svelte";
 import AppHeader from "./AppHeader.svelte";
 
-// Small stand-ins for the real stores: the header only reads "is there a level, and may it move?"
+// A small stand-in for the real store: the header only asks "is there a level?"
 const gamification = (ready = true) => ({
   ready,
   level: { level: 3, xp: 141, into: 40, needed: 100, fraction: 0.4 },
   title: { name: "Newcomer" },
 });
 
-const base = { gamification: gamification(), motion: { on: true } };
+const base = { gamification: gamification() };
 
 const snippet = (html: string) => createRawSnippet(() => ({ render: () => html }));
 
@@ -37,14 +37,6 @@ describe("AppHeader", () => {
     scrollTo(300);
     await tick();
     scrollTo(100);
-    await tick();
-    expect(container.querySelector(".app-header")).toHaveAttribute("data-collapsed", "false");
-  });
-
-  it("never collapses while animations are off", async () => {
-    // Accessibility outranks polish: motion off means a still header.
-    const { container } = render(AppHeader, { ...base, motion: { on: false } });
-    scrollTo(300);
     await tick();
     expect(container.querySelector(".app-header")).toHaveAttribute("data-collapsed", "false");
   });

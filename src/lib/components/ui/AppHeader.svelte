@@ -3,27 +3,24 @@
   import LevelChip from "./LevelChip.svelte";
   import { collapseOnScroll, type HeaderScroll } from "$lib/domain/navigation";
   import { gamificationStore } from "$lib/stores/gamification.svelte";
-  import { motionStore } from "$lib/stores/motion.svelte";
   import type { LevelInfo } from "$lib/domain/gamification";
 
   type Progress = { ready: boolean; level: LevelInfo; title: { name: string } };
 
   // `heading` is the page's own <h1> ("Library"); the chip's rank name comes from the store, so
-  // no page has to derive it. Both stores are props only so tests can hand in stand-ins.
+  // no page has to derive it. The store is a prop only so tests can hand in a stand-in.
   let {
     heading,
     action,
     persistent,
     collapsible,
     gamification = gamificationStore,
-    motion = motionStore,
   }: {
     heading?: string;
     action?: Snippet;
     persistent?: Snippet;
     collapsible?: Snippet;
     gamification?: Progress;
-    motion?: { on: boolean };
   } = $props();
 
   const progress = $derived(
@@ -34,9 +31,7 @@
 
   $effect(() => {
     const onScroll = () => {
-      scroll = motion.on
-        ? collapseOnScroll(scroll, window.scrollY)
-        : { y: window.scrollY, collapsed: false };
+      scroll = collapseOnScroll(scroll, window.scrollY);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

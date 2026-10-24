@@ -179,9 +179,10 @@
     episodes = to;
   }
 
+  // Custom starts from the episodes on screen, not a stale default.
   function pickCustom(perEpisode: number) {
     custom = true;
-    if (!Number.isFinite(minutes) || minutes < perEpisode) minutes = count * perEpisode;
+    minutes = count * perEpisode;
   }
 
   function pick(value: number) {

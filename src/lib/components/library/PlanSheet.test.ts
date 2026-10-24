@@ -200,6 +200,13 @@ describe("PlanSheet", () => {
     expect(center()).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("Custom starts from what the picker shows", async () => {
+    setup();
+    await userEvent.click(more());
+    await userEvent.click(customBtn());
+    expect(screen.getByLabelText("Minutes per session")).toHaveValue(90);
+  });
+
   it("opens an existing plan on its episodes, or on Custom when it is not whole episodes", () => {
     const two: Plan = { days: [0], max_session_minutes: 90, since: "2026-09-28" };
     setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, two) });

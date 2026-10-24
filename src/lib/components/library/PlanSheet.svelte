@@ -179,6 +179,7 @@
         bind:length={draft}
         mediaType={entry.snapshot.media_type}
         disabled={busy}
+        required
       />
     </div>
   {/if}

@@ -235,3 +235,21 @@ test("planning a show the catalog can't time warns inside the plan", async ({ pa
   );
   await expect(dialog.getByLabel("Minutes per episode")).toHaveValue("");
 });
+
+test("the plan marks its missing length as required, in the equipped accent", async ({ page }) => {
+  const st = item(66, "tv", "Stranger Things", { episodes: 42 }, null);
+  await mockLibrary(page, [st], {
+    details: { "tmdb:tv:66": { episodes: 42, runtime: null } },
+    seenLevel: 3,
+    prefs: { accent: "ember" },
+  });
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Stranger Things" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Stranger Things" });
+  const field = dialog.getByLabel("Minutes per episode");
+  await expect(field).toHaveAttribute("aria-required", "true");
+  await expect(dialog.getByText("Required")).toBeVisible();
+  await expect(field).toHaveCSS("border-top-color", "rgb(163, 80, 12)");
+  await field.fill("50");
+  await expect(field).not.toHaveCSS("border-top-color", "rgb(163, 80, 12)");
+});

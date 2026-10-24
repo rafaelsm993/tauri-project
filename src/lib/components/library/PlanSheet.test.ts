@@ -251,6 +251,7 @@ describe("PlanSheet", () => {
     expect(screen.getByText(/needed to plan it/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/^episodes/i)).not.toBeInTheDocument();
     const minutes = screen.getByLabelText(/minutes per episode/i);
+    expect(minutes).toHaveAttribute("aria-required", "true");
     await userEvent.click(day(/mon/i));
     expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
     await userEvent.type(minutes, "30");

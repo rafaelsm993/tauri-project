@@ -5,8 +5,12 @@ import LengthFields from "./LengthFields.svelte";
 import { emptyLength } from "$lib/domain/length";
 import type { MediaType } from "$lib/types/media";
 
-function setup(mediaType: MediaType, fields = ["episodes", "episode_minutes"] as const) {
-  const props = $state({ mediaType, fields: [...fields], length: emptyLength() });
+function setup(
+  mediaType: MediaType,
+  fields = ["episodes", "episode_minutes"] as const,
+  required = false,
+) {
+  const props = $state({ mediaType, fields: [...fields], length: emptyLength(), required });
   render(LengthFields, props);
   return props;
 }
@@ -54,5 +58,27 @@ describe("LengthFields", () => {
   it("offers nothing for lengths without a typical value", () => {
     setup("movie", ["runtime_minutes"] as never);
     expect(screen.queryByRole("group")).not.toBeInTheDocument();
+  });
+
+  it("marks required fields without changing their names", () => {
+    setup("tv", ["episodes", "episode_minutes"], true);
+    expect(screen.getByLabelText("Minutes per episode")).toHaveAttribute("aria-required", "true");
+    expect(screen.getByLabelText("Episodes")).toHaveAttribute("aria-required", "true");
+    expect(screen.getAllByText("Required")).toHaveLength(2);
+  });
+
+  it("flags an empty required field until it is filled", async () => {
+    setup("tv", ["episode_minutes"] as never, true);
+    const field = screen.getByLabelText("Minutes per episode");
+    expect(field).toHaveClass("missing");
+    await userEvent.type(field, "45");
+    expect(field).not.toHaveClass("missing");
+  });
+
+  it("marks nothing required unless asked", () => {
+    setup("tv");
+    expect(screen.queryByText("Required")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Minutes per episode")).not.toHaveAttribute("aria-required");
+    expect(screen.getByLabelText("Minutes per episode")).not.toHaveClass("missing");
   });
 });

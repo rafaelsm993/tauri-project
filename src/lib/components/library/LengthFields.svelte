@@ -10,7 +10,15 @@
     length = $bindable(),
     mediaType,
     disabled = false,
-  }: { fields: LengthField[]; length: Length; mediaType: MediaType; disabled?: boolean } = $props();
+    required = false,
+  }: {
+    fields: LengthField[];
+    length: Length;
+    mediaType: MediaType;
+    disabled?: boolean;
+    // The Plan sheet can't plan without these: tag them and outline the empty ones.
+    required?: boolean;
+  } = $props();
 
   const presets = $derived(
     (EPISODE_MINUTE_PRESETS[mediaType] ?? []).map((m) => ({ value: String(m), label: `${m} min` })),
@@ -27,7 +35,12 @@
 
 {#each fields as field (field)}
   <div class="length-field">
-    <label class="length-label" for="{id}-{field}">{LENGTH_LABELS[field]}</label>
+    <div class="length-head">
+      <label class="length-label" for="{id}-{field}">{LENGTH_LABELS[field]}</label>
+      {#if required}
+        <span class="length-required" aria-hidden="true">Required</span>
+      {/if}
+    </div>
     <input
       id="{id}-{field}"
       class="length-input"
@@ -36,6 +49,8 @@
       step="1"
       inputmode="numeric"
       value={length[field] ?? ""}
+      class:missing={required && !length[field]}
+      aria-required={required || undefined}
       {disabled}
       oninput={(event) => change(field, event)}
     />
@@ -71,6 +86,21 @@
     letter-spacing: 0.04em;
   }
 
+  .length-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $spacing-xs;
+  }
+
+  .length-required {
+    font-size: 0.68rem;
+    padding: 0 $spacing-xs;
+    border-radius: $radius-sm;
+    background: rgb(var(--clr-accent-rgb) / 0.15);
+    color: var(--clr-text);
+  }
+
   .length-input {
     width: 100%;
     background: rgb(var(--clr-ink-rgb) / 0.06);
@@ -80,6 +110,10 @@
     border-radius: $radius-sm;
     font-size: 0.85rem;
     font-family: inherit;
+
+    &.missing {
+      border-color: var(--clr-accent);
+    }
 
     &:focus-visible {
       outline: 2px solid var(--clr-accent);

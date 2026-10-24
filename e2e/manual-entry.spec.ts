@@ -148,14 +148,31 @@ test.describe("a hand-made item's page", () => {
     await page.getByRole("button", { name: "Edit" }).click();
     const sheet = page.getByRole("dialog", { name: "Edit Hades" });
     await expect(sheet.getByLabel("Title")).toHaveValue("Hades");
+    await expect(sheet.getByLabel(/hours/i)).toHaveValue("");
     await sheet.getByLabel("Title").fill("Hades II");
+    await sheet.getByLabel(/hours/i).fill("40");
     await sheet.getByRole("button", { name: "Save" }).click();
 
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hades II");
     await expect(page).toHaveURL(new RegExp(`/media/game/${UUID}$`));
-    const edits = (await ipcCalls(page)).filter((c) => c.cmd === "library_edit_manual");
+    const calls = await ipcCalls(page);
+    const edits = calls.filter((c) => c.cmd === "library_edit_manual");
     expect(edits).toHaveLength(1);
+    const updates = calls.filter((c) => c.cmd === "library_update");
+    expect(updates).toHaveLength(1);
+    expect(updates[0].args).toMatchObject({
+      key: `manual:game:${UUID}`,
+      patch: { length: { hours: 40 } },
+    });
+    expect(calls.indexOf(edits[0])).toBeLessThan(calls.indexOf(updates[0]));
+
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Edit Hades II" }).getByLabel(/hours/i),
+    ).toHaveValue("40");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
 
     await page.goBack();
     await expect(page).toHaveURL(/\/library$/);

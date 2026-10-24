@@ -19,15 +19,22 @@
   const request = $derived(entry.current);
   const editing = $derived(request?.edit ? (library.get(request.edit) ?? null) : null);
 
-  async function save(draft: ManualDraft, user: Partial<UserData> | null) {
+  // An edit saves the details, then the length only when it changed.
+  async function save(draft: ManualDraft, user: Partial<UserData>) {
     if (!request) return;
     busy = true;
     error = "";
     let saved: LibraryEntry | null = null;
     if (request.edit) {
-      if (await library.editManual(request.edit, draft)) saved = library.get(request.edit) ?? null;
+      const key = request.edit;
+      const lengthChanged =
+        !!user.length && JSON.stringify(user.length) !== JSON.stringify(editing?.user.length);
+      const ok =
+        (await library.editManual(key, draft)) &&
+        (!lengthChanged || (await library.update(key, { length: user.length })));
+      if (ok) saved = library.get(key) ?? null;
     } else {
-      saved = await library.addManual(draft, user ?? {});
+      saved = await library.addManual(draft, user);
     }
     busy = false;
     if (saved) entry.saved(saved);

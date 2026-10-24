@@ -85,6 +85,57 @@ describe("ManualEntrySheet", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("saves an edited length after the details", async () => {
+    const book = { ...DUNE, user: { ...DUNE.user, length: { ...emptyLength(), pages: 412 } } };
+    const calls: string[] = [];
+    const editManual = vi.fn(async () => (calls.push("edit"), book));
+    const update = vi.fn(async (_k: string, patch: object) => {
+      calls.push("update");
+      return { ...book, user: { ...book.user, ...patch } };
+    });
+    const { library, entry, user } = setup({ editManual, update }, [book]);
+    await library.hydrate();
+    const saved = vi.spyOn(entry, "saved");
+    entry.open({ type: "book", edit: KEY });
+    await screen.findByRole("dialog", { name: "Edit Dune" });
+    await user.clear(screen.getByLabelText("Pages"));
+    await user.type(screen.getByLabelText("Pages"), "500");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(saved).toHaveBeenCalledOnce());
+    expect(calls).toEqual(["edit", "update"]);
+    expect(update).toHaveBeenCalledWith(KEY, { length: { ...emptyLength(), pages: 500 } });
+    expect(library.get(KEY)?.user.length.pages).toBe(500);
+  });
+
+  it("does not touch the length when only the details changed", async () => {
+    const book = { ...DUNE, user: { ...DUNE.user, length: { ...emptyLength(), pages: 412 } } };
+    const update = vi.fn();
+    const { library, entry, user } = setup({ editManual: vi.fn(async () => book), update }, [book]);
+    await library.hydrate();
+    entry.open({ type: "book", edit: KEY });
+    await user.type(await screen.findByLabelText("Title"), " Messiah");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("stays open with the reason when the length save fails after the details saved", async () => {
+    const book = { ...DUNE, user: { ...DUNE.user, length: { ...emptyLength(), pages: 412 } } };
+    const update = vi.fn(async () => {
+      throw new Error("disk full");
+    });
+    const { library, entry, user } = setup({ editManual: vi.fn(async () => book), update }, [book]);
+    await library.hydrate();
+    const saved = vi.spyOn(entry, "saved");
+    entry.open({ type: "book", edit: KEY });
+    await user.clear(await screen.findByLabelText("Pages"));
+    await user.type(screen.getByLabelText("Pages"), "500");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText(/disk full/)).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(saved).not.toHaveBeenCalled();
+  });
+
   it("closes on Cancel without saving", async () => {
     const addManual = vi.fn();
     const { entry, user } = setup({ addManual });

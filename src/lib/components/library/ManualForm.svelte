@@ -26,8 +26,8 @@
     entries: LibraryEntry[];
     busy?: boolean;
     error?: string;
-    // `user` is null when editing: an edit changes the item's details only.
-    onsave: (draft: ManualDraft, user: Partial<UserData> | null) => void;
+    // When editing, `user` carries only the length; a new item also starts as Planning.
+    onsave: (draft: ManualDraft, user: Partial<UserData>) => void;
     onopen: (entry: LibraryEntry) => void;
     oncancel: () => void;
   } = $props();
@@ -42,7 +42,7 @@
   let genres = $state((start?.genres ?? []).join(", "));
   let platforms = $state((start?.platforms ?? []).join(", "));
   let overview = $state(start?.overview ?? "");
-  let length = $state<Length>(emptyLength());
+  let length = $state<Length>(untrack(() => (edit ? { ...edit.user.length } : emptyLength())));
   let tried = $state(false);
   let lookalike = $state<LibraryEntry | null>(null);
 
@@ -66,7 +66,10 @@
 
   function send() {
     lookalike = null;
-    onsave(draft(), edit ? null : { status: "planning", length: { ...length } });
+    onsave(
+      draft(),
+      edit ? { length: { ...length } } : { status: "planning", length: { ...length } },
+    );
   }
 
   function save() {
@@ -196,11 +199,9 @@
         bind:value={overview}></textarea>
     </div>
 
-    {#if !edit}
-      <div class="field-row">
-        <LengthFields fields={REQUIRED_LENGTH_FIELDS[mediaType]} bind:length disabled={busy} />
-      </div>
-    {/if}
+    <div class="field-row">
+      <LengthFields fields={REQUIRED_LENGTH_FIELDS[mediaType]} bind:length disabled={busy} />
+    </div>
   </div>
 
   {#if lookalike}

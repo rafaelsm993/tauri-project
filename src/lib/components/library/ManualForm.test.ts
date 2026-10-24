@@ -144,7 +144,7 @@ describe("ManualForm", () => {
     expect(onsave).not.toHaveBeenCalled();
   });
 
-  it("editing fills the fields, locks the type and sends no user data", async () => {
+  it("editing fills the fields and the length, locks the type, and sends the length", async () => {
     const dune = saved("book", "Dune", {
       year: "1965",
       creator: "Frank Herbert",
@@ -156,9 +156,11 @@ describe("ManualForm", () => {
     expect(screen.getByLabelText("Author")).toHaveValue("Frank Herbert");
     expect(screen.getByLabelText(/Genres/)).toHaveValue("Sci-fi");
     expect(screen.getByRole("button", { name: "Movie" })).toBeDisabled();
-    expect(screen.queryByLabelText("Pages")).toBeNull();
+    expect(screen.getByLabelText("Pages")).toHaveValue(412);
     await user.clear(screen.getByLabelText("Title"));
     await user.type(screen.getByLabelText("Title"), "Dune Messiah");
+    await user.clear(screen.getByLabelText("Pages"));
+    await user.type(screen.getByLabelText("Pages"), "500");
     await user.click(save());
     expect(onsave).toHaveBeenCalledExactlyOnceWith(
       {
@@ -170,8 +172,15 @@ describe("ManualForm", () => {
         genres: ["Sci-fi"],
         platforms: [],
       },
-      null,
+      { length: { ...emptyLength(), pages: 500 } },
     );
+  });
+
+  it("editing sends only the length, never a status", async () => {
+    const dune = saved("book", "Dune");
+    const { onsave, user } = form({ type: "book", edit: dune, entries: [dune] });
+    await user.click(save());
+    expect(onsave.mock.calls[0][1]).toEqual({ length: { ...emptyLength(), pages: 412 } });
   });
 
   it("disables everything while saving and shows the backend's reason", () => {

@@ -10,6 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Renamed from the `tauri-app` placeholder to **Aevum** (Latin: an age, a lifetime); bundle identifier `com.user.tauri-app` → `com.rafaelsm993.aevum`. The Android project was regenerated for the new package; a device with the old debug APK must reinstall.
 
 ### Added
+- One session picker for the Plan and Log session sheets: `‹ [centre] ›` with a quiet **Custom** that types minutes straight into the centre and shows what they are worth in units and time ("6 chapters · 2 h", "≈ 3 chapters · 50 min", "≈ 25 pages · 50 min"). TV, anime and manga step by whole episodes or chapters (never below one, at most 12 h or what is left); books and games step by 30 min, floor 30 min unless the item or what is left is shorter; movies keep their presets in Plan and log as one "Full movie". Existing plans open on their whole steps, or on Custom with their exact minutes.
+- Log session from a Library card or Home's Continue row: it opens on today's planned session without raising the phone keyboard, shows what it adds and what is left (in hours), rounds to whole units by itself, starts a planned item and finishes it on its last unit. Today's sessions lead Continue (the separate Today strip is gone); the cover icon plans an item.
+- Plans start at one full movie, episode or chapter; a new plan fills a missing episode length from the catalog (TMDB/AniList `runtime`, never a single episode's), says where it came from, and marks the length fields it needs as **Required**. When the catalog has no length, the detail page and the Plan sheet say so and why it matters, with an "Add length" button on the detail page.
+- Settings: reading pace (pages per hour) and a default minutes per manga chapter, both prefilled in the Plan sheet.
+- One-tap common episode lengths when adding an item (TV 22/30/45/60, anime 12/24 min), on one row on a phone.
+- Edit an item's length any time; a hand-made item's length and **type** can change from its form (its history and XP follow it; progress restarts in the new type's units, the plan goes).
+- One sticky app header (search and filters), which collapses on scroll down and returns on scroll up; all six Home categories and every Library filter option fit a phone without a sideways swipe.
 - Backup: export the library, activity, posters and settings to one zip from Settings, and import it back by merging or replacing (a safety copy is saved before a replace). API keys are never exported. Works on Android too, with files chosen in the system picker (the backup is verified before it is copied into the chosen file).
 - Profile: level, title, XP and streak, derived from the activity log (titles by level; values are placeholders until a playtest).
 - Profile dashboard: level ring, stat tiles, XP progression by family (30 days / 90 days / all), activity heatmap, library donut, taste radar and a forecast (backlog hours, next-level ETA, projected XP), built on LayerChart with the app's color tokens; every chart has a text summary and a table for screen readers.
@@ -26,7 +33,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Netflix-style SCSS/CSS design tokens, with SCSS variables and mixins auto-injected by Vite
 - Svelte 5 runes and class-based application stores
 
+### Fixed
+- An accent's own text colour (Ember's dark text) now reaches every filled button, in the dark, light and system themes.
+- The length and Log session sheets no longer open the phone keyboard over their own buttons.
+- Taps reach cards showing through the collapsed header's gap; the header pins below the Android status bar.
+
 ### Removed
+- The level chip in the page header (the level lives on the Profile tab) and Home's Today strip.
 - Local account system (register / login / profile switching) and its SQLite `users` table
 - Watchlist feature, including the `watchlist` table, the `/watchlist` route, and the `WatchlistButton` component
 - Optional cloud backend integration (`VITE_CLOUD_API_URL`, `src/lib/api/cloud.ts`)

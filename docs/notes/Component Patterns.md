@@ -102,9 +102,16 @@ A button that opens a popover of native checkboxes. Generic: values keep their t
 ## Sheet
 
 - File: `src/lib/components/ui/Sheet.svelte`
-- Props: `label`, `onclose()`, `children`
+- Props: `label`, `onclose()`, `children`, `focus?: "field" | "sheet"` (default `field`)
 
-The one modal for add/edit forms: a native `<dialog>` opened with `showModal()`, centred, over a dimmed `::backdrop` (`--clr-shade-rgb`). Focus moves to its first field and returns to the opener when it unmounts. Escape, the system back gesture (`cancel`) and a click on the backdrop call `onclose`; the parent decides and unmounts it. While an on-screen keyboard is up it sits above it (`--sheet-covered`, from `visualViewport`), so Save stays reachable. Opening it pushes a shallow history entry, so Android's Back (and the browser's) closes the sheet instead of leaving the page. `onclosed` runs only after that entry is gone, so a caller that navigates on save can't have its new page undone by the sheet's own Back. On a phone a short swipe down on the handle closes it (a quarter of its height, at most 120 px). `size="full"` is for long forms: the whole height below the status bar on a phone, a wider centred dialog on desktop. The form inside keeps its own card look. Used by `SaveToLibrary` (add / edit length), `PlanDialog`, `ManualEntrySheet` and `MatchSheet`. jsdom has no `showModal`, so `vitest-setup.ts` stubs it.
+The one modal for add/edit forms: a native `<dialog>` opened with `showModal()`, centred, over a dimmed `::backdrop` (`--clr-shade-rgb`). Focus moves to its first field (or, with `focus="sheet"`, to the dialog itself, so a phone keyboard does not cover a sheet whose first control is a number field) and returns to the opener when it unmounts. Escape, the system back gesture (`cancel`) and a click on the backdrop call `onclose`; the parent decides and unmounts it. While an on-screen keyboard is up it sits above it (`--sheet-covered`, from `visualViewport`), so Save stays reachable. Opening it pushes a shallow history entry, so Android's Back (and the browser's) closes the sheet instead of leaving the page. `onclosed` runs only after that entry is gone, so a caller that navigates on save can't have its new page undone by the sheet's own Back. On a phone a short swipe down on the handle closes it (a quarter of its height, at most 120 px). `size="full"` is for long forms: the whole height below the status bar on a phone, a wider centred dialog on desktop. The form inside keeps its own card look. Used by `SaveToLibrary` (add / edit length), `PlanDialog`, `ManualEntrySheet` and `MatchSheet`. jsdom has no `showModal`, so `vitest-setup.ts` stubs it.
+
+## SessionPicker
+
+- Files: `src/lib/components/library/SessionPicker.svelte`, `src/lib/domain/sessionScale.ts`
+- Props: `scale` (a `SessionScale`), `choice` (bindable `SessionChoice { count, custom, typed }`), `label` (the group's accessible name), `pagesPerHour`, `disabled?`
+
+How long one session is, in the Plan sheet ("Up to, per session") and the Log session sheet ("Session length"). `sessionScale(entry, pace)` decides the unit: whole episodes/chapters (step = minutes per unit, floor one unit) or time (30 min steps; the step and floor shrink to the item's length or what is left when shorter); it returns `null` for a movie or without a length, and the sheet shows a hint ("Add the pages above to pick a session.") or, for a movie, its own control. ‹ and › move one step, the centre is a filled button that resets to one unit (plain text for time), and **Custom** turns the centre into a minutes input that shows below it what the minutes are worth in units and time (`customText`: "6 chapters · 2 h", "≈ 3 chapters · 50 min", "≈ 25 pages · 50 min"), or "At least one episode (24 min)." under the floor. `openAt` picks where a sheet opens; `choiceMinutes`/`choiceOk` give the minutes to save and whether they are allowed. The sheet owns `choice` and derives minutes from it; the picker never saves. Pass a validated pace, never the raw input: a cleared field would render `NaN`.
 
 ## Add manually
 
@@ -160,10 +167,10 @@ The routes themselves are described in [SvelteKit Special Pages](Front-end/Svelt
 <div class="app-shell">    <!-- padded by --nav-left / --nav-bottom -->
   <AppNav {section} {progress} />
   <div class="app-content">  <!-- z-index 1 -->
-    <LevelChip />            <!-- desktop only -->
-    {@render children()}
+    {@render children()}     <!-- each page renders its own AppHeader -->
   </div>
 </div>
+<OfflineBanner /> <LevelUpToast /> <ReminderToast /> <ManualEntrySheet /> <MatchSheet />
 ```
 
 The layout imports `$lib/styles/global.css`. It has no route guard; the startup-problem screen has no
@@ -186,11 +193,18 @@ on/off settings; a choice between named options stays a `SegmentedControl`.
 paints it before the app loads. `global.css` holds the dark palette on `:root` and the light one
 under `[data-theme="light"]` and, for `system`, under `prefers-color-scheme: light`.
 `scripts/contrast.test.mjs` (in `lint:guards`) checks every text/surface pair in both palettes (4.5:1 for text,
-3:1 for hints and accents). Text on a red fill uses `--clr-on-primary`. On Android, `applyTheme` also calls the
+3:1 for hints and accents). Text on a filled (primary) background uses `--clr-on-primary`, derived from `--clr-on-primary-rgb`; an accent that needs dark text (Ember) overrides the channel, and every theme block sets the channel, never a literal. On Android, `applyTheme` also calls the
 `AevumSystemBars` bridge from `MainActivity.kt` so the status and navigation bar icons turn dark on
 the light theme.
 
-## AppNav, LevelChip and LevelRing
+## AppHeader
+
+- File: `src/lib/components/ui/AppHeader.svelte`
+- Props: `heading?` (the page's `<h1>`; Home has none), snippets `action?`, `persistent?`, `collapsible?`
+
+One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling down hides the `collapsible` row and scrolling up brings it back; the decision is the pure `collapseOnScroll(prev, y)` in `domain/navigation.ts`, independent of the Animations setting. A hidden row keeps its box with `visibility: hidden` (shrinking it reflows the page and flips the state back), and only the rows take taps, so cards showing through the gap stay tappable. While stuck it paints up to the screen edge, under the Android status bar.
+
+## AppNav and LevelRing
 
 - `ui/AppNav.svelte` — props `section` (from `sectionOf` in `domain/navigation.ts`) and optional
   `progress`. One `<nav aria-label="Main">` of links: a left rail (`$nav-rail-width`) with Settings
@@ -198,9 +212,8 @@ the light theme.
   Settings at `md` and below. The current tab has a filled pill and `aria-current="page"`.
 - A detail page keeps the tab it was opened from (the layout remembers the last section); opened
   cold it belongs to Home. `/welcome` has no tab.
-- `ui/LevelChip.svelte` — the level number in a progress ring, top right on desktop, links to
-  /profile ("Level N · Title"). On phone the ring sits on the Profile tab instead, whose name
-  becomes "Profile · Level N"; Settings is a link in the Profile header.
-- `ui/LevelRing.svelte` — the decorative ring both use.
+- The level ring sits on the Profile tab, whose name becomes "Profile · Level N"; Settings is a
+  link in the Profile header. (The desktop `LevelChip` was removed with the sticky header.)
+- `ui/LevelRing.svelte` — the decorative ring.
 - Fixed overlays (OfflineBanner, BackToTop, toasts) add `var(--nav-bottom)` / `var(--nav-left)`,
   set on `:root` by the layout, so they stay clear of the navigation.

@@ -35,7 +35,7 @@
     <button type="button" class="panel-reset" disabled={!active} onclick={onreset}>Reset</button>
   </div>
   <section class="panel-section">
-    <h3 class="panel-label" aria-hidden="true">Status</h3>
+    <span class="panel-label" aria-hidden="true">Status</span>
     <SegmentedControl
       label="Status"
       options={withEmptyDisabled(statuses, status)}
@@ -46,7 +46,7 @@
   </section>
   {#if types.length > 2}
     <section class="panel-section">
-      <h3 class="panel-label" aria-hidden="true">Type</h3>
+      <span class="panel-label" aria-hidden="true">Type</span>
       <SegmentedControl
         label="Type"
         options={withEmptyDisabled(types, type)}

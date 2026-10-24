@@ -1,8 +1,14 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import LengthFields from "./LengthFields.svelte";
+  import LengthNote from "./LengthNote.svelte";
   import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
-  import { LENGTH_LABELS, fillMissing, missingLengthFields } from "$lib/domain/length";
+  import {
+    LENGTH_LABELS,
+    fillMissing,
+    lengthGapNote,
+    missingLengthFields,
+  } from "$lib/domain/length";
   import { finishShift, planFor } from "$lib/domain/planner";
   import { fullSession } from "$lib/domain/sessionLog";
   import { formatDay, formatMinutes, plural } from "$lib/utils/format";
@@ -78,6 +84,8 @@
     missingLengthFields(entry.snapshot.media_type, entry.user.length),
   );
   const fromCatalog = untrack(() => askedFields.some((field) => found?.[field] != null));
+  // Asked of the catalog and still unknown; empty when the catalog was never asked.
+  const gap = untrack(() => (found ? askedFields.filter((field) => draft[field] === null) : []));
   const asksPace = $derived(type === "book" && pagesPerHour === null);
   const usedPace = $derived(type === "book" ? pace : (pagesPerHour ?? DEFAULT_PAGES_PER_HOUR));
 
@@ -154,12 +162,18 @@
 
   {#if askedFields.length > 0}
     <div class="sheet-block">
-      <p class="sheet-hint">
-        Needed to plan it: how long it is.
-        {#if fromCatalog}
-          Filled in from {PROVIDER_LABELS[entry.snapshot.provider]}; change it if it is off.
-        {/if}
-      </p>
+      {#if gap.length > 0}
+        <LengthNote
+          text={lengthGapNote(PROVIDER_LABELS[entry.snapshot.provider], entry.snapshot.title, gap)}
+        />
+      {:else}
+        <p class="sheet-hint">
+          Needed to plan it: how long it is.
+          {#if fromCatalog}
+            Filled in from {PROVIDER_LABELS[entry.snapshot.provider]}; change it if it is off.
+          {/if}
+        </p>
+      {/if}
       <LengthFields fields={askedFields} bind:length={draft} disabled={busy} />
     </div>
   {/if}

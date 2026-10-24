@@ -3,7 +3,7 @@
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
   import { catalog } from "$lib/api/catalog";
-  import { toMediaItem, type MediaDetail, type MediaType } from "$lib/types/media";
+  import { PROVIDER_LABELS, toMediaItem, type MediaDetail, type MediaType } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
   import { detailSource, entryForRoute, snapshotItem } from "$lib/domain/detailView";
   import { isManualId, manualDetail } from "$lib/domain/manual";
@@ -11,7 +11,13 @@
   import { posterKey as toPosterKey } from "$lib/utils/transition";
   import { onlineStore, onReconnect } from "$lib/stores/online.svelte";
   import { match } from "$lib/stores/match.svelte";
-  import { emptyLength, isPlannable, resolveTotal } from "$lib/domain/length";
+  import {
+    catalogGap,
+    emptyLength,
+    isPlannable,
+    lengthGapNote,
+    resolveTotal,
+  } from "$lib/domain/length";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { errorMessage } from "$lib/utils/errors";
   import { latest } from "$lib/utils/latest";
@@ -61,6 +67,13 @@
   const savedLength = $derived(savedEntry?.user.length ?? emptyLength());
   const savedTotal = $derived(resolveTotal(mediaType, detail, savedLength));
   const savedPlannable = $derived(isPlannable(mediaType, savedLength));
+  // Shown only with a saved entry; a hand-made item has no detail, so no gap.
+  const lengthNote = $derived.by(() => {
+    const gap = catalogGap(mediaType, savedLength, detail);
+    return detail && gap.length
+      ? lengthGapNote(PROVIDER_LABELS[detail.provider], detail.title, gap)
+      : "";
+  });
   const title = $derived(detail?.title ?? routeEntry?.snapshot.title ?? "");
   const posterKey = $derived(toPosterKey(page.params.type ?? "", page.params.id ?? ""));
 
@@ -116,6 +129,7 @@
     onprogress={(progress) => libraryStore.update(entry.key, { progress })}
     onrating={(rating) => libraryStore.update(entry.key, { rating })}
     onaddlength={() => (editingLength = true)}
+    {lengthNote}
   />
   {#if entry.user.status !== "dropped"}
     {#if planning}

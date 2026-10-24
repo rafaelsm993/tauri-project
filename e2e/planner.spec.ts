@@ -223,3 +223,15 @@ test("a new plan takes the episode length the catalog lists", async ({ page }) =
   });
   expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 24 } } });
 });
+
+test("planning a show the catalog can't time warns inside the plan", async ({ page }) => {
+  const st = item(66, "tv", "Stranger Things", { episodes: 42 }, null);
+  await mockLibrary(page, [st], { details: { "tmdb:tv:66": { episodes: 42, runtime: null } } });
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Stranger Things" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Stranger Things" });
+  await expect(dialog.getByRole("note")).toContainText(
+    "TMDB doesn't list the minutes per episode for Stranger Things",
+  );
+  await expect(dialog.getByLabel("Minutes per episode")).toHaveValue("");
+});

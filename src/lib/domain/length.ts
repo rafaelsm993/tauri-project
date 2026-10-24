@@ -82,6 +82,22 @@ export function fillMissing(length: Length, from: Length): Length {
   return out;
 }
 
+// Fields neither the user nor the catalog knows; empty until the catalog has answered.
+export function catalogGap(
+  type: MediaType,
+  length: Length,
+  detail: MediaDetail | null,
+): LengthField[] {
+  if (!detail) return [];
+  return missingLengthFields(type, fillMissing(length, lengthFromDetail(type, detail)));
+}
+
+// Why a length matters, for a catalog item the provider can't measure.
+export function lengthGapNote(provider: string, title: string, fields: LengthField[]): string {
+  const what = fields.map((f) => LENGTH_LABELS[f].toLowerCase()).join(" or ");
+  return `${provider} doesn't list the ${what} for ${title}. Add it yourself: your plan is only as accurate as this number.`;
+}
+
 // Derived, never stored: a stored flag would drift from the fields.
 export function isPlannable(type: MediaType, length: Length): boolean {
   return missingLengthFields(type, length).length === 0;

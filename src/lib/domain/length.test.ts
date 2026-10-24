@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   REQUIRED_LENGTH_FIELDS,
   catalogCanFill,
+  catalogGap,
   emptyLength,
   fillMissing,
   isPlannable,
   lengthFromDetail,
+  lengthGapNote,
   missingLengthFields,
   resolveTotal,
 } from "./length";
@@ -154,5 +156,39 @@ describe("catalogCanFill", () => {
 
   it("is false when nothing is missing", () => {
     expect(catalogCanFill("tv", len({ episodes: 48, episode_minutes: 24 }))).toBe(false);
+  });
+});
+
+describe("catalogGap", () => {
+  const st = detail({ episodes: 42, runtime: null });
+
+  it("lists what neither the user nor the catalog knows", () => {
+    expect(catalogGap("tv", len({ episodes: 42 }), st)).toEqual(["episode_minutes"]);
+  });
+
+  it("is empty when the catalog can fill the rest", () => {
+    expect(catalogGap("tv", emptyLength(), detail({ episodes: 48, runtime: 24 }))).toEqual([]);
+  });
+
+  it("is empty when the user already typed it", () => {
+    expect(catalogGap("tv", len({ episodes: 42, episode_minutes: 50 }), st)).toEqual([]);
+  });
+
+  it("is empty while the catalog has not answered, so it never blames it unasked", () => {
+    expect(catalogGap("tv", emptyLength(), null)).toEqual([]);
+  });
+});
+
+describe("lengthGapNote", () => {
+  it("names the provider, what is missing, and why it matters", () => {
+    expect(lengthGapNote("TMDB", "Stranger Things", ["episode_minutes"])).toBe(
+      "TMDB doesn't list the minutes per episode for Stranger Things. Add it yourself: your plan is only as accurate as this number.",
+    );
+  });
+
+  it("joins two missing fields", () => {
+    expect(lengthGapNote("TMDB", "Severance", ["episodes", "episode_minutes"])).toBe(
+      "TMDB doesn't list the episodes or minutes per episode for Severance. Add it yourself: your plan is only as accurate as this number.",
+    );
   });
 });

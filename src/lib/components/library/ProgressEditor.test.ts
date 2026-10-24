@@ -89,4 +89,38 @@ describe("ProgressEditor", () => {
     expect(screen.queryByText(/length unknown/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /add length/i })).not.toBeInTheDocument();
   });
+
+  it("highlights adding the length, with the reason, when the catalog can't give it", async () => {
+    const onaddlength = vi.fn();
+    render(ProgressEditor, {
+      ...base,
+      plannable: false,
+      onaddlength,
+      lengthNote: "TMDB doesn't list it.",
+    });
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent("TMDB doesn't list it.");
+    const add = screen.getByRole("button", { name: "Add length" });
+    expect(note).toContainElement(add);
+    await userEvent.click(add);
+    expect(onaddlength).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Length unknown.")).not.toBeInTheDocument();
+  });
+
+  it("keeps the plain hint when there is no reason to give", () => {
+    render(ProgressEditor, { ...base, plannable: false, onaddlength: vi.fn() });
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add length" })).toHaveClass("length-link");
+  });
+
+  it("drops the note once the length is known", () => {
+    render(ProgressEditor, {
+      ...base,
+      plannable: true,
+      onaddlength: vi.fn(),
+      lengthNote: "anything",
+    });
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit length" })).toHaveClass("length-link");
+  });
 });

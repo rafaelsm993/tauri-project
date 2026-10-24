@@ -5,7 +5,7 @@ import SaveToLibrary from "./SaveToLibrary.svelte";
 import { LibraryStore, type LibraryClient } from "$lib/stores/library.svelte";
 import { emptyLength } from "$lib/domain/length";
 import type { LibraryEntry } from "$lib/types/library";
-import type { MediaItem } from "$lib/types/media";
+import type { MediaDetail, MediaItem } from "$lib/types/media";
 
 const ITEM = {
   id: 7,
@@ -218,6 +218,16 @@ describe("SaveToLibrary", () => {
     render(SaveToLibrary, { item: ITEM, store, editing: true });
     expect(screen.getByRole("dialog", { name: /^edit /i })).toHaveFocus();
     expect(screen.getByLabelText(/^episodes/i)).not.toHaveFocus();
+  });
+
+  it("fills a saved item's missing length from the catalog, keeping what was typed", async () => {
+    const typed = { ...SAVED, user: { ...SAVED.user, length: { ...emptyLength(), episodes: 10 } } };
+    const { store } = storeWith({ load: vi.fn(async () => [typed]) });
+    await store.hydrate();
+    const detail = { ...ITEM, episodes: 48, runtime: 24 } as unknown as MediaDetail;
+    render(SaveToLibrary, { item: ITEM, store, editing: true, detail });
+    expect(screen.getByLabelText(/^episodes/i)).toHaveValue(10);
+    expect(screen.getByLabelText(/^minutes per episode/i)).toHaveValue(24);
   });
 
   it("closes the sheet on Escape without saving", async () => {

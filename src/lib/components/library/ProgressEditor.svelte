@@ -1,5 +1,6 @@
 <script lang="ts">
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import LengthNote from "./LengthNote.svelte";
   import { clampProgress, isBinary, percent, progressLabel } from "$lib/domain/progress";
   import type { MediaType } from "$lib/types/media";
 
@@ -13,6 +14,7 @@
     disabled = false,
     plannable = true,
     onaddlength = undefined,
+    lengthNote = "",
   }: {
     mediaType: MediaType;
     progress: number;
@@ -23,6 +25,8 @@
     disabled?: boolean;
     plannable?: boolean;
     onaddlength?: () => void;
+    // Why the length matters when the catalog could not give it; empty for the plain hint.
+    lengthNote?: string;
   } = $props();
 
   const id = $props.id();
@@ -65,7 +69,9 @@
     </div>
   {/if}
 
-  {#if !plannable}
+  {#if !plannable && lengthNote && onaddlength}
+    <LengthNote text={lengthNote} onadd={onaddlength} {disabled} />
+  {:else if !plannable}
     <p class="length-hint">
       Length unknown.
       {#if onaddlength}

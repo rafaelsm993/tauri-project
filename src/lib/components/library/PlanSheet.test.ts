@@ -186,6 +186,22 @@ describe("PlanSheet", () => {
       expect(onsave.mock.calls[0][0].length).toMatchObject({ episodes: 10, episode_minutes: 24 });
     });
 
+    it("warns, in the accent note, about what the catalog could not give", () => {
+      setup({ entry: entry("tv", {}, null, 0), found: { ...emptyLength(), episodes: 42 } });
+      const note = screen.getByRole("note");
+      expect(note).toHaveTextContent(
+        "TMDB doesn't list the minutes per episode for Arcane. Add it yourself: your plan is only as accurate as this number.",
+      );
+      expect(within(note).queryByRole("button")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Minutes per episode")).toHaveValue(null);
+    });
+
+    it("shows no warning when the catalog was not asked", () => {
+      setup({ entry: entry("tv", { episodes: 42 }, null, 0), found: null });
+      expect(screen.queryByRole("note")).not.toBeInTheDocument();
+      expect(screen.getByText(/needed to plan it/i)).toBeInTheDocument();
+    });
+
     it("says nothing about the catalog when it filled nothing", () => {
       setup({ entry: NEW_TV, found: emptyLength() });
       expect(screen.getByLabelText("Minutes per episode")).toHaveValue(null);

@@ -3,7 +3,7 @@
   import RemoveConfirm from "./RemoveConfirm.svelte";
   import Sheet from "$lib/components/ui/Sheet.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
-  import { lengthFromDetail } from "$lib/domain/length";
+  import { fillMissing, lengthFromDetail } from "$lib/domain/length";
   import { xpOfItem } from "$lib/domain/gamification";
   import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { isBinary } from "$lib/domain/progress";
@@ -39,7 +39,8 @@
 
   let adding = $state(false);
   const sheetOpen = $derived(adding || (editing && !!entry));
-  const sheetLength = $derived(entry ? entry.user.length : prefill);
+  // A saved item keeps what was typed; the catalog fills only the gaps.
+  const sheetLength = $derived(entry ? fillMissing(entry.user.length, prefill) : prefill);
   const sheetReview = $derived(entry ? entry.user.review : null);
 
   function close() {

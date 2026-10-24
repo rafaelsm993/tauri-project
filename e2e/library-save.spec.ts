@@ -265,3 +265,59 @@ test("closing the sheet another way leaves Back for the page", async ({ page }) 
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
 });
+
+test("a show the catalog can't time asks for its episode length, and says why", async ({
+  page,
+}) => {
+  const st = item(66, "tv", "Stranger Things", { episodes: 42 }, null);
+  await mockLibrary(page, [st], { details: { "tmdb:tv:66": { episodes: 42, runtime: null } } });
+  await page.goto("/media/tv/66");
+  const note = page.getByRole("note");
+  await expect(note).toContainText("TMDB doesn't list the minutes per episode for Stranger Things");
+  await note.getByRole("button", { name: "Add length" }).click();
+  const sheet = page.getByRole("dialog", { name: "Edit Stranger Things" });
+  await sheet.getByLabel("Minutes per episode").fill("50");
+  await sheet.getByRole("button", { name: /^save/i }).click();
+  await expect(page.getByRole("note")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit length" })).toBeVisible();
+});
+
+test("a show the catalog can time shows no warning", async ({ page }) => {
+  const ghoul = item(67, "tv", "Tokyo Ghoul", { episodes: 48 }, null);
+  await mockLibrary(page, [ghoul], { details: { "tmdb:tv:67": { episodes: 48, runtime: 24 } } });
+  await page.goto("/media/tv/67");
+  await expect(page.getByText("Length unknown.")).toBeVisible();
+  await expect(page.getByRole("note")).toHaveCount(0);
+});
+
+const STRANGER = item(66, "tv", "Stranger Things", { episodes: 42 }, null);
+const NO_RUNTIME = { "tmdb:tv:66": { episodes: 42, runtime: null } };
+
+test("the length warning takes the equipped accent's colours", async ({ page }) => {
+  await mockLibrary(page, [STRANGER], {
+    details: NO_RUNTIME,
+    seenLevel: 3,
+    prefs: { accent: "ember" },
+  });
+  await page.goto("/media/tv/66");
+  const note = page.getByRole("note");
+  await expect(note).toBeVisible();
+  const colours = await note.evaluate((n) => ({
+    bar: getComputedStyle(n).borderInlineStartColor,
+    button: getComputedStyle(n.querySelector("button") as HTMLElement).backgroundColor,
+  }));
+  expect(colours).toEqual({ bar: "rgb(163, 80, 12)", button: "rgb(199, 102, 18)" });
+});
+
+test("with the default accent the warning follows the default accent token", async ({ page }) => {
+  await mockLibrary(page, [STRANGER], { details: NO_RUNTIME });
+  await page.goto("/media/tv/66");
+  const note = page.getByRole("note");
+  await expect(note).toBeVisible();
+  const { bar, token } = await note.evaluate((n) => ({
+    bar: getComputedStyle(n).borderInlineStartColor,
+    token: getComputedStyle(document.documentElement).getPropertyValue("--clr-accent-rgb").trim(),
+  }));
+  expect(bar).toBe(`rgb(${token.split(/\s+/).join(", ")})`);
+  expect(bar).not.toBe("rgb(163, 80, 12)");
+});

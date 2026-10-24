@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatDay, formatMinutes, formatRuntime, initials, plural } from "./format";
+import {
+  formatDate,
+  formatDay,
+  formatHours,
+  formatMinutes,
+  formatRuntime,
+  initials,
+  plural,
+} from "./format";
 
 describe("plural", () => {
   it("adds an s except for one", () => {
@@ -68,5 +76,15 @@ describe("formatMinutes", () => {
     [0, "0 min"],
   ])("%i minutes is %s", (minutes, text) => {
     expect(formatMinutes(minutes)).toBe(text);
+  });
+});
+
+describe("formatHours", () => {
+  it("gives minutes as hours to one decimal, dropping a trailing .0", () => {
+    expect(formatHours(89)).toBe("1.5 h");
+    expect(formatHours(624)).toBe("10.4 h");
+    expect(formatHours(45)).toBe("0.8 h");
+    expect(formatHours(120)).toBe("2 h");
+    expect(formatHours(0)).toBe("0 h");
   });
 });

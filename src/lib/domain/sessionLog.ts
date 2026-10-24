@@ -4,14 +4,6 @@ import { resolveTotal } from "./length";
 import { planFor } from "./planner";
 import type { LibraryEntry, LibraryStatus, Plan } from "$lib/types/library";
 
-export type Round = "down" | "up";
-
-export interface Rounding {
-  down: number;
-  up: number;
-  nearest: Round;
-}
-
 export interface LogPreview {
   // Units this session adds (episodes, chapters, pages, hours; 1 for a movie).
   gained: number;
@@ -46,33 +38,15 @@ export function minutesPerUnit(
   }
 }
 
-// Units `minutes` is worth, before rounding. Without a length one session is one unit.
-function exactUnits(entry: LibraryEntry, minutes: number, pagesPerHour: number): number {
-  const per = minutesPerUnit(entry, pagesPerHour);
-  return per ? minutes / per : 1;
-}
-
-// Whole units at each end, capped at what is left. A movie is watched or not.
-function ends(entry: LibraryEntry, minutes: number, pagesPerHour: number): [number, number] {
+// Whole units `minutes` is worth, nearest (half up), capped at what is left. Without a length one
+// session is one unit; a movie is watched or not.
+function unitsFor(entry: LibraryEntry, minutes: number, pagesPerHour: number): number {
   const { media_type: type } = entry.snapshot;
-  if (type === "movie") return [1, 1];
-  const exact = exactUnits(entry, minutes, pagesPerHour);
+  if (type === "movie") return 1;
+  const per = minutesPerUnit(entry, pagesPerHour);
+  const units = per ? Math.round(minutes / per) : 1;
   const total = resolveTotal(type, null, entry.user.length);
-  const cap = (n: number) =>
-    total === null ? n : Math.max(0, Math.min(n, total - entry.user.progress));
-  return [cap(Math.floor(exact)), cap(Math.ceil(exact))];
-}
-
-// The choice the sheet offers when the minutes split a unit; null when there is nothing to choose.
-export function rounding(
-  entry: LibraryEntry,
-  minutes: number,
-  pagesPerHour: number = DEFAULT_PAGES_PER_HOUR,
-): Rounding | null {
-  const [down, up] = ends(entry, minutes, pagesPerHour);
-  if (down === up) return null;
-  const exact = exactUnits(entry, minutes, pagesPerHour);
-  return { down, up, nearest: exact - Math.floor(exact) >= 0.5 ? "up" : "down" };
+  return total === null ? units : Math.max(0, Math.min(units, total - entry.user.progress));
 }
 
 // What logging `minutes` today would record, and what the plan looks like after it.
@@ -81,15 +55,13 @@ export function logPreview(
   plan: Plan,
   minutes: number,
   today: string,
-  round: Round,
   pagesPerHour: number = DEFAULT_PAGES_PER_HOUR,
 ): LogPreview {
   const { media_type: type } = entry.snapshot;
   const { progress, status, length } = entry.user;
   const total = resolveTotal(type, null, length);
-  const [down, up] = ends(entry, minutes, pagesPerHour);
-  // The user chose; rounding down may record nothing and still counts as the session.
-  const gained = round === "up" ? up : down;
+  // A short session may record nothing; it still counts as the session.
+  const gained = unitsFor(entry, minutes, pagesPerHour);
   const after = progress + gained;
   const finishes = total !== null && after >= total;
   const nextStatus: LibraryStatus = finishes

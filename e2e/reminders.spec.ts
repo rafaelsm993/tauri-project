@@ -99,10 +99,8 @@ test("Log session on a Library card confirms, then saves the progress", async ({
   await expect(sheet).toBeFocused();
   await expect(sheet).toContainText("+2 episodes · 2 of 28 episodes");
   await expect(sheet).toContainText("14 sessions · 10 h 24 min");
-  // 45 min is 1.875 episodes: the user may record 1 instead.
-  await sheet.getByRole("button", { name: "Round down · 1 episode" }).click();
-  await expect(sheet).toContainText("+1 episode · 1 of 28 episodes");
-  await sheet.getByRole("button", { name: "Round up · 2 episodes" }).click();
+  await expect(sheet).toContainText("Planned: 45 min per session");
+  await expect(sheet).toContainText("0.8 h this session · 10.4 h left");
   await sheet.getByRole("button", { name: "Log session", exact: true }).click();
   await expect(sheet).toBeHidden();
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");

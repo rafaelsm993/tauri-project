@@ -1,14 +1,13 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import Sheet from "$lib/components/ui/Sheet.svelte";
   import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
   import { unitLabel } from "$lib/domain/progress";
-  import { defaultMinutes, logPreview, rounding, type Round } from "$lib/domain/sessionLog";
+  import { defaultMinutes, logPreview } from "$lib/domain/sessionLog";
   import { libraryStore, type LibraryStore } from "$lib/stores/library.svelte";
   import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
-  import { formatDay, formatMinutes, plural } from "$lib/utils/format";
+  import { formatDay, formatHours, formatMinutes, plural } from "$lib/utils/format";
   import type { LibraryEntry, Plan, UserData } from "$lib/types/library";
 
   // Confirms one session before saving it: how long it was, what it adds, what is left after.
@@ -50,26 +49,12 @@
       ),
     ),
   );
-  // null follows the nearest end; set only when the user picks one. Editing the minutes resets it.
-  let picked = $state<Round | null>(null);
   let failure = $state("");
 
   const valid = $derived(minutes !== null && minutes > 0 && minutes <= MAX_MINUTES);
-  const choice = $derived(valid ? rounding(entry, minutes as number, pace) : null);
-  const round = $derived<Round>(picked ?? choice?.nearest ?? "down");
-  const preview = $derived(
-    valid ? logPreview(entry, plan, minutes as number, today, round, pace) : null,
-  );
+  const preview = $derived(valid ? logPreview(entry, plan, minutes as number, today, pace) : null);
   const busy = $derived(library.isPending(entry.key));
   const units = (n: number) => `${n} ${unitLabel(type, n)}`;
-  const roundOptions = $derived<{ value: Round; label: string }[]>(
-    choice
-      ? [
-          { value: "down", label: `Round down · ${units(choice.down)}` },
-          { value: "up", label: `Round up · ${units(choice.up)}` },
-        ]
-      : [],
-  );
 
   const adds = $derived.by(() => {
     if (!preview) return "";
@@ -124,30 +109,26 @@
 
     <div class="sheet-block">
       <label class="field-label" for="{id}-minutes">Session length (minutes)</label>
-      <input
-        id="{id}-minutes"
-        class="field-input"
-        type="number"
-        inputmode="numeric"
-        min="1"
-        max={MAX_MINUTES}
-        step="1"
-        bind:value={minutes}
-        oninput={() => (picked = null)}
-        disabled={busy}
-      />
+      <div class="field-row">
+        <input
+          id="{id}-minutes"
+          class="field-input"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          max={MAX_MINUTES}
+          step="1"
+          bind:value={minutes}
+          disabled={busy}
+        />
+        {#if preview}
+          <span class="field-hours">
+            {formatHours(minutes as number)} this session · {formatHours(preview.remainingMinutes)} left
+          </span>
+        {/if}
+      </div>
+      <p class="field-hint">Planned: {formatMinutes(plan.max_session_minutes)} per session</p>
     </div>
-
-    {#if choice}
-      <SegmentedControl
-        label="Round"
-        options={roundOptions}
-        value={round}
-        onchange={(v) => (picked = v)}
-        disabled={busy}
-        wrap
-      />
-    {/if}
 
     {#if preview}
       <dl class="log-preview">
@@ -213,8 +194,7 @@
   }
 
   .field-input {
-    width: 100%;
-    max-width: 10rem;
+    width: 6rem;
     background: rgb(var(--clr-ink-rgb) / 0.06);
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
     color: var(--clr-text);
@@ -231,6 +211,24 @@
     @include touch {
       min-height: $touch-target;
     }
+  }
+
+  .field-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-xs $spacing-sm;
+  }
+
+  .field-hours {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .field-hint {
+    font-size: 0.78rem;
+    color: var(--clr-text-2);
   }
 
   .log-note {

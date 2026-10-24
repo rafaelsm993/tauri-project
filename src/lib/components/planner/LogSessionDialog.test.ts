@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/svelte";
+import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import LogSessionDialog from "./LogSessionDialog.svelte";
 import { emptyLength } from "$lib/domain/length";
@@ -74,35 +74,39 @@ describe("LogSessionDialog", () => {
     expect(minutes()).not.toHaveFocus();
   });
 
-  it("offers round down or up when the minutes split an episode, nearest first", async () => {
-    const { library } = await setup(); // 45 min = 1.875 episodes
-    const group = screen.getByRole("group", { name: "Round" });
-    expect(within(group).getByRole("button", { name: "Round up · 2 episodes" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.click(within(group).getByRole("button", { name: "Round down · 1 episode" }));
-    expect(screen.getByText("+1 episode · 1 of 28 episodes")).toBeInTheDocument();
-    await userEvent.click(logButton());
-    expect(library.update).toHaveBeenCalledWith("tmdb:anime:1", { progress: 1 });
-  });
-
-  it("re-picks the nearest after the length is edited, and hides the choice on whole episodes", async () => {
+  it("shows the planned length, and this session and what is left in hours", async () => {
     await setup();
-    await userEvent.click(screen.getByRole("button", { name: "Round down · 1 episode" }));
-    await userEvent.clear(minutes());
-    await userEvent.type(minutes(), "70"); // 2.92 -> up
-    expect(screen.getByRole("button", { name: "Round up · 3 episodes" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.clear(minutes());
-    await userEvent.type(minutes(), "96"); // exactly 4
-    expect(screen.queryByRole("group", { name: "Round" })).not.toBeInTheDocument();
-    expect(screen.getByText("+4 episodes · 4 of 28 episodes")).toBeInTheDocument();
+    expect(screen.getByText("Planned: 45 min per session")).toBeInTheDocument();
+    expect(screen.getByText("0.8 h this session · 10.4 h left")).toBeInTheDocument();
+    expect(screen.getByText("Tue, Oct 27")).toBeInTheDocument();
   });
 
-  it("can round a short session down to nothing and say it still counts", async () => {
+  it("updates the hours, progress and finish as the length is edited", async () => {
+    const { library } = await setup();
+    await userEvent.clear(minutes());
+    await userEvent.type(minutes(), "96"); // 4 episodes
+    expect(screen.getByText("1.6 h this session · 9.6 h left")).toBeInTheDocument();
+    expect(screen.getByText("+4 episodes · 4 of 28 episodes")).toBeInTheDocument();
+    expect(screen.queryByText("Tue, Oct 27")).not.toBeInTheDocument();
+    // The plan itself is not changed by logging a longer session.
+    expect(screen.getByText("Planned: 45 min per session")).toBeInTheDocument();
+    await userEvent.click(logButton());
+    expect(library.update).toHaveBeenCalledWith("tmdb:anime:1", { progress: 4 });
+  });
+
+  it("rounds to the nearest episode by itself", async () => {
+    const { library } = await setup();
+    await userEvent.clear(minutes());
+    await userEvent.type(minutes(), "30"); // 1.25
+    expect(screen.getByText("+1 episode · 1 of 28 episodes")).toBeInTheDocument();
+    await userEvent.clear(minutes());
+    await userEvent.type(minutes(), "36"); // 1.5
+    expect(screen.getByText("+2 episodes · 2 of 28 episodes")).toBeInTheDocument();
+    await userEvent.click(logButton());
+    expect(library.update).toHaveBeenCalledWith("tmdb:anime:1", { progress: 2 });
+  });
+
+  it("records nothing for a short session and says it still counts", async () => {
     const { library } = await setup();
     await userEvent.clear(minutes());
     await userEvent.type(minutes(), "5");

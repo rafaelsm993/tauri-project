@@ -43,3 +43,8 @@ export function formatMinutes(minutes: number): string {
   if (h === 0) return `${m} min`;
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
+
+// "1.5 h", "2 h": minutes as hours to one decimal.
+export function formatHours(minutes: number): string {
+  return `${Number((minutes / 60).toFixed(1))} h`;
+}

@@ -1,9 +1,17 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import SessionPicker from "$lib/components/library/SessionPicker.svelte";
   import Sheet from "$lib/components/ui/Sheet.svelte";
   import { DEFAULT_PAGES_PER_HOUR } from "$lib/domain/estimate";
   import { unitLabel } from "$lib/domain/progress";
-  import { defaultMinutes, logPreview } from "$lib/domain/sessionLog";
+  import { defaultMinutes, fullSession, logPreview } from "$lib/domain/sessionLog";
+  import {
+    choiceMinutes,
+    choiceOk,
+    openAt,
+    sessionScale,
+    type SessionChoice,
+  } from "$lib/domain/sessionScale";
   import { libraryStore, type LibraryStore } from "$lib/stores/library.svelte";
   import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
@@ -31,28 +39,29 @@
     reminders?: { logged: (key: string) => void };
   } = $props();
 
-  const MAX_MINUTES = 720;
-  const id = $props.id();
-
   const plan = $derived(entry.user.plan as Plan);
   const pace = $derived(prefs.prefs.reading_pages_per_hour ?? DEFAULT_PAGES_PER_HOUR);
   const type = $derived(entry.snapshot.media_type);
 
-  let minutes = $state<number | null>(
-    untrack(() =>
-      defaultMinutes(
-        entry,
-        entry.user.plan as Plan,
-        today,
-        dueMinutes,
-        prefs.prefs.reading_pages_per_hour ?? DEFAULT_PAGES_PER_HOUR,
-      ),
-    ),
+  const scale = $derived(sessionScale(entry, pace));
+  // A movie logs whole; its runtime only drives the preview.
+  const movie = $derived(type === "movie" ? fullSession(entry) : null);
+  let choice = $state<SessionChoice>(
+    untrack(() => {
+      const startPace = prefs.prefs.reading_pages_per_hour ?? DEFAULT_PAGES_PER_HOUR;
+      const due = defaultMinutes(entry, entry.user.plan as Plan, today, dueMinutes, startPace);
+      const start = sessionScale(entry, startPace);
+      // Units log whole ones anyway, so they open on the nearest; time opens on the exact due minutes.
+      return start
+        ? openAt(start, due, start.kind === "units")
+        : { count: 1, custom: false, typed: due };
+    }),
   );
   let failure = $state("");
 
-  const valid = $derived(minutes !== null && minutes > 0 && minutes <= MAX_MINUTES);
-  const preview = $derived(valid ? logPreview(entry, plan, minutes as number, today, pace) : null);
+  const minutes = $derived(scale ? choiceMinutes(scale, choice) : (movie?.minutes ?? choice.typed));
+  const valid = $derived(scale ? choiceOk(scale, minutes) : minutes > 0);
+  const preview = $derived(valid ? logPreview(entry, plan, minutes, today, pace) : null);
   const busy = $derived(library.isPending(entry.key));
   const units = (n: number) => `${n} ${unitLabel(type, n)}`;
 
@@ -108,25 +117,23 @@
     {/if}
 
     <div class="sheet-block">
-      <label class="field-label" for="{id}-minutes">Session length (minutes)</label>
-      <div class="field-row">
-        <input
-          id="{id}-minutes"
-          class="field-input"
-          type="number"
-          inputmode="numeric"
-          min="1"
-          max={MAX_MINUTES}
-          step="1"
-          bind:value={minutes}
+      <span class="field-label">Session length</span>
+      {#if scale}
+        <SessionPicker
+          {scale}
+          bind:choice
+          label="Session length"
+          pagesPerHour={pace}
           disabled={busy}
         />
-        {#if preview}
-          <span class="field-hours">
-            {formatHours(minutes as number)} this session · {formatHours(preview.remainingMinutes)} left
-          </span>
-        {/if}
-      </div>
+      {:else if movie}
+        <p class="log-movie">{movie.label} · {formatMinutes(movie.minutes)}</p>
+      {/if}
+      {#if preview}
+        <span class="field-hours">
+          {formatHours(minutes)} this session · {formatHours(preview.remainingMinutes)} left
+        </span>
+      {/if}
       <p class="field-hint">Planned: {formatMinutes(plan.max_session_minutes)} per session</p>
     </div>
 
@@ -193,31 +200,10 @@
     letter-spacing: 0.04em;
   }
 
-  .field-input {
-    width: 6rem;
-    background: rgb(var(--clr-ink-rgb) / 0.06);
-    border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
+  .log-movie {
+    font-size: 0.9rem;
+    font-weight: 600;
     color: var(--clr-text);
-    padding: $spacing-xs $spacing-sm;
-    border-radius: $radius-sm;
-    font-size: 0.85rem;
-    font-family: inherit;
-
-    &:focus-visible {
-      outline: 2px solid var(--clr-accent);
-      outline-offset: 1px;
-    }
-
-    @include touch {
-      min-height: $touch-target;
-    }
-  }
-
-  .field-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $spacing-xs $spacing-sm;
   }
 
   .field-hours {

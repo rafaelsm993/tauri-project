@@ -94,7 +94,8 @@ test("Log session on a Library card confirms, then saves the progress", async ({
   await expect(page.getByText("45 min today")).toBeVisible();
   await page.getByRole("button", { name: "Log a session of Frieren" }).click();
   const sheet = page.getByRole("dialog", { name: "Log a session of Frieren" });
-  await expect(sheet.getByLabel("Session length (minutes)")).toHaveValue("45");
+  // 45 planned minutes of 24-minute episodes opens on the nearest whole: 2 episodes.
+  await expect(sheet.getByRole("group", { name: "Session length" })).toContainText("2 episodes");
   // The cursor stays out of the field: on a phone the keyboard would cover the rest.
   await expect(sheet).toBeFocused();
   await expect(sheet).toContainText("+2 episodes · 2 of 28 episodes");
@@ -117,7 +118,7 @@ test("a session on an unplanned day says so and still counts", async ({ page }) 
   await page.getByRole("button", { name: "Log a session of Hades" }).click();
   const sheet = page.getByRole("dialog", { name: "Log a session of Hades" });
   await expect(sheet.getByRole("note")).toContainText("isn't one of the days you planned");
-  await expect(sheet.getByLabel("Session length (minutes)")).toHaveValue("120");
+  await expect(sheet.getByRole("group", { name: "Session length" })).toContainText("2 h");
   await sheet.getByRole("button", { name: "Log session", exact: true }).click();
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
   expect(saved.at(-1)?.args).toMatchObject({ key: HADES.key, patch: { progress: 2 } });
@@ -140,6 +141,8 @@ test("logging the last session completes the item", async ({ page }) => {
   await page.getByRole("button", { name: "Log a session of Dune" }).click();
   const sheet = page.getByRole("dialog", { name: "Log a session of Dune" });
   await expect(sheet).toContainText("this finishes it");
+  // 10 pages left is 20 min: the last session can still be logged under the 30-min floor.
+  await expect(sheet.getByRole("group", { name: "Session length" })).toContainText("≈ 10 pages");
   await sheet.getByRole("button", { name: "Log session", exact: true }).click();
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
   expect(saved.at(-1)?.args).toMatchObject({ patch: { progress: 600, status: "completed" } });
@@ -242,4 +245,18 @@ test("the toast and card buttons are touch-sized and fit", async ({ page, isMobi
   const box = (await reminder(page).locator(".toast").boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+});
+
+test("logging an episode session uses the picker and saves whole episodes", async ({ page }) => {
+  await mockLibrary(page, LIBRARY);
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Log a session of Frieren" }).click();
+  const sheet = page.getByRole("dialog", { name: "Log a session of Frieren" });
+  const picker = sheet.getByRole("group", { name: "Session length" });
+  await picker.getByRole("button", { name: "More episodes" }).click();
+  await expect(picker).toContainText("3 episodes");
+  await expect(sheet).toContainText("+3 episodes · 3 of 28 episodes");
+  await sheet.getByRole("button", { name: "Log session", exact: true }).click();
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ key: FRIEREN.key, patch: { progress: 3 } });
 });

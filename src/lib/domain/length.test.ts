@@ -40,10 +40,20 @@ describe("lengthFromDetail", () => {
     expect(lengthFromDetail("game", detail({ runtime: 74 * 60 })).hours).toBe(74);
   });
 
-  it("never invents minutes per episode, because no provider returns it", () => {
+  it("takes minutes per episode when the catalog publishes them", () => {
+    expect(lengthFromDetail("tv", detail({ episodes: 48, runtime: 24 }))).toEqual(
+      len({ episodes: 48, episode_minutes: 24 }),
+    );
+    expect(lengthFromDetail("anime", detail({ episodes: 12, runtime: 24 })).episode_minutes).toBe(
+      24,
+    );
+  });
+
+  it("leaves minutes per episode empty when the catalog has none", () => {
     expect(
-      lengthFromDetail("tv", detail({ episodes: 24, runtime: 45 })).episode_minutes,
+      lengthFromDetail("tv", detail({ episodes: 42, runtime: null })).episode_minutes,
     ).toBeNull();
+    expect(lengthFromDetail("tv", detail({ episodes: 42, runtime: 0 })).episode_minutes).toBeNull();
   });
 
   it("leaves a book empty, since no provider gives a page count", () => {

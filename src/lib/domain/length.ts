@@ -39,12 +39,15 @@ export function emptyLength(): Length {
 const known = (value: number | null | undefined): number | null =>
   value && value > 0 ? value : null;
 
-// No provider returns minutes per episode or a page count.
+// TMDB's series episode length and AniList's duration arrive as runtime; no provider gives pages.
 export function lengthFromDetail(type: MediaType, detail: MediaDetail | null): Length {
   const length = emptyLength();
   if (!detail) return length;
   if (type === "movie") length.runtime_minutes = known(detail.runtime);
-  if (type === "tv" || type === "anime") length.episodes = known(detail.episodes);
+  if (type === "tv" || type === "anime") {
+    length.episodes = known(detail.episodes);
+    length.episode_minutes = known(detail.runtime);
+  }
   if (type === "manga") length.chapters = known(detail.chapters);
   if (type === "game") {
     const minutes = known(detail.runtime);

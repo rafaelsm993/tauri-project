@@ -80,7 +80,7 @@ test("planning from the library card shows up in the planner", async ({ page }) 
   await page.getByRole("button", { name: "Plan Arcane" }).click();
   const dialog = page.getByRole("dialog", { name: "Plan Arcane" });
   await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Tue" }).click();
-  await dialog.getByRole("button", { name: "45 min" }).click();
+  await dialog.getByRole("button", { name: "More episodes" }).click();
   await expect(dialog).toContainText(/finishes/i);
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toBeHidden();
@@ -97,7 +97,7 @@ test("a new plan for an episode-length item starts at one full episode", async (
   await page.goto("/library");
   await page.getByRole("button", { name: "Plan Arcane" }).click();
   const dialog = page.getByRole("dialog", { name: "Plan Arcane" });
-  await expect(dialog.getByRole("button", { name: "Full episode · 40 min" })).toHaveAttribute(
+  await expect(dialog.getByRole("button", { name: "Full episode 40 min" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -210,7 +210,7 @@ test("a new plan takes the episode length the catalog lists", async ({ page }) =
   const dialog = page.getByRole("dialog", { name: "Plan Tokyo Ghoul" });
   await expect(dialog.getByLabel("Minutes per episode")).toHaveValue("24");
   await expect(dialog.getByText(/filled in from tmdb/i)).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Full episode · 24 min" })).toHaveAttribute(
+  await expect(dialog.getByRole("button", { name: "Full episode 24 min" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -252,4 +252,38 @@ test("the plan marks its missing length as required, in the equipped accent", as
   await expect(field).toHaveCSS("border-top-color", "rgb(163, 80, 12)");
   await field.fill("50");
   await expect(field).not.toHaveCSS("border-top-color", "rgb(163, 80, 12)");
+});
+
+test("an anime plans whole episodes around Full episode, with a quiet Custom", async ({ page }) => {
+  const aot = item(16498, "anime", "Attack on Titan", { episodes: 25, episode_minutes: 24 }, null);
+  await mockLibrary(page, [aot], { seenLevel: 3, prefs: { accent: "ember" } });
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Attack on Titan" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Attack on Titan" });
+  const picker = dialog.getByRole("group", { name: "Up to, per session" });
+  const center = picker.getByRole("button", { name: /^(Full episode|\d+ episodes)/ });
+  await expect(center).toHaveAccessibleName("Full episode 24 min");
+  await expect(picker.getByRole("button", { name: "Fewer episodes" })).toBeDisabled();
+  await picker.getByRole("button", { name: "More episodes" }).click();
+  await picker.getByRole("button", { name: "More episodes" }).click();
+  await expect(center).toHaveAccessibleName("3 episodes 1 h 12 min");
+  await expect(center).toHaveCSS("background-color", "rgb(199, 102, 18)");
+  await expect(center).toHaveCSS("color", "rgb(28, 18, 8)");
+  // Arrows and centre share one row; Custom sits under the right arrow.
+  const box = async (name: string | RegExp) =>
+    (await picker.getByRole("button", { name }).boundingBox())!;
+  const fewerBox = await box("Fewer episodes");
+  const moreBox = await box("More episodes");
+  const customBox = await box("Custom");
+  expect(Math.round(fewerBox.y)).toBe(Math.round(moreBox.y));
+  expect(customBox.y).toBeGreaterThan(moreBox.y + moreBox.height - 1);
+  expect(Math.round(customBox.x + customBox.width)).toBe(Math.round(moreBox.x + moreBox.width));
+  expect(await noOverflow(page)).toBeLessThanOrEqual(0);
+  await picker.getByRole("button", { name: "Custom" }).click();
+  await dialog.getByLabel("Minutes per session").fill("100");
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Sat" }).click();
+  await dialog.getByRole("button", { name: "Save plan" }).click();
+  await expect(dialog).toHaveCount(0);
+  const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
+  expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 100 } } });
 });

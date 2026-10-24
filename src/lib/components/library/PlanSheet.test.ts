@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/svelte";
+import { cleanup, render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import PlanSheet from "./PlanSheet.svelte";
 import { emptyLength } from "$lib/domain/length";
@@ -57,6 +57,12 @@ function setup(over: Record<string, unknown> = {}) {
 
 const day = (name: RegExp) =>
   within(screen.getByRole("group", { name: /days/i })).getByRole("button", { name });
+const sessionGroup = () => screen.getByRole("group", { name: "Up to, per session" });
+const center = () =>
+  within(sessionGroup()).getByRole("button", { name: /^(Full episode|\d+ episodes)/ });
+const more = () => screen.getByRole("button", { name: "More episodes" });
+const fewer = () => screen.getByRole("button", { name: "Fewer episodes" });
+const customBtn = () => within(sessionGroup()).getByRole("button", { name: "Custom" });
 
 describe("PlanSheet", () => {
   it("offers the seven days as toggles and cannot save without one", async () => {
@@ -83,23 +89,19 @@ describe("PlanSheet", () => {
     await userEvent.click(day(/mon/i));
     await userEvent.click(day(/wed/i));
     await userEvent.click(day(/fri/i));
-    await userEvent.click(screen.getByRole("button", { name: "1 h" }));
     expect(
-      screen.getByText("8 sessions of about 56 min · finishes Mon, Oct 19"),
+      screen.getByText("10 sessions of about 45 min · finishes Fri, Oct 23"),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "2 h" }));
+    await userEvent.click(more());
     expect(
-      screen.getByText("4 sessions of about 1 h 53 min · finishes Fri, Oct 9"),
+      screen.getByText("5 sessions of about 1 h 30 min · finishes Mon, Oct 12"),
     ).toBeInTheDocument();
   });
 
   it("starts a new plan at one full episode when its length is known", async () => {
     const { onsave } = setup();
-    expect(screen.getByRole("button", { name: "Full episode · 45 min" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "1 h" })).toHaveAttribute("aria-pressed", "false");
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
+    expect(center()).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(day(/mon/i));
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(45);
@@ -116,47 +118,103 @@ describe("PlanSheet", () => {
     expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(60);
   });
 
-  it("Custom turns Full off, and Full can be picked again", async () => {
+  it("Custom turns the episode picker off, and the centre turns it back on", async () => {
     setup();
-    const full = screen.getByRole("button", { name: "Full episode · 45 min" });
-    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
-    expect(full).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(full);
-    expect(full).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Custom" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(customBtn());
+    expect(center()).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(center());
+    expect(center()).toHaveAttribute("aria-pressed", "true");
+    expect(customBtn()).toHaveAttribute("aria-pressed", "false");
   });
 
   it("follows the per-episode minutes typed in the sheet until a length is picked", async () => {
     setup({ entry: entry("anime", { episodes: 12 }) });
     expect(screen.queryByRole("button", { name: /^Full episode/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "1 h" })).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByText("Add the minutes per episode above to pick a session."),
+    ).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText("Minutes per episode"), "24");
-    expect(screen.getByRole("button", { name: "Full episode · 24 min" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(center()).toHaveAccessibleName("Full episode 24 min");
+    expect(center()).toHaveAttribute("aria-pressed", "true");
   });
 
   it("opens an existing one-episode plan on Full", () => {
     const plan: Plan = { days: [0], max_session_minutes: 45, since: "2026-09-28" };
     setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, plan) });
-    expect(screen.getByRole("button", { name: "Full episode · 45 min" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
+    expect(center()).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("an existing plan of another length keeps it", () => {
-    const plan: Plan = { days: [0], max_session_minutes: 90, since: "2026-09-28" };
-    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, plan) });
-    expect(screen.getByRole("button", { name: "Full episode · 45 min" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    expect(screen.getByRole("button", { name: "1 h 30 min" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+  it("centres one full episode and steps a show by whole episodes, never below one", async () => {
+    const { onsave } = setup();
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
+    expect(fewer()).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "1 h" })).not.toBeInTheDocument();
+    await userEvent.click(more());
+    expect(center()).toHaveAccessibleName("2 episodes 1 h 30 min");
+    await userEvent.click(fewer());
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
+    await userEvent.click(more());
+    await userEvent.click(day(/mon/i));
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(90);
+  });
+
+  it("the centre button goes back to one full episode", async () => {
+    setup();
+    await userEvent.click(more());
+    await userEvent.click(more());
+    await userEvent.click(center());
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
+  });
+
+  it("stops at the episodes left and at 12 hours", async () => {
+    setup({ entry: entry("tv", { episodes: 3, episode_minutes: 45 }, null, 1) });
+    await userEvent.click(more());
+    expect(more()).toBeDisabled();
+    cleanup();
+    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 300 }) });
+    await userEvent.click(more());
+    expect(center()).toHaveAccessibleName("2 episodes 10 h");
+    expect(more()).toBeDisabled();
+  });
+
+  it("Custom takes any minutes from one episode up, and the arrows take over again", async () => {
+    const { onsave } = setup();
+    await userEvent.click(customBtn());
+    expect(customBtn()).toHaveAttribute("aria-pressed", "true");
+    expect(center()).toHaveAttribute("aria-pressed", "false");
+    const input = screen.getByLabelText("Minutes per session");
+    expect(input).toHaveAttribute("min", "45");
+    await userEvent.click(day(/mon/i));
+    await userEvent.clear(input);
+    await userEvent.type(input, "30");
+    expect(screen.getByText("At least one episode (45 min).")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
+    await userEvent.clear(input);
+    await userEvent.type(input, "100");
+    await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
+    expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(100);
+    await userEvent.click(more());
+    expect(screen.queryByLabelText("Minutes per session")).not.toBeInTheDocument();
+    expect(center()).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("opens an existing plan on its episodes, or on Custom when it is not whole episodes", () => {
+    const two: Plan = { days: [0], max_session_minutes: 90, since: "2026-09-28" };
+    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, two) });
+    expect(center()).toHaveAccessibleName("2 episodes 1 h 30 min");
+    cleanup();
+    const odd: Plan = { days: [0], max_session_minutes: 60, since: "2026-09-28" };
+    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, odd) });
+    expect(customBtn()).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Minutes per session")).toHaveValue(60);
+    cleanup();
+    const short: Plan = { days: [0], max_session_minutes: 15, since: "2026-09-28" };
+    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, short) });
+    expect(center()).toHaveAccessibleName("Full episode 45 min");
+    expect(center()).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByLabelText("Minutes per session")).not.toBeInTheDocument();
   });
 
   describe("with a length from the catalog", () => {
@@ -167,10 +225,8 @@ describe("PlanSheet", () => {
       const { onsave } = setup({ entry: NEW_TV, found: FOUND });
       expect(screen.getByLabelText("Minutes per episode")).toHaveValue(24);
       expect(screen.getByText(/filled in from tmdb/i)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Full episode · 24 min" })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
+      expect(center()).toHaveAccessibleName("Full episode 24 min");
+      expect(center()).toHaveAttribute("aria-pressed", "true");
       await userEvent.click(day(/tue/i));
       await userEvent.click(screen.getByRole("button", { name: "Save plan" }));
       expect(onsave.mock.calls[0][0].length).toMatchObject({ episodes: 48, episode_minutes: 24 });
@@ -223,7 +279,6 @@ describe("PlanSheet", () => {
     const { onsave } = setup();
     await userEvent.click(day(/sat/i));
     await userEvent.click(day(/tue/i));
-    await userEvent.click(screen.getByRole("button", { name: "45 min" }));
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave).toHaveBeenCalledWith({
       plan: { days: [1, 5], max_session_minutes: 45, since: TODAY },
@@ -233,7 +288,7 @@ describe("PlanSheet", () => {
   });
 
   it("takes a custom session length between 5 and 720 minutes", async () => {
-    const { onsave } = setup();
+    const { onsave } = setup({ entry: entry("game", { hours: 20 }) });
     await userEvent.click(day(/mon/i));
     await userEvent.click(screen.getByRole("button", { name: /custom/i }));
     const input = screen.getByLabelText(/minutes per session/i);
@@ -317,7 +372,7 @@ describe("PlanSheet", () => {
 
   it("editing a plan says how the finish line moves, never that you are behind", async () => {
     const plan: Plan = { days: [0, 2, 4], max_session_minutes: 120, since: "2026-09-28" };
-    setup({ entry: entry("tv", { episodes: 10, episode_minutes: 45 }, plan) });
+    setup({ entry: entry("tv", { episodes: 8, episode_minutes: 60 }, plan) });
     expect(day(/wed/i)).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/same finish date/i)).toBeInTheDocument();
     await userEvent.click(day(/fri/i));

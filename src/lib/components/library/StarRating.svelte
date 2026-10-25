@@ -144,9 +144,8 @@
     // The pale accent of a lit star's glint and its twinkle.
     --glint: color-mix(in srgb, var(--clr-accent) 35%, rgb(var(--clr-glint-rgb)));
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: $spacing-sm;
-    flex-wrap: wrap;
   }
 
   // Equal cells with no gap between them, so a point's x maps straight to its half star.
@@ -209,7 +208,7 @@
     font-size: 0.85rem;
     color: var(--clr-text-2);
     font-variant-numeric: tabular-nums;
-    min-width: 8.5em; // "10 · Masterpiece" doesn't push the stars around
+    text-align: center;
   }
 
   // ── The burst (Animations on only): a stepped pop, four square sparks, a plus-shaped twinkle. ──

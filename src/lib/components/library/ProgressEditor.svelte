@@ -481,11 +481,12 @@
     }
   }
 
+  // Centred in the card: the label, then the stars, then their word.
   .rating-field {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: $spacing-sm;
-    flex-wrap: wrap;
+    gap: $spacing-xs;
   }
 
   .sr {

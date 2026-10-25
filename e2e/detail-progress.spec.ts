@@ -194,3 +194,17 @@ test("lit stars take the equipped accent", async ({ page }) => {
     ]);
   expect(body).toBe(`rgb(${accent.split(/\s+/).join(", ")})`);
 });
+
+test("the rating sits centred in the card, its word centred under the stars", async ({ page }) => {
+  await open(page, 5, "in_progress");
+  await rating(page).focus();
+  await page.keyboard.press("End");
+  const card = (await page.locator(".progress-card").boundingBox())!;
+  const stars = (await rating(page).boundingBox())!;
+  const word = (await page.locator(".rating-word").boundingBox())!;
+  const mid = (b: { x: number; width: number }) => b.x + b.width / 2;
+  expect(Math.abs(mid(stars) - mid(card))).toBeLessThanOrEqual(2);
+  expect(Math.abs(mid(word) - mid(stars))).toBeLessThanOrEqual(2);
+  expect(word.y).toBeGreaterThanOrEqual(stars.y + stars.height - 1);
+  await expect(page.locator(".rating-word")).toHaveCSS("text-align", "center");
+});

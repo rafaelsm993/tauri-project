@@ -17,7 +17,7 @@ pub struct Side<'a> {
     pub updated_at: &'a str,
 }
 
-// The user's data after a merge; catalog length only fills what nobody typed.
+// Catalog length wins; saved catalog fields fill its blanks before manual fields.
 pub fn merge_user(
     media_type: MediaType,
     manual: Side,
@@ -30,11 +30,10 @@ pub fn merge_user(
         None => (manual, None),
     };
     let old = older.map(|s| s.user);
-    let typed = match old {
-        Some(o) => fill(&newer.user.length, &o.length),
-        None => newer.user.length,
-    };
-    let user = UserData {
+    let saved = existing.map_or(manual.user.length, |e| {
+        fill(&e.user.length, &manual.user.length)
+    });
+    let mut user = UserData {
         status: old.map_or(newer.user.status, |o| status(newer.user.status, o.status)),
         progress: old.map_or(0, |o| o.progress).max(newer.user.progress),
         rating: newer.user.rating.or(old.and_then(|o| o.rating)),
@@ -43,10 +42,10 @@ pub fn merge_user(
             .review
             .clone()
             .or(old.and_then(|o| o.review.clone())),
-        length: fill(&typed, catalog),
+        length: fill(catalog, &saved),
         plan: newer.user.plan.clone().or(old.and_then(|o| o.plan.clone())),
     };
-    check_progress(media_type, &user, &typed)?;
+    cap_progress(media_type, &mut user);
     Ok(user)
 }
 
@@ -77,29 +76,24 @@ fn status(newer: Status, older: Status) -> Status {
     }
 }
 
-// The length field progress counts against, with its unit; a movie is only watched or not.
-fn total(media_type: MediaType, length: &Length) -> Option<(Option<u32>, &'static str)> {
+// The length field progress counts against; a movie is only watched or not.
+fn total(media_type: MediaType, length: &Length) -> Option<u32> {
     match media_type {
         MediaType::Movie => None,
-        MediaType::Tv | MediaType::Anime => Some((length.episodes, "episodes")),
-        MediaType::Manga => Some((length.chapters, "chapters")),
-        MediaType::Book => Some((length.pages, "pages")),
-        MediaType::Game => Some((length.hours, "hours")),
+        MediaType::Tv | MediaType::Anime => length.episodes,
+        MediaType::Manga => length.chapters,
+        MediaType::Book => length.pages,
+        MediaType::Game => length.hours,
     }
 }
 
-// Only a catalog length can cut progress short; a length the user typed is theirs to keep.
-fn check_progress(media_type: MediaType, user: &UserData, typed: &Length) -> Result<(), String> {
-    if total(media_type, typed).is_some_and(|(n, _)| n.is_some()) {
-        return Ok(());
-    }
-    match total(media_type, &user.length) {
-        Some((Some(n), unit)) if user.progress > n => Err(format!(
-            "Your progress ({} {unit}) is past this match's length ({n}). \
-             Add the length first, or pick another match.",
-            user.progress
-        )),
-        _ => Ok(()),
+// Progress beyond the winning total finishes at that total.
+fn cap_progress(media_type: MediaType, user: &mut UserData) {
+    if let Some(n) = total(media_type, &user.length) {
+        if user.progress > n {
+            user.progress = n;
+            user.status = Status::Completed;
+        }
     }
 }
 
@@ -293,22 +287,41 @@ mod tests {
     }
 
     #[test]
-    fn a_typed_length_stays_and_empty_fields_take_the_catalogs() {
+    fn the_catalogs_length_wins_and_the_manual_one_fills_its_blanks() {
         let mine = UserData {
             length: Length {
-                pages: Some(400),
+                chapters: Some(300),
+                chapter_minutes: Some(22),
                 ..Length::default()
             },
             ..user(Status::InProgress, 10)
         };
         let catalog = Length {
-            pages: Some(320),
-            hours: Some(9),
+            chapters: Some(380),
             ..Length::default()
         };
-        let out = merge_user(MediaType::Book, side(&mine, "t1"), None, &catalog).unwrap();
-        assert_eq!(out.length.pages, Some(400));
-        assert_eq!(out.length.hours, Some(9));
+        let out = merge_user(MediaType::Manga, side(&mine, "t1"), None, &catalog).unwrap();
+        assert_eq!(out.length.chapters, Some(380));
+        assert_eq!(out.length.chapter_minutes, Some(22));
+    }
+
+    #[test]
+    fn a_typed_length_gives_way_to_the_catalogs() {
+        let mine = UserData {
+            length: Length {
+                episodes: Some(300),
+                ..Length::default()
+            },
+            ..user(Status::InProgress, 3)
+        };
+        let catalog = Length {
+            episodes: Some(25),
+            episode_minutes: Some(25),
+            ..Length::default()
+        };
+        let out = merge_user(MediaType::Anime, side(&mine, "t1"), None, &catalog).unwrap();
+        assert_eq!(out.length, catalog);
+        assert_eq!((out.status, out.progress), (Status::InProgress, 3));
     }
 
     #[test]
@@ -330,23 +343,34 @@ mod tests {
     }
 
     #[test]
-    fn progress_past_the_catalogs_length_is_refused() {
-        let mine = user(Status::InProgress, 380);
-        let err = merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).unwrap_err();
+    fn progress_past_the_catalogs_length_stops_at_the_end_and_finishes_it() {
+        let mine = UserData {
+            length: pages(400),
+            ..user(Status::InProgress, 380)
+        };
+        let out = merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).unwrap();
         assert_eq!(
-            err,
-            "Your progress (380 pages) is past this match's length (320). \
-             Add the length first, or pick another match."
+            (out.status, out.progress, out.length.pages),
+            (Status::Completed, 320, Some(320))
         );
     }
 
     #[test]
-    fn progress_past_a_length_the_user_typed_is_not_the_catalogs_problem() {
-        let mine = UserData {
-            length: pages(300),
-            ..user(Status::InProgress, 380)
+    fn progress_within_the_length_keeps_its_status() {
+        let mine = user(Status::InProgress, 320);
+        let out = merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).unwrap();
+        assert_eq!((out.status, out.progress), (Status::InProgress, 320));
+    }
+
+    #[test]
+    fn a_movie_has_no_length_to_cap_against() {
+        let mine = user(Status::Completed, 1);
+        let runtime = Length {
+            runtime_minutes: Some(116),
+            ..Length::default()
         };
-        assert!(merge_user(MediaType::Book, side(&mine, "t1"), None, &pages(320)).is_ok());
+        let out = merge_user(MediaType::Movie, side(&mine, "t1"), None, &runtime).unwrap();
+        assert_eq!((out.status, out.progress), (Status::Completed, 1));
     }
 
     #[test]
@@ -464,20 +488,42 @@ mod tests {
     }
 
     #[test]
-    fn combining_keeps_a_length_either_side_typed_before_the_catalogs() {
-        let mine = user(Status::Planning, 0);
-        let theirs = UserData {
-            length: pages(410),
+    fn combining_takes_the_catalog_then_the_saved_entry_then_the_manual_one() {
+        let mine = UserData {
+            length: Length {
+                pages: Some(500),
+                hours: Some(12),
+                runtime_minutes: Some(90),
+                ..Length::default()
+            },
             ..user(Status::Planning, 0)
         };
-        let out = merge_user(
-            MediaType::Book,
-            side(&mine, "t2"),
-            Some(side(&theirs, "t1")),
-            &pages(320),
-        )
-        .unwrap();
-        assert_eq!(out.length.pages, Some(410));
+        let saved = UserData {
+            length: Length {
+                pages: Some(410),
+                hours: Some(9),
+                ..Length::default()
+            },
+            ..user(Status::Planning, 0)
+        };
+        for (mine_at, saved_at) in [("t2", "t1"), ("t1", "t2")] {
+            let out = merge_user(
+                MediaType::Book,
+                side(&mine, mine_at),
+                Some(side(&saved, saved_at)),
+                &pages(320),
+            )
+            .unwrap();
+            assert_eq!(
+                (
+                    out.length.pages,
+                    out.length.hours,
+                    out.length.runtime_minutes
+                ),
+                (Some(320), Some(9), Some(90)),
+                "mine at {mine_at}"
+            );
+        }
     }
 
     #[test]

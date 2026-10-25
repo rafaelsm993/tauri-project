@@ -774,12 +774,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_refused_merge_writes_nothing_and_logs_nothing() {
-        let dir = scratch("f3-refused");
+    async fn progress_past_length_is_capped_in_preview_and_saved_merge() {
+        let dir = scratch("f3-capped");
         let state = state_in(&dir);
         let key = manual_book(&state, 380).await;
-        let before = saved(&dir);
-        let err = merge(
+        let preview = merge_preview(&state, &key, &piranesi(), &pages(320))
+            .await
+            .unwrap();
+        let entry = merge(
             &state,
             &key,
             &piranesi(),
@@ -787,10 +789,13 @@ mod tests {
             ev("library_merge", &key, "m", "t2"),
         )
         .await
-        .unwrap_err();
-        assert!(err.starts_with("Your progress (380 pages)"), "{err}");
-        assert_eq!(saved(&dir), before);
-        assert_eq!(events_in(&dir).len(), 1, "only the add");
+        .unwrap();
+        assert_eq!(entry.user.progress, 320);
+        assert_eq!(entry.user.status, Status::Completed);
+        assert_eq!(preview.entry.snapshot, entry.snapshot);
+        assert_eq!(preview.entry.user, entry.user);
+        assert_eq!(saved(&dir).entries[PIRANESI], entry);
+        assert_eq!(events_in(&dir).len(), 2);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

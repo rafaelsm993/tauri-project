@@ -14,7 +14,7 @@
   import { errorMessage } from "$lib/utils/errors";
   import { latest } from "$lib/utils/latest";
   import type { Length } from "$lib/types/library";
-  import type { MediaItem } from "$lib/types/media";
+  import type { MediaDetail, MediaItem } from "$lib/types/media";
 
   const MAX_RESULTS = 8;
 
@@ -30,7 +30,12 @@
   let searching = $state(false);
   let searchError = $state("");
   let searched = $state(false);
-  let picked = $state<{ item: MediaItem; length: Length; result: PreviewResult } | null>(null);
+  let picked = $state<{
+    item: MediaItem;
+    detail: MediaDetail | null;
+    length: Length;
+    result: PreviewResult;
+  } | null>(null);
   let picking = $state(false);
   let saving = $state(false);
   let saveError = $state("");
@@ -63,19 +68,12 @@
     const isCurrent = beginPick();
     picking = true;
     saveError = "";
-    let length = lengthFromDetail(item.media_type, null);
-    try {
-      length = lengthFromDetail(
-        item.media_type,
-        await catalog.fetchDetail(item.media_type, String(item.id)),
-      );
-    } catch {
-      // Without details the catalog fills no length; the merge still works.
-    }
-    const result = await library.preview(mine.key, item, length);
+    const detail = await catalog.fetchDetail(item.media_type, String(item.id)).catch(() => null);
+    const length = lengthFromDetail(item.media_type, detail);
+    const result = await library.preview(mine.key, item, length, detail);
     if (!isCurrent()) return;
     picking = false;
-    picked = { item, length, result };
+    picked = { item, detail, length, result };
   }
 
   function backToResults() {
@@ -89,7 +87,7 @@
     if (!mine || !picked) return;
     saving = true;
     saveError = "";
-    const saved = await library.merge(mine.key, picked.item, picked.length);
+    const saved = await library.merge(mine.key, picked.item, picked.length, picked.detail);
     saving = false;
     if (saved) match.merged(saved);
     else saveError = library.error || "Couldn't use this match.";
@@ -138,7 +136,9 @@
       {#if picked}
         <MatchCompare
           item={picked.item}
-          kept={picked.result.ok ? picked.result.preview.entry : mine}
+          {mine}
+          merged={picked.result.ok ? picked.result.preview.entry : mine}
+          posterDir={library.posterDir}
           combined={picked.result.ok && picked.result.preview.combined}
         />
         {#if !picked.result.ok}

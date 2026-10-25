@@ -59,9 +59,8 @@ test.describe("find a match", () => {
   test("Use this lands on the catalog page, and one Back leaves it", async ({ page }) => {
     await openManualPage(page);
     await pickFirst(page);
-    await expect(sheet(page).getByRole("region", { name: "Yours, kept" })).toContainText(
-      "Planning",
-    );
+    await expect(sheet(page).getByRole("list", { name: "What changes" })).toContainText("2020");
+    await expect(sheet(page).getByText(/^Kept as is:.*Status/)).toBeVisible();
     await sheet(page).getByRole("button", { name: "Use this" }).click();
 
     await expect(page).toHaveURL(/\/media\/book\/42$/);

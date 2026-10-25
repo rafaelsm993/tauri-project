@@ -591,23 +591,32 @@ test.describe("find a match", () => {
     await expect(sheet.getByRole("button", { name: "Use this" })).toBeVisible();
     expect(await overflow(), "compare step wider than the sheet").toBeLessThanOrEqual(0);
     if (isMobile) expect(await small(), "compare step controls under 44 px").toEqual([]);
+    // Each old and new value wraps between words, never inside one.
     const split = await sheet
-      .getByRole("region", { name: "Yours, kept" })
-      .locator("dd")
-      .evaluateAll((dds) =>
-        dds
-          .filter((dd) => {
+      .getByRole("list", { name: "What changes" })
+      .locator(".before, .after")
+      .evaluateAll((els) =>
+        els
+          .map((el) => {
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            let last: Text | null = null;
+            for (let n = walker.nextNode(); n; n = walker.nextNode())
+              if (
+                n.textContent!.trim() &&
+                !(n.parentElement as HTMLElement).classList.contains("sr")
+              )
+                last = n as Text;
+            if (!last) return null;
+            const word = last.textContent!.trim().split(" ")[0];
+            const at = last.textContent!.indexOf(word);
             const range = document.createRange();
-            const text = dd.firstChild!;
-            const word = dd.textContent!.trim().split(" ")[0];
-            const at = dd.textContent!.indexOf(word);
-            range.setStart(text, at);
-            range.setEnd(text, at + word.length);
-            return range.getClientRects().length > 1;
+            range.setStart(last, at);
+            range.setEnd(last, at + word.length);
+            return range.getClientRects().length > 1 ? el.textContent : null;
           })
-          .map((dd) => dd.textContent),
+          .filter(Boolean),
       );
-    expect(split, "a kept value broken inside a word").toEqual([]);
+    expect(split, "a compared value broken inside a word").toEqual([]);
   });
 });
 

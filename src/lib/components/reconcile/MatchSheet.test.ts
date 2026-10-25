@@ -142,19 +142,41 @@ describe("MatchSheet", () => {
     expect(await screen.findByRole("button", { name: /^Piranesi 1\b/ })).toBeInTheDocument();
   });
 
-  it("compares a picked result with what the user keeps, using the catalog's length", async () => {
+  it("shows yours → the catalog's, lists what changes and what stays", async () => {
     const detail = { media_type: "book", runtime: null } as unknown as MediaDetail;
     const s = setup({ fetchDetail: vi.fn(async () => detail) });
     await opened(s);
     await s.user.click(await screen.findByRole("button", { name: /^Piranesi 1\b/ }));
-    const catalogSide = await screen.findByRole("region", { name: "Catalog" });
-    expect(catalogSide).toHaveTextContent("Piranesi 1");
-    expect(catalogSide).toHaveTextContent("2020");
-    const kept = screen.getByRole("region", { name: "Yours, kept" });
-    expect(kept).toHaveTextContent("In progress");
-    expect(kept).toHaveTextContent("40 of 272 pages");
-    expect(kept).toHaveTextContent("8/10");
+    const changes = await screen.findByRole("list", { name: "What changes" });
+    const rows = within(changes).getAllByRole("listitem");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Year");
+    expect(rows[0]).toHaveTextContent("was empty");
+    expect(rows[0]).toHaveTextContent("now 2020");
+    expect(
+      screen.getByText("Kept as is: Title, Pages, Status, Progress, Rating"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Apple Books")).toBeInTheDocument();
+    expect(screen.getByText("Piranesi 1")).toBeInTheDocument();
     expect(s.catalog.fetchDetail).toHaveBeenCalledWith("book", "1");
+  });
+
+  it("says when progress stopped at the new end and the item finished", async () => {
+    const capped = {
+      ...MERGED,
+      user: {
+        ...MERGED.user,
+        status: "completed",
+        progress: 30,
+        length: { ...emptyLength(), pages: 30 },
+      },
+    } as LibraryEntry;
+    const s = setup({}, { mergePreview: vi.fn(async () => ({ entry: capped, combined: false })) });
+    await opened(s);
+    await s.user.click(await screen.findByRole("button", { name: /^Piranesi 1\b/ }));
+    expect(
+      await screen.findByText(/stops at the end and the item is marked Completed/),
+    ).toBeInTheDocument();
   });
 
   it("warns that an item already in the library will be combined", async () => {
@@ -165,7 +187,7 @@ describe("MatchSheet", () => {
   });
 
   it("shows the reason in place of Use this when the match would be refused", async () => {
-    const reason = "Your progress (380 pages) is past this match's length (320).";
+    const reason = "a match must be the same type";
     const s = setup(
       {},
       {
@@ -197,9 +219,32 @@ describe("MatchSheet", () => {
     await s.user.click(await screen.findByRole("button", { name: /^Piranesi 1\b/ }));
     await s.user.click(await screen.findByRole("button", { name: "Use this" }));
     await vi.waitFor(() => expect(merged).toHaveBeenCalledWith(MERGED));
-    expect(merge).toHaveBeenCalledWith(KEY, hit(1), emptyLength());
+    expect(merge).toHaveBeenCalledWith(KEY, hit(1), emptyLength(), { media_type: "book" });
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(s.library.get(MERGED.key)).toEqual(MERGED);
+  });
+
+  it("uses the same fetched metadata for preview and saving", async () => {
+    const detail = {
+      media_key: "itunes:book:1",
+      media_type: "book",
+      title: "Catalog title",
+      overview: "Fresh catalog overview",
+      author: "Catalog author",
+      genres: [{ id: 1, name: "Fantasy" }],
+      platforms: ["Library"],
+      poster_path: "https://example.com/poster.jpg",
+      runtime: null,
+    } as MediaDetail;
+    const preview = vi.fn(async () => ({ entry: MERGED, combined: false }));
+    const merge = vi.fn(async () => MERGED);
+    const s = setup({ fetchDetail: vi.fn(async () => detail) }, { mergePreview: preview, merge });
+    await opened(s);
+    await s.user.click(await screen.findByRole("button", { name: /^Piranesi 1\b/ }));
+    expect(preview).toHaveBeenCalledWith(KEY, hit(1), emptyLength(), detail);
+    await s.user.click(screen.getByRole("button", { name: "Use this" }));
+    expect(merge).toHaveBeenCalledWith(KEY, hit(1), emptyLength(), detail);
+    expect(s.catalog.fetchDetail).toHaveBeenCalledOnce();
   });
 
   it("keeps the sheet open with the reason when the merge fails", async () => {

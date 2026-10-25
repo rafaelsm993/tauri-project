@@ -222,6 +222,26 @@ under `[data-theme="light"]` and, for `system`, under `prefers-color-scheme: lig
 `AevumSystemBars` bridge from `MainActivity.kt` so the status and navigation bar icons turn dark on
 the light theme.
 
+## Profile artwork (completion crests)
+
+- Files: `src/lib/domain/profileArt.ts`, `src/lib/components/profile/ProfileArtwork.svelte`,
+  `src/lib/components/settings/ProfileArtworkSection.svelte`
+
+The shared renderer and the Settings grid for 30 original pixel crests earned by completion.
+
+- `ProfileArtwork` — props `art: string`, `size?: 24 | 32` (default 32), `scale?: 1 | 2 | 3 | 4`,
+  `decorative?`. Draws one crest as unit-square `<path>`s (no curves or fractional geometry) with
+  `shape-rendering="crispEdges"`; native 24 px in the nav and a 32 px base × 2 in the Profile card.
+  The five tones (`.outline` `.shade` `.body` `.accent` `.glint`) all mix `--clr-primary` with the
+  theme's `--clr-shade-rgb` / `--clr-highlight-rgb`, so a live accent change repaints every use.
+  Decorative use sets `aria-hidden`; otherwise `role="img"` with `"<name> artwork"` as its label.
+- `profileArt.ts` derives `PROFILE_ART` from the same completion requirements as everything else
+  (six media × five tiers of 1 / 5 / 10 / 25 / 50 completed; no competing catalogue), with a
+  distinct native 24 and 32 grid per media and five ornament tiers layered on a tier-1 silhouette.
+- `ProfileArtworkSection` (mounted in `ThemeSection`, on Settings) lists Default plus all 30 crests
+  grouped by media, each with its completed count and the level it needs; a locked crest previews
+  but cannot be equipped, and a saved-but-now-locked choice explains itself and falls back to Default.
+
 ## AppHeader
 
 - File: `src/lib/components/ui/AppHeader.svelte`
@@ -240,5 +260,7 @@ One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling d
 - The level ring sits on the Profile tab, whose name becomes "Profile · Level N"; Settings is a
   link in the Profile header. (The desktop `LevelChip` was removed with the sticky header.)
 - `ui/LevelRing.svelte` — the decorative ring.
+- When a completion crest is equipped, a decorative 24 px `ProfileArtwork` replaces the Profile
+  glyph; the level ring and the "Profile · Level N" name stay.
 - Fixed overlays (OfflineBanner, BackToTop, toasts) add `var(--nav-bottom)` / `var(--nav-left)`,
   set on `:root` by the layout, so they stay clear of the navigation.

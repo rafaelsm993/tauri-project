@@ -84,7 +84,7 @@ Reminders (`src/lib/domain/reminders.ts`, `src/lib/stores/reminders.svelte.ts`) 
 | --- | --- | --- |
 | `startup_status` | — | `StartupProblem \| null` |
 
-`prefs.json` is schema v2: v1's `background_animation` became `motion` (one switch for every decorative animation); a v1 file or backup is upgraded on load and the old field name is refused in a `prefs_update` patch. An older build opening a v2 file shows the newer-version screen below.
+`prefs.json` is schema v2: v1's `background_animation` became `motion` (one switch for every decorative animation); a v1 file or backup is upgraded on load and the old field name is refused in a `prefs_update` patch. The same v2 file also stores `title` (`automatic` or a chosen title id) and `profile_art` (`default` or a chosen crest id): each accepts a shaped string, rejects a blank or one over 80 characters, and a well-formed but unknown value is kept as the stored selection and resolved to a safe fallback by the frontend — never rewritten on its own. An older build opening a v2 file shows the newer-version screen below.
 
 If `library.json` or `prefs.json` is from a newer app or cannot be read, setup keeps the file untouched, skips the library and prefs state, and the root layout shows `StartupProblem.svelte` (why, the data folder, a copy button) instead of the app.
 

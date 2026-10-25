@@ -7,6 +7,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Equipment (accent, theme, title and profile artwork) is chosen in Settings now; the Profile's old Achievements section is gone. Each reward lists the level it needs, and a locked reward still shows its palette or crest without being equippable.
+- A reward's eligibility follows your **current** level and completed counts, not the highest level you have ever seen: stop meeting a requirement and its reward, title or artwork falls back to Default, then returns by itself the moment it is earned again. `seen_level` only stops a level-up toast from repeating.
 - An item's status follows its progress: 0 is Planning, partway is In progress, the last unit is Completed (lowering it un-completes; a movie is Completed when marked Watched). Adding still saves as Planning and logging sessions moves it the same way. The detail page's status chips are gone: on a phone they cut off Completed and Dropped.
 - The detail page's progress card: a big "87 / 232 chapters" count, a status badge, − / + and Edit length, and a pixel-art boss health bar in the equipped accent that you drag or tap to jump; its empty side has diagonal stripes that scroll only while Animations is on. Rating is five pixel-art stars (after Terraria's Fallen Star) in the equipped accent, a point per half star: tap one, swipe across them, or use the keys; tap the current value again to clear it; centred, with the word under them ("8 · Great"); a pixel pop, square sparks and a twinkle play on a raise when Animations is on.
 - Plan / Edit plan, Log session, Drop / Resume and Remove sit in one icon bar at the bottom of the detail page (fixed above the tab bar on a phone). Resume returns a dropped item to what its progress says; Plan and Log session wait while it is dropped, and Log session needs a plan.
@@ -14,6 +16,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Renamed from the `tauri-app` placeholder to **Aevum** (Latin: an age, a lifetime); bundle identifier `com.user.tauri-app` → `com.rafaelsm993.aevum`. The Android project was regenerated for the new package; a device with the old debug APK must reinstall.
 
 ### Added
+- Profile artwork: 30 original pixel crests — movies, TV, anime, manga, books and games, five tiers each at 1 / 5 / 10 / 25 / 50 completed — recoloured by the equipped accent, previewed and equipped from Settings. The equipped crest replaces the Profile glyph in the bottom navigation and sits beside the level ring on the Profile card; a saved crest that stops being earned falls back to Default and returns automatically when re-earned.
+- Titles you have earned are selectable from Settings ("Automatic" keeps the level's own title); each locked title lists the level it needs.
 - One session picker for the Plan and Log session sheets: `‹ [centre] ›` with a quiet **Custom** that types minutes straight into the centre and shows what they are worth in units and time ("6 chapters · 2 h", "≈ 3 chapters · 50 min", "≈ 25 pages · 50 min"). TV, anime and manga step by whole episodes or chapters (never below one, at most 12 h or what is left); books and games step by 30 min, floor 30 min unless the item or what is left is shorter; movies keep their presets in Plan and log as one "Full movie". Existing plans open on their whole steps, or on Custom with their exact minutes.
 - Log session from a Library card or Home's Continue row: it opens on today's planned session without raising the phone keyboard, shows what it adds and what is left (in hours), rounds to whole units by itself, starts a planned item and finishes it on its last unit. Today's sessions lead Continue (the separate Today strip is gone); the cover icon plans an item.
 - Plans start at one full movie, episode or chapter; a new plan fills a missing episode length from the catalog (TMDB/AniList `runtime`, never a single episode's), says where it came from, and marks the length fields it needs as **Required**. When the catalog has no length, the detail page and the Plan sheet say so and why it matters, with an "Add length" button on the detail page.
@@ -47,6 +51,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Taps reach cards showing through the collapsed header's gap; the header pins below the Android status bar.
 
 ### Removed
+- The Profile's Achievements section (its cosmetic rewards, titles and artwork now live in Settings).
 - The level chip in the page header (the level lives on the Profile tab) and Home's Today strip.
 - Local account system (register / login / profile switching) and its SQLite `users` table
 - Watchlist feature, including the `watchlist` table, the `/watchlist` route, and the `WatchlistButton` component

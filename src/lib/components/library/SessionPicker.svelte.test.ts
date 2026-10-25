@@ -37,6 +37,30 @@ function setup(scale: SessionScale, start: Partial<SessionChoice> = {}) {
 const group = () => screen.getByRole("group", { name: "Up to, per session" });
 
 describe("SessionPicker", () => {
+  it("an emptied Custom says what it needs instead of NaN", async () => {
+    setup(EPISODES);
+    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
+    await userEvent.clear(within(group()).getByLabelText("Minutes per session"));
+    expect(group()).not.toHaveTextContent("NaN");
+    expect(group()).toHaveTextContent("At least one episode (24 min).");
+  });
+
+  it("an emptied Custom on a book shows the shortest session", async () => {
+    setup(BOOK);
+    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
+    await userEvent.clear(within(group()).getByLabelText("Minutes per session"));
+    expect(group()).not.toHaveTextContent("NaN");
+    expect(group()).toHaveTextContent("At least 30 min.");
+  });
+
+  it("Custom past 12 hours says so instead of a huge count", async () => {
+    setup(EPISODES);
+    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
+    const input = within(group()).getByLabelText("Minutes per session");
+    await userEvent.clear(input);
+    await userEvent.type(input, "99999");
+    expect(group()).toHaveTextContent("At most 12 h.");
+  });
   it("centres one full episode with arrows, and never goes below one", async () => {
     const props = setup(EPISODES);
     const centre = within(group()).getByRole("button", { name: "Full episode 24 min" });

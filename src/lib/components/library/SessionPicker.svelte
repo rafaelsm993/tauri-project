@@ -32,7 +32,8 @@
   const minutes = $derived(choiceMinutes(scale, choice));
   const count = $derived(choice.custom ? nearestCount(scale, choice.typed) : minutes / scale.step);
   const text = $derived(sessionText(scale, minutes, pagesPerHour));
-  const tooShort = $derived(choice.custom && Number.isFinite(minutes) && minutes < scale.min);
+  const tooShort = $derived(choice.custom && !(minutes >= scale.min));
+  const tooLong = $derived(choice.custom && minutes > MAX_SESSION);
   const fewer = $derived(
     scale.kind === "units" ? `Fewer ${scale.noun}s` : `${formatMinutes(scale.step)} less`,
   );
@@ -83,7 +84,11 @@
         oninput={read}
       />
       <span class="step-minutes"
-        >{tooShort ? tooShortText(scale) : customText(scale, minutes, pagesPerHour)}</span
+        >{tooShort
+          ? tooShortText(scale)
+          : tooLong
+            ? `At most ${formatMinutes(MAX_SESSION)}.`
+            : customText(scale, minutes, pagesPerHour)}</span
       >
     </div>
   {:else if scale.full}

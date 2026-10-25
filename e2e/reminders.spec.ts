@@ -283,3 +283,26 @@ test("logging an episode session uses the picker and saves whole episodes", asyn
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
   expect(saved.at(-1)?.args).toMatchObject({ key: FRIEREN.key, patch: { progress: 3 } });
 });
+
+test("an emptied Custom never shows NaN in Log session or the Plan sheet", async ({ page }) => {
+  await mockLibrary(page, LIBRARY);
+  await page.goto("/");
+  await card(page, "Frieren").getByRole("button", { name: "Log a session of Frieren" }).click();
+  const log = page.getByRole("dialog", { name: "Log a session of Frieren" });
+  await log.getByRole("button", { name: "Custom" }).click();
+  await log.getByLabel("Minutes per session").fill("");
+  await expect(log).toContainText("At least one episode (24 min).");
+  await expect(log).not.toContainText("NaN");
+  await page.keyboard.press("Escape");
+  await expect(log).toBeHidden();
+
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Edit plan for Frieren" }).click();
+  const plan = page.getByRole("dialog", { name: "Plan Frieren" });
+  const minutes = plan.getByLabel("Minutes per session");
+  await expect(minutes).toHaveValue("45");
+  await minutes.fill("");
+  await expect(plan).toContainText("At least one episode (24 min).");
+  await expect(plan).not.toContainText("NaN");
+  await expect(plan.getByRole("button", { name: /^save plan/i })).toBeDisabled();
+});

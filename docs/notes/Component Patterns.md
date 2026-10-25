@@ -94,6 +94,16 @@ A button that opens a popover of native checkboxes. Generic: values keep their t
 
 `DetailHero` (title, tagline, backdrop, back button), `DetailMeta` (`detail: MediaDetail`), `DetailSection` (titled wrapper with a `children` snippet), `TrailerEmbed` (`videoKey`, `name`), `ScreenshotStrip` (`screenshots`), `CastRow` (`cast`), `DetailSkeleton`.
 
+## Progress card and item actions
+
+- Folder: `src/lib/components/library/`; status rule in `src/lib/domain/status.ts`; icon paths in `src/lib/components/ui/icons.ts`
+
+`ProgressEditor` (`mediaType`, `progress`, `total`, `status`, `rating`, `onprogress`, `onrating`, `plannable?`, `onaddlength?`, `lengthNote?`) is the detail page's "Your progress" card: a big count, a status badge (`Status:` for screen readers), − / + (one unit; − stops at 0, + at the total) and Edit length, then Rating. A movie gets one **Watched** toggle (`aria-pressed`) instead. The bar is pixel art drawn by `aria-hidden` spans (a 5×5 grid of `--px` cells: four edges, four stepped corner pixels, the meter in the centre cell with a one-pixel gap ring), with an invisible native `<input type="range">` on top that does the work: drag, tap to jump, arrows/Home/End. While dragging, the count follows the thumb and nothing is saved; the value is saved once, on `change`, and only if it differs. Without a known total there is no bar and + has no ceiling. Colours are tokens only: `--clr-ink-rgb` frame, `--clr-accent` fill with an `--clr-on-primary-rgb` top band and an `--clr-shade-rgb` base, `--clr-accent-rgb` stripes on the empty side. The stripes and the stepped width change are declared only under `:root[data-motion="on"]`, so Animations off (or system reduce-motion) means none at all. `--px` is 4 px on a phone, 3 px above.
+
+The page saves `progressPatch(entry, progress, total)`: progress plus the status it implies (`statusForProgress`), unless the item is Dropped. Log session keeps using `logPreview`.
+
+`ItemActions` (`entry`, `total`, `detail?`, `dueMinutes?`, `xpOf`, `library?`) is a `role="toolbar"` of four icon buttons with labels: Plan / Edit plan, Log session, Drop / Resume, Remove. It owns the Plan, Log session and Remove sheets. Resume sets `resumeStatus` (what the progress says). While Dropped, Plan and Log session are disabled; Log session is also disabled without a plan or once finished, with the reason as its description. `SaveToLibrary` is now only "+ Add to library" and the add / edit-length sheet.
+
 ## ErrorNote and Skeleton
 
 - `src/lib/components/ui/ErrorNote.svelte`: `message`, `onretry?`, `children?` (extra actions after the retry, e.g. the detail page's Back). A `role="alert"` box in the error colours; buttons are ≥ 44 px under `touch`. Every page-level and section-level error uses it: home grid, carousels, detail, library, profile, settings, backup. Errors inside a form (`SaveToLibrary`, `PlanDialog`) stay as plain text next to the fields.

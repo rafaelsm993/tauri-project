@@ -179,6 +179,67 @@ describe("MatchSheet", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows each side's title, length and type · year, with a replaced length struck", async () => {
+    const mine = {
+      ...MINE,
+      snapshot: { ...MINE.snapshot, media_type: "manga", title: "nagatoro", year: "2017" },
+      user: {
+        ...MINE.user,
+        progress: 0,
+        length: { ...emptyLength(), chapters: 666, chapter_minutes: 22 },
+      },
+    } as LibraryEntry;
+    const merged = {
+      ...mine,
+      key: "anilist:manga:100664",
+      snapshot: {
+        ...mine.snapshot,
+        media_key: "anilist:manga:100664",
+        provider: "anilist",
+        title: "Nagatoro",
+      },
+      user: { ...mine.user, length: { ...emptyLength(), chapters: 189, chapter_minutes: 22 } },
+    } as LibraryEntry;
+    const manga = {
+      ...hit(100664, "Nagatoro"),
+      provider: "anilist",
+      media_key: "anilist:manga:100664",
+      media_type: "manga",
+      release_date: "2017-08-09",
+    } as MediaItem;
+    const s = setup({}, { mergePreview: vi.fn(async () => ({ entry: merged, combined: false })) }, [
+      manga,
+    ]);
+    await s.library.hydrate();
+    s.match.open(mine);
+    await s.user.click(await screen.findByRole("button", { name: /^Nagatoro/ }));
+
+    const yours = await screen.findByRole("figure", { name: "Yours" });
+    expect(yours).toHaveTextContent("nagatoro");
+    expect(yours).toHaveTextContent("666 chapters");
+    expect(yours).toHaveTextContent("Manga · 2017");
+    expect(yours.querySelector("s")).toBeNull();
+
+    const theirs = screen.getByRole("figure", { name: "AniList" });
+    expect(theirs).toHaveTextContent("Nagatoro");
+    expect(theirs).toHaveTextContent("Manga · 2017");
+    // The struck and bold values carry hidden "was" / "now" words for screen readers.
+    expect(theirs.querySelector("s")).toHaveTextContent("666 chapters");
+    expect(theirs.querySelector("strong")).toHaveTextContent("189 chapters");
+
+    const changes = screen.getByRole("list", { name: "What changes" });
+    expect(changes).toHaveTextContent(/Chapters.*666.*189/);
+  });
+
+  it("shows a length the match keeps plainly, not struck", async () => {
+    const s = setup();
+    await opened(s);
+    await s.user.click(await screen.findByRole("button", { name: /^Piranesi 1\b/ }));
+    const theirs = await screen.findByRole("figure", { name: "Apple Books" });
+    expect(within(theirs).getByText("272 pages")).toBeInTheDocument();
+    expect(theirs.querySelector("s")).toBeNull();
+  });
+
   it("warns that an item already in the library will be combined", async () => {
     const s = setup({}, { mergePreview: vi.fn(async () => ({ entry: MERGED, combined: true })) });
     await opened(s);

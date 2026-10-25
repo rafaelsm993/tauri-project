@@ -164,8 +164,9 @@
         </div>
       {:else}
         <p class="hint">
-          Pick the catalog item this is. Its title, year and poster replace yours; your status,
-          progress, rating, review and plan stay.
+          Pick the catalog item this is. Its details and length replace yours, and yours fill only
+          what it leaves blank; your status, rating, review and plan stay, and progress stops at the
+          new end.
         </p>
         <SearchField
           label="Search the catalog"

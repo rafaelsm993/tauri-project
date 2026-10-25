@@ -2,6 +2,8 @@
   import PosterPlaceholder from "$lib/components/media/PosterPlaceholder.svelte";
   import { mergeChanges } from "$lib/domain/reconcile";
   import { posterSources } from "$lib/domain/poster";
+  import { resolveTotal } from "$lib/domain/length";
+  import { isBinary, unitLabel } from "$lib/domain/progress";
   import { getYear, MEDIA_LABELS, PROVIDER_LABELS, type MediaItem } from "$lib/types/media";
   import type { LibraryEntry } from "$lib/types/library";
 
@@ -23,12 +25,25 @@
   const id = $props.id();
   const diff = $derived(mergeChanges(mine, merged));
   const minePoster = $derived(posterSources(mine.snapshot, posterDir)[0] ?? null);
-  const meta = $derived([MEDIA_LABELS[item.media_type], getYear(item)].filter(Boolean).join(" · "));
+  // "189 chapters" / "272 pages"; "" for a movie or an unknown length.
+  function lengthLine(entry: LibraryEntry): string {
+    const type = entry.snapshot.media_type;
+    if (isBinary(type)) return "";
+    const n = resolveTotal(type, null, entry.user.length);
+    return n === null ? "" : `${n} ${unitLabel(type, n)}`;
+  }
+  const typeYear = (year: string | null | undefined) =>
+    [MEDIA_LABELS[item.media_type], year].filter(Boolean).join(" · ");
+
+  const mineLength = $derived(lengthLine(mine));
+  const mergedLength = $derived(lengthLine(merged));
+  const mineMeta = $derived(typeYear(mine.snapshot.year));
+  const meta = $derived(typeYear(getYear(item)));
 </script>
 
 <div class="compare">
   <div class="sides">
-    <figure class="side">
+    <figure class="side" aria-labelledby="{id}-mine">
       <div class="poster">
         {#if minePoster}
           <img src={minePoster} alt="" />
@@ -37,12 +52,14 @@
         {/if}
       </div>
       <figcaption>
-        <span class="side-label">Yours</span>
+        <span class="side-label" id="{id}-mine">Yours</span>
         <span class="side-title">{mine.snapshot.title}</span>
+        {#if mineLength}<span class="side-meta">{mineLength}</span>{/if}
+        <span class="side-meta">{mineMeta}</span>
       </figcaption>
     </figure>
     <span class="arrow" aria-hidden="true">→</span>
-    <figure class="side">
+    <figure class="side" aria-labelledby="{id}-theirs">
       <div class="poster">
         {#if item.poster_path}
           <img src={item.poster_path} alt="" />
@@ -51,8 +68,16 @@
         {/if}
       </div>
       <figcaption>
-        <span class="side-label">{PROVIDER_LABELS[item.provider]}</span>
+        <span class="side-label" id="{id}-theirs">{PROVIDER_LABELS[item.provider]}</span>
         <span class="side-title">{item.title}</span>
+        {#if mergedLength && mineLength && mergedLength !== mineLength}
+          <span class="side-meta side-length">
+            <s class="before"><span class="sr">was&nbsp;</span>{mineLength}</s>
+            <strong class="after"><span class="sr">, now&nbsp;</span>{mergedLength}</strong>
+          </span>
+        {:else if mergedLength}
+          <span class="side-meta">{mergedLength}</span>
+        {/if}
         <span class="side-meta">{meta}</span>
       </figcaption>
     </figure>
@@ -120,6 +145,20 @@
     display: flex;
     flex-direction: column;
     gap: $spacing-xs;
+  }
+
+  // One line each: the label, then the title and details under it.
+  figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .side-length {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 $spacing-xs;
   }
 
   .poster {

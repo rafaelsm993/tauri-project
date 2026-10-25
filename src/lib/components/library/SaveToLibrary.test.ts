@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/svelte";
+import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import SaveToLibrary from "./SaveToLibrary.svelte";
 import { LibraryStore, type LibraryClient } from "$lib/stores/library.svelte";
@@ -89,16 +89,16 @@ describe("SaveToLibrary", () => {
     expect(screen.getByRole("button", { name: /add to library/i })).toBeInTheDocument();
   });
 
-  it("saves on click and shows the resulting status", async () => {
+  it("saves on click as Planning and hides the add button", async () => {
     const { store, client } = storeWith();
     render(SaveToLibrary, { item: ITEM, store });
     await userEvent.click(screen.getByRole("button", { name: /add to library/i }));
     await userEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(client.add).toHaveBeenCalledTimes(1);
-    expect(await screen.findByRole("button", { name: /planning/i })).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("button", { name: /add to library/i })).toBeNull(),
     );
+    expect(store.get("tmdb:tv:7")?.user.status).toBe("planning");
   });
 
   it("shows the error and the add button again when the save fails", async () => {
@@ -112,77 +112,6 @@ describe("SaveToLibrary", () => {
     await userEvent.click(screen.getByRole("button", { name: /skip/i }));
     expect(await screen.findByText(/disk full/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /add to library/i })).toBeInTheDocument();
-  });
-
-  it("changes the status of a saved entry", async () => {
-    const { store, client } = storeWith({ load: vi.fn(async () => [SAVED]) });
-    await store.hydrate();
-    render(SaveToLibrary, { item: ITEM, store });
-    expect(screen.getByRole("button", { name: /planning/i })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.click(screen.getByRole("button", { name: /completed/i }));
-    expect(client.update).toHaveBeenCalledWith("tmdb:tv:7", { status: "completed" });
-  });
-
-  it("marks a movie watched when it is completed, and unwatched otherwise", async () => {
-    const movie = { ...ITEM, media_key: "tmdb:movie:7", media_type: "movie" as const };
-    const saved = {
-      ...SAVED,
-      key: movie.media_key,
-      snapshot: { ...SAVED.snapshot, media_key: movie.media_key, media_type: "movie" as const },
-    };
-    const { store, client } = storeWith({ load: vi.fn(async () => [saved]) });
-    await store.hydrate();
-    render(SaveToLibrary, { item: movie, store });
-    await userEvent.click(screen.getByRole("button", { name: /completed/i }));
-    expect(client.update).toHaveBeenLastCalledWith(movie.media_key, {
-      status: "completed",
-      progress: 1,
-    });
-    await userEvent.click(screen.getByRole("button", { name: /dropped/i }));
-    expect(client.update).toHaveBeenLastCalledWith(movie.media_key, {
-      status: "dropped",
-      progress: 0,
-    });
-  });
-
-  async function confirming(xpOf = () => 65) {
-    const { store, client } = storeWith({ load: vi.fn(async () => [SAVED]) });
-    await store.hydrate();
-    render(SaveToLibrary, { item: ITEM, store, xpOf });
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
-    return { client, sheet: screen.getByRole("dialog", { name: "Remove Arcane?" }) };
-  }
-
-  it("asks before removing, and says how much XP goes back", async () => {
-    const { client, sheet } = await confirming();
-    expect(client.remove).not.toHaveBeenCalled();
-    expect(sheet).toHaveTextContent("You lose the 65 XP it earned.");
-    expect(sheet).toHaveTextContent(/progress, rating and plan/i);
-  });
-
-  it("removes once confirmed", async () => {
-    const { client, sheet } = await confirming();
-    await userEvent.click(within(sheet).getByRole("button", { name: "Remove" }));
-    expect(client.remove).toHaveBeenCalledExactlyOnceWith("tmdb:tv:7");
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("keeps the item on Keep or Escape", async () => {
-    const { client, sheet } = await confirming();
-    await userEvent.click(within(sheet).getByRole("button", { name: "Keep" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
-    await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(client.remove).not.toHaveBeenCalled();
-  });
-
-  it("leaves the XP line out when the item earned none", async () => {
-    const { sheet } = await confirming(() => 0);
-    expect(sheet).not.toHaveTextContent("XP");
   });
 
   it("opens the add sheet instead of saving straight away", async () => {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PLAN_ICON } from "$lib/components/ui/icons";
   import { resolve } from "$app/paths";
   import PosterPlaceholder from "$lib/components/media/PosterPlaceholder.svelte";
   import { detailPath } from "$lib/domain/libraryView";
@@ -27,9 +28,6 @@
     onlog?: () => void;
     dueMinutes?: number | null;
   } = $props();
-
-  // The planner glyph from the nav, so the icon reads as "Planner" everywhere.
-  const PLAN_ICON = "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4";
 
   let failed = $state(0);
 

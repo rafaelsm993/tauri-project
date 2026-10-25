@@ -34,11 +34,13 @@
   import SaveToLibrary from "$lib/components/library/SaveToLibrary.svelte";
   import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import ProgressEditor from "$lib/components/library/ProgressEditor.svelte";
-  import PlanDialog from "$lib/components/planner/PlanDialog.svelte";
-  import { localDay } from "$lib/domain/calendar";
+  import ItemActions from "$lib/components/library/ItemActions.svelte";
+  import { progressPatch } from "$lib/domain/status";
+  import { xpOfItem } from "$lib/domain/gamification";
+  import { gamificationStore } from "$lib/stores/gamification.svelte";
+  import { reminderStore } from "$lib/stores/reminders.svelte";
 
   let detail = $state<MediaDetail | null>(null);
-  let planning = $state(false);
   let loading = $state(true);
   let error = $state("");
   let editingLength = $state(false);
@@ -123,27 +125,27 @@
     {mediaType}
     progress={entry.user.progress}
     total={savedTotal}
+    status={entry.user.status}
     plannable={savedPlannable}
     rating={entry.user.rating}
     disabled={libraryStore.isPending(entry.key)}
-    onprogress={(progress) => libraryStore.update(entry.key, { progress })}
+    onprogress={(progress) =>
+      libraryStore.update(entry.key, progressPatch(entry, progress, savedTotal))}
     onrating={(rating) => libraryStore.update(entry.key, { rating })}
     onaddlength={() => (editingLength = true)}
     {lengthNote}
   />
-  {#if entry.user.status !== "dropped"}
-    {#if planning}
-      <PlanDialog
-        {entry}
-        detail={detail ?? undefined}
-        today={localDay()}
-        onclose={() => (planning = false)}
-      />
-    {:else}
-      <button type="button" class="plan-btn" onclick={() => (planning = true)}>
-        {entry.user.plan ? "Edit plan" : "Plan"}
-      </button>
-    {/if}
+{/snippet}
+
+{#snippet actions(entry: LibraryEntry | null)}
+  {#if entry}
+    <ItemActions
+      {entry}
+      total={savedTotal}
+      {detail}
+      dueMinutes={reminderStore.data.due.find((d) => d.entry.key === entry.key)?.minutes ?? null}
+      xpOf={(key) => xpOfItem(gamificationStore.awards, key)}
+    />
   {/if}
 {/snippet}
 
@@ -195,12 +197,13 @@
     </div>
 
     <div class="detail-actions">
-      <div class="detail-status">
-        <SaveToLibrary item={toMediaItem(d)} detail={d} bind:editing={editingLength} />
-      </div>
       {#if savedEntry}
         <div class="detail-controls">{@render controls(savedEntry)}</div>
       {/if}
+      <div class="detail-status">
+        <SaveToLibrary item={toMediaItem(d)} detail={d} bind:editing={editingLength} />
+        {@render actions(savedEntry ?? null)}
+      </div>
     </div>
   </div>
 {:else if manual}
@@ -239,10 +242,11 @@
     </div>
 
     <div class="detail-actions">
+      <div class="detail-controls">{@render controls(entry)}</div>
       <div class="detail-status">
         <SaveToLibrary item={snapshotItem(entry.snapshot)} bind:editing={editingLength} />
+        {@render actions(entry)}
       </div>
-      <div class="detail-controls">{@render controls(entry)}</div>
     </div>
   </div>
 {:else}
@@ -265,10 +269,11 @@
     </div>
 
     <div class="detail-actions">
+      <div class="detail-controls">{@render controls(entry)}</div>
       <div class="detail-status">
         <SaveToLibrary item={snapshotItem(entry.snapshot)} bind:editing={editingLength} />
+        {@render actions(entry)}
       </div>
-      <div class="detail-controls">{@render controls(entry)}</div>
     </div>
   </div>
 {/if}
@@ -296,7 +301,7 @@
     min-width: 0;
   }
 
-  // Phone: the status row is a bar fixed above the tab bar; progress, rating and plan sit under the hero.
+  // Phone: the action bar is fixed above the tab bar; the progress card sits under the hero.
   .detail-actions {
     position: sticky;
     top: $spacing-lg;
@@ -321,10 +326,8 @@
 
   .detail-status {
     min-width: 0;
-
-    :global(.segmented) {
-      flex-wrap: wrap;
-    }
+    padding-top: $spacing-sm;
+    border-top: 1px solid var(--clr-border);
 
     @include respond-to(md) {
       position: fixed;
@@ -336,18 +339,6 @@
       :global(.save-row) {
         flex-wrap: nowrap;
         margin-bottom: 0;
-      }
-
-      :global(.status-control) {
-        flex: 1 1 0;
-      }
-
-      :global(.segmented) {
-        flex-wrap: nowrap;
-      }
-
-      :global(.status-label) {
-        display: none;
       }
       background: rgb(var(--clr-surface-rgb) / 0.94);
       backdrop-filter: blur(12px);
@@ -367,11 +358,6 @@
     gap: $spacing-sm;
   }
 
-  .plan-btn {
-    margin-bottom: $spacing-md;
-  }
-
-  .plan-btn,
   .match-btn {
     background: none;
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);

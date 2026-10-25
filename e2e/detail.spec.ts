@@ -83,7 +83,7 @@ test("offline, a saved item opens from your library copy", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Saved movie" })).toBeVisible();
   await expect(page.getByText(/Showing your saved copy/)).toBeVisible();
   await expect(page.getByRole("button", { name: /retry|try again/i })).toHaveCount(0);
-  await expect(page.getByRole("group", { name: "Status" })).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Item actions" })).toBeVisible();
   await expect(page).toHaveTitle("Saved movie · Aevum");
 });
 

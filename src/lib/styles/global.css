@@ -82,6 +82,8 @@
   /* The status bar's height on edge-to-edge Android; 0 everywhere else. One name so the sticky
      header and the page frame always agree, and tests can fake a bar. */
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Android's navigation bar on edge-to-edge screens (0 elsewhere); popovers end above it. */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   --z-nav: 200;
   --z-toast: 300;
 }

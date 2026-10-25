@@ -24,7 +24,9 @@ test("every custom property defined in global.css is used", () => {
     .map((f) => readFileSync(f, "utf8"))
     .join("\n");
   const unused = defined.filter(
-    (d) => !KEEP.test(d) && !new RegExp(`var\\(${d}(?![\\w-])`).test(corpus),
+    (d) =>
+      !KEEP.test(d) &&
+      !new RegExp(`var\\(${d}(?![\\w-])|getPropertyValue\\(["']${d}["']\\)`).test(corpus),
   );
   assert.deepEqual(unused, [], "delete unused tokens or use them");
 });

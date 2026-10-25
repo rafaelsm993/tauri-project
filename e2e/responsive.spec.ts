@@ -165,6 +165,21 @@ test.describe("the browse header", () => {
   const fakeStatusBar = (page: Page) =>
     page.evaluate(() => document.documentElement.style.setProperty("--safe-top", "27px"));
 
+  test("the Genres panel and its Clear end above Android's navigation bar", async ({ page }) => {
+    await page.evaluate(() => document.documentElement.style.setProperty("--safe-bottom", "48px"));
+    await page.getByRole("button", { name: /^Genres/ }).click();
+    const group = page.getByRole("group", { name: "Genres" });
+    await group.getByRole("checkbox", { name: "Western" }).check();
+    const clear = page.getByRole("button", { name: "Clear" });
+    await expect(clear).toBeVisible();
+    const limit = page.viewportSize()!.height - 48;
+    await expect
+      .poll(async () => (await clear.boundingBox())!.y + (await clear.boundingBox())!.height)
+      .toBeLessThanOrEqual(limit);
+    await clear.click();
+    await expect(page.getByRole("button", { name: /^Genres$/ })).toBeVisible();
+  });
+
   test("pins below the status bar with a little air, and paints that air", async ({ page }) => {
     await fakeStatusBar(page);
     await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));

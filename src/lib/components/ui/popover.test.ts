@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { placeBelow } from "./popover";
+import { afterEach, describe, expect, it } from "vitest";
+import { followTrigger, placeBelow } from "./popover";
 
 const rect = (left: number, top: number, width: number, height: number) =>
   ({ left, top, width, height, right: left + width, bottom: top + height }) as DOMRect;
@@ -31,5 +31,28 @@ describe("placeBelow", () => {
     expect(placeBelow(rect(100, 700, 40, 30), 200, { width: 360, height: 740 }).maxHeight).toBe(
       160,
     );
+  });
+});
+
+describe("followTrigger", () => {
+  afterEach(() => document.documentElement.style.removeProperty("--safe-bottom"));
+
+  it("keeps the panel above the system's bottom bar", () => {
+    document.documentElement.style.setProperty("--safe-bottom", "48px");
+    const trigger = document.createElement("button");
+    trigger.getBoundingClientRect = () => rect(100, 10, 40, 40);
+    const panel = document.createElement("div");
+    const stop = followTrigger(trigger, panel);
+    expect(panel.style.maxHeight).toBe(`${window.innerHeight - 48 - 56 - 8}px`);
+    stop();
+  });
+
+  it("uses the whole height where nothing covers the bottom", () => {
+    const trigger = document.createElement("button");
+    trigger.getBoundingClientRect = () => rect(100, 10, 40, 40);
+    const panel = document.createElement("div");
+    const stop = followTrigger(trigger, panel);
+    expect(panel.style.maxHeight).toBe(`${window.innerHeight - 56 - 8}px`);
+    stop();
   });
 });

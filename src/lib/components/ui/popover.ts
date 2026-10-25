@@ -21,6 +21,13 @@ export function placeBelow(
   };
 }
 
+// What the system draws over the bottom of the window (Android's navigation bar); 0 elsewhere.
+function safeBottom(): number {
+  return (
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--safe-bottom")) || 0
+  );
+}
+
 // Re-places `panel` under `trigger` now and on resize/scroll; returns a stop fn.
 export function followTrigger(
   trigger: HTMLElement,
@@ -31,7 +38,7 @@ export function followTrigger(
     const p = placeBelow(
       trigger.getBoundingClientRect(),
       panel.offsetWidth,
-      { width: window.innerWidth, height: window.innerHeight },
+      { width: window.innerWidth, height: window.innerHeight - safeBottom() },
       align,
     );
     panel.style.left = `${p.left}px`;

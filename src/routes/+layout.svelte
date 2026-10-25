@@ -143,7 +143,7 @@
   });
 </script>
 
-<AppBackground />
+<AppBackground currentLevel={unlocksStore.level} />
 {#if problem}
   <div class="app-content">
     <StartupProblem {problem} />

@@ -38,6 +38,19 @@ describe("the ladder", () => {
 });
 
 describe("isUnlocked", () => {
+  it.each(UNLOCKS)("restricts $id to its catalogue slot", (reward) => {
+    for (const kind of ["accent", "motif", "pack", "garden"] as const) {
+      expect(isUnlocked(reward.id, 25, kind)).toBe(kind === reward.kind);
+      expect(isUnlocked(reward.id, reward.level - 1, kind)).toBe(false);
+    }
+  });
+
+  it("recomputes after a level drops, without remembering prior unlocks", () => {
+    expect(unlockedIds(25)).toHaveLength(UNLOCKS.length);
+    expect(unlockedIds(1)).toEqual([]);
+    expect(nextUnlock(1)?.id).toBe("bubbles");
+    expect(isUnlocked("ocean", 1)).toBe(false);
+  });
   it("is locked below its level", () => {
     expect(isUnlocked("bubbles", 1)).toBe(false);
   });

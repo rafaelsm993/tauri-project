@@ -1,5 +1,4 @@
-// What levelling opens up. Keyed off `seen_level`, the highest level ever congratulated, so a
-// level that later drops (an import, a merge) never takes a reward away (Q14).
+// Rewards require the current level; celebration history never grants eligibility.
 export type UnlockKind = "accent" | "motif" | "pack" | "garden";
 
 export type UnlockId =
@@ -85,23 +84,27 @@ const BY_ID = new Map(UNLOCKS.map((u) => [u.id, u]));
 
 // Takes a plain string: the equipped id comes from prefs, where an unknown value is possible
 // after a downgrade or a hand-edited file, and must simply read as not unlocked.
-export function isUnlocked(id: string, seenLevel: number): boolean {
+export function isUnlocked(id: string, currentLevel: number, kind?: UnlockKind): boolean {
   const unlock = BY_ID.get(id as UnlockId);
-  return unlock !== undefined && seenLevel >= unlock.level;
+  return (
+    unlock !== undefined &&
+    currentLevel >= unlock.level &&
+    (kind === undefined || unlock.kind === kind)
+  );
 }
 
-export function unlockedIds(seenLevel: number): UnlockId[] {
-  return UNLOCKS.filter((u) => seenLevel >= u.level).map((u) => u.id);
+export function unlockedIds(currentLevel: number): UnlockId[] {
+  return UNLOCKS.filter((u) => currentLevel >= u.level).map((u) => u.id);
 }
 
 // The nearest reward still ahead, for the "next up" line; null once everything is open.
-export function nextUnlock(seenLevel: number): Unlock | null {
-  return UNLOCKS.find((u) => u.level > seenLevel) ?? null;
+export function nextUnlock(currentLevel: number): Unlock | null {
+  return UNLOCKS.find((u) => u.level > currentLevel) ?? null;
 }
 
-const openOfKind = (kind: UnlockKind, seenLevel: number): Unlock[] =>
-  UNLOCKS.filter((u) => u.kind === kind && seenLevel >= u.level);
+const openOfKind = (kind: UnlockKind, currentLevel: number): Unlock[] =>
+  UNLOCKS.filter((u) => u.kind === kind && currentLevel >= u.level);
 
-export const accentsFor = (seenLevel: number): Unlock[] => openOfKind("accent", seenLevel);
-export const motifsFor = (seenLevel: number): Unlock[] => openOfKind("motif", seenLevel);
-export const packsFor = (seenLevel: number): Unlock[] => openOfKind("pack", seenLevel);
+export const accentsFor = (currentLevel: number): Unlock[] => openOfKind("accent", currentLevel);
+export const motifsFor = (currentLevel: number): Unlock[] => openOfKind("motif", currentLevel);
+export const packsFor = (currentLevel: number): Unlock[] => openOfKind("pack", currentLevel);

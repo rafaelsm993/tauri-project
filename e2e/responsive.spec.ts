@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
-import { manualItem, mockLibrary } from "./fixtures/library";
+import { eventsAtLevel, manualItem, mockLibrary } from "./fixtures/library";
 
 // `chrome` is what the shared AppHeader should put on each screen. Content screens opt out:
 // a detail page and the onboarding flow own their whole viewport, and their <h1> is the thing
@@ -289,7 +289,7 @@ test.describe("touch devices", () => {
 
   test("reward chips are at least 44px tall on coarse pointers", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mouse viewports may use compact targets");
-    await mockLibrary(page, [], { seenLevel: 25 });
+    await mockLibrary(page, [], { events: eventsAtLevel(25), seenLevel: 25 });
     await page.goto("/profile");
     const chips = page.getByRole("group", { name: "Accent" }).getByRole("button");
     await expect(chips.first()).toBeVisible();

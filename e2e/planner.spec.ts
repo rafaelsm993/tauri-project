@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ipcCalls, item, mockLibrary, type LibraryFake } from "./fixtures/library";
+import { eventsAtLevel, ipcCalls, item, mockLibrary, type LibraryFake } from "./fixtures/library";
 
 const MWF = { days: [0, 2, 4], max_session_minutes: 60, since: "2026-09-28" };
 const LIBRARY = [
@@ -244,6 +244,7 @@ test("the plan marks its missing length as required, in the equipped accent", as
   const st = item(66, "tv", "Stranger Things", { episodes: 42 }, null);
   await mockLibrary(page, [st], {
     details: { "tmdb:tv:66": { episodes: 42, runtime: null } },
+    events: eventsAtLevel(3),
     seenLevel: 3,
     prefs: { accent: "ember" },
   });
@@ -260,7 +261,11 @@ test("the plan marks its missing length as required, in the equipped accent", as
 
 test("an anime plans whole episodes around Full episode, with a quiet Custom", async ({ page }) => {
   const aot = item(16498, "anime", "Attack on Titan", { episodes: 25, episode_minutes: 24 }, null);
-  await mockLibrary(page, [aot], { seenLevel: 3, prefs: { accent: "ember" } });
+  await mockLibrary(page, [aot], {
+    events: eventsAtLevel(3),
+    seenLevel: 3,
+    prefs: { accent: "ember" },
+  });
   await page.goto("/library");
   await page.getByRole("button", { name: "Plan Attack on Titan" }).click();
   const dialog = page.getByRole("dialog", { name: "Plan Attack on Titan" });

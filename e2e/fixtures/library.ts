@@ -1,4 +1,22 @@
 import type { Page } from "@playwright/test";
+import { awards, levelOf, totalXp, XP, xpForLevel } from "../../src/lib/domain/gamification";
+import type { LibraryEvent } from "../../src/lib/types/library";
+
+// Real award-bearing history; seenLevel only suppresses celebration toasts.
+export function eventsAtLevel(level: number): LibraryEvent[] {
+  const count = Math.ceil(xpForLevel(level) / (XP.add + XP.completion));
+  const events: LibraryEvent[] = Array.from({ length: count }, (_, i) => ({
+    id: `earned-${i}`,
+    kind: "library_add",
+    media_key: `tmdb:movie:${900000 + i}`,
+    at_utc: "2026-09-01T12:00:00Z",
+    local_date: "2026-09-01",
+    payload: { status: "completed" },
+  }));
+  if (levelOf(totalXp(awards(events))).level !== level)
+    throw new Error(`Fixture failed to earn level ${level}`);
+  return events;
+}
 
 const LENGTH = {
   runtime_minutes: null,

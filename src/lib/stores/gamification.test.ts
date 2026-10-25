@@ -105,6 +105,48 @@ function movie(id: string, runtime_minutes: number): LibraryEntry {
 }
 
 describe("GamificationStore", () => {
+  it("never rewrites celebration history after a failed refresh", async () => {
+    let fail = false;
+    const client = {
+      events: vi.fn(async () => {
+        if (fail) throw new Error("unreadable log");
+        return [ev("1", { status: "completed" })];
+      }),
+    };
+    const seen = { get: () => 25, set: vi.fn(async () => {}) };
+    const store = new GamificationStore(
+      client,
+      () => [],
+      () => "2026-09-20",
+      seen,
+    );
+    await store.load();
+    fail = true;
+    await store.load({ quiet: true });
+    expect(store.loaded).toBe(false);
+    expect(store.moment).toBeNull();
+    expect(seen.set).not.toHaveBeenCalled();
+  });
+  it("does not authorize current-level equipment from an old log during a reload or after its failure", async () => {
+    const { store, load } = storeWith([ev("1", { status: "completed" })]);
+    expect(store.loaded).toBe(false);
+    await store.load();
+    expect(store.loaded).toBe(true);
+    let reject!: (error: Error) => void;
+    load.mockImplementationOnce(
+      () =>
+        new Promise((_, fail) => {
+          reject = fail;
+        }),
+    );
+    const pending = store.load({ quiet: true });
+    expect(store.loaded).toBe(false);
+    reject(new Error("import log unreadable"));
+    await pending;
+    expect(store.loaded).toBe(false);
+    await store.load({ quiet: true });
+    expect(store.loaded).toBe(true);
+  });
   it("starts at level 1 with nothing loaded", () => {
     const { store } = storeWith([]);
     expect(store.ready).toBe(false);

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ipcCalls, item, mockLibrary } from "./fixtures/library";
+import { eventsAtLevel, ipcCalls, item, mockLibrary } from "./fixtures/library";
 
 // The optimistic save must undo itself visibly; this drives it with a rejecting backend.
 const DETAIL = {
@@ -283,6 +283,7 @@ const NO_RUNTIME = { "tmdb:tv:66": { episodes: 42, runtime: null } };
 test("the length warning takes the equipped accent's colours", async ({ page }) => {
   await mockLibrary(page, [STRANGER], {
     details: NO_RUNTIME,
+    events: eventsAtLevel(3),
     seenLevel: 3,
     prefs: { accent: "ember" },
   });
@@ -309,6 +310,7 @@ for (const theme of ["dark", "light"]) {
   test(`Ember's dark text reaches filled buttons in the ${theme} theme too`, async ({ page }) => {
     await mockLibrary(page, [STRANGER], {
       details: NO_RUNTIME,
+      events: eventsAtLevel(3),
       seenLevel: 3,
       prefs: { accent: "ember", theme },
     });

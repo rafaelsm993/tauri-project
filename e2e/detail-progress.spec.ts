@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
-import { ipcCalls, item, mockLibrary } from "./fixtures/library";
+import { eventsAtLevel, ipcCalls, item, mockLibrary } from "./fixtures/library";
 
 const plan = { days: [0, 2, 4], max_session_minutes: 60, since: "2026-09-28" };
 
@@ -61,7 +61,11 @@ test("on a phone the four actions fit one row with nothing off-screen", async ({
 });
 
 test("the bar's fill is the equipped accent, as wide as the progress", async ({ page }) => {
-  await open(page, 5, "in_progress", { seenLevel: 99, prefs: { accent: "ember" } });
+  await open(page, 5, "in_progress", {
+    events: eventsAtLevel(3),
+    seenLevel: 99,
+    prefs: { accent: "ember" },
+  });
   const [fill, accent] = await page
     .locator(".px-fill")
     .evaluate((el) => [
@@ -182,7 +186,11 @@ test("with Animations off the stars change without a burst", async ({ page }) =>
 });
 
 test("lit stars take the equipped accent", async ({ page }) => {
-  await open(page, 5, "in_progress", { seenLevel: 99, prefs: { accent: "ember" } });
+  await open(page, 5, "in_progress", {
+    events: eventsAtLevel(3),
+    seenLevel: 99,
+    prefs: { accent: "ember" },
+  });
   await rating(page).focus();
   await page.keyboard.press("End");
   const [body, accent] = await page

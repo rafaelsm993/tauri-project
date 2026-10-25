@@ -1,27 +1,23 @@
 <script lang="ts">
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
-  import { isUnlocked } from "$lib/domain/unlocks";
+  import { UnlocksStore } from "$lib/stores/unlocks.svelte";
   import { particlesFor } from "$lib/domain/motifs";
 
   // The store prop exists for tests; the app uses the singleton.
-  let { prefs = prefsStore }: { prefs?: PrefsStore } = $props();
+  let {
+    prefs = prefsStore,
+    currentLevel = null,
+  }: { prefs?: PrefsStore; currentLevel?: number | null } = $props();
 
-  // An equipped motif only draws while the level it needs is still there (Q15): a fresh install
-  // gets a still background, and a restored backup never shows art the user cannot re-earn.
-  const motif = $derived(
-    prefs.ready &&
-      prefs.prefs.motif !== "default" &&
-      isUnlocked(prefs.prefs.motif, prefs.prefs.seen_level)
-      ? prefs.prefs.motif
-      : "default",
-  );
+  const equipment = $derived(new UnlocksStore(prefs, () => currentLevel));
+  const motif = $derived(equipment.motif);
 
   // The motif derivation already waits for prefs, so an unloaded store yields no particles.
   const particles = $derived(particlesFor(motif, prefs.prefs.particle_count));
 
   let hidden = $state(false);
   let blurred = $state(false);
-  const paused = $derived(hidden || blurred || !prefs.ready || !prefs.prefs.motion);
+  const paused = $derived(hidden || blurred || !prefs.loaded || !prefs.prefs.motion);
 
   // Stops the infinite background loops while nobody can see them.
   $effect(() => {

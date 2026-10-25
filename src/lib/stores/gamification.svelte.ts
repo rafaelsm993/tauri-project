@@ -72,6 +72,7 @@ export class GamificationStore {
   burst = $state(false);
   today = $state("");
   ready = $state(false);
+  loaded = $state(false);
   error = $state("");
 
   entries = $derived.by(() => this.entriesOf());
@@ -132,7 +133,7 @@ export class GamificationStore {
   // Congratulates a level above the highest one seen; `quiet` (imports) adopts the level as is.
   check(quiet = false): void {
     const saved = this.seen.get();
-    if (!this.ready || saved === null) return;
+    if (!this.loaded || saved === null) return;
     const level = this.level.level;
     const mark = Math.max(saved, this.celebrated);
     const next = quiet ? { show: null, seen: level } : celebration(mark, level);
@@ -166,6 +167,7 @@ export class GamificationStore {
 
   // Read on every visit: cheap, and an import or a save elsewhere is always reflected.
   async load({ quiet = false }: { quiet?: boolean } = {}): Promise<void> {
+    this.loaded = false;
     this.error = "";
     this.today = this.todayOf();
     const id = ++this.loads;
@@ -177,6 +179,7 @@ export class GamificationStore {
       this.saved = saved;
       this.events = mergeById(asLog(log), heard);
       this.ready = true;
+      this.loaded = true;
     } catch (e) {
       if (id !== this.loads) return;
       this.error = errorMessage(e, "Failed to read your activity.");

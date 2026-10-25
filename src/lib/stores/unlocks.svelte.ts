@@ -1,4 +1,6 @@
 import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
+import { gamificationStore } from "$lib/stores/gamification.svelte";
+import { libraryStore } from "$lib/stores/library.svelte";
 import {
   ACCENTS,
   PACKS,
@@ -11,29 +13,32 @@ import { UNLOCKS, isUnlocked, nextUnlock, type Unlock, type UnlockId } from "$li
 
 export type Slot = "accent" | "pack" | "motif" | "garden";
 
-// What the user has earned and what they have equipped. Reads `seen_level`, the highest level
-// ever congratulated, so a level that later drops never takes a reward away (Q14).
+// Current eligibility changes the display without rewriting stored selections.
 export class UnlocksStore {
   private prefs: PrefsStore;
 
-  constructor(prefs: PrefsStore = prefsStore) {
+  constructor(
+    prefs: PrefsStore = prefsStore,
+    private currentLevel: () => number | null = () =>
+      libraryStore.ready && gamificationStore.loaded ? gamificationStore.level.level : null,
+  ) {
     this.prefs = prefs;
   }
 
-  get seenLevel(): number {
-    return this.prefs.ready ? this.prefs.prefs.seen_level : 0;
+  get level(): number {
+    return this.prefs.loaded ? (this.currentLevel() ?? 0) : 0;
   }
 
   get unlocked(): Unlock[] {
-    return UNLOCKS.filter((u) => isUnlocked(u.id, this.seenLevel));
+    return UNLOCKS.filter((u) => isUnlocked(u.id, this.level));
   }
 
   get locked(): Unlock[] {
-    return UNLOCKS.filter((u) => !isUnlocked(u.id, this.seenLevel));
+    return UNLOCKS.filter((u) => !isUnlocked(u.id, this.level));
   }
 
   get next(): Unlock | null {
-    return nextUnlock(this.seenLevel);
+    return nextUnlock(this.level);
   }
 
   // `system` is resolved by the document; for offer rules treat it as dark, the app's default.
@@ -44,7 +49,7 @@ export class UnlocksStore {
   // An id only counts if it is both unlocked and suitable for the current base theme.
   private live(id: string, set: Record<string, Palette>): string {
     const palette = set[id];
-    if (!palette || !isUnlocked(id as UnlockId, this.seenLevel)) return "default";
+    if (!palette || !isUnlocked(id as UnlockId, this.level)) return "default";
     return offerable(palette, this.baseTheme) ? id : "default";
   }
 
@@ -58,13 +63,13 @@ export class UnlocksStore {
 
   get motif(): string {
     const id = this.prefs.prefs.motif;
-    return isUnlocked(id as UnlockId, this.seenLevel) ? id : "default";
+    return isUnlocked(id, this.level, "motif") ? id : "default";
   }
 
   // The garden slot holds one reward, so prefs store it as the motif-style id or "default".
   get garden(): string {
     const id = this.prefs.prefs.garden;
-    return isUnlocked(id as UnlockId, this.seenLevel) ? id : "default";
+    return isUnlocked(id, this.level, "garden") ? id : "default";
   }
 
   get tokens(): Tokens {
@@ -73,7 +78,7 @@ export class UnlocksStore {
 
   canEquip(slot: Slot, id: string): boolean {
     if (id === "default") return true;
-    if (!isUnlocked(id as UnlockId, this.seenLevel)) return false;
+    if (!isUnlocked(id, this.level, slot)) return false;
     const set = slot === "accent" ? ACCENTS : slot === "pack" ? PACKS : null;
     const palette = set?.[id];
     return palette ? offerable(palette, this.baseTheme) : set === null;

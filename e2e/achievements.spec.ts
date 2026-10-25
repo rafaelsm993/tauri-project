@@ -1,15 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { mockLibrary } from "./fixtures/library";
+import { eventsAtLevel, item, mockLibrary } from "./fixtures/library";
 
-const ENTRY = {
-  key: "movie:tmdb:1",
-  user: { status: "completed", rating: 9, added_at: "2026-09-01T00:00:00Z" },
-  snapshot: { title: "Solaris", provider: "tmdb", media_type: "movie", year: 1972 },
-};
+const ENTRY = item(1, "movie", "Solaris", { runtime_minutes: 100 }, null);
+ENTRY.user.status = "completed";
+ENTRY.user.progress = 1;
 
 test.describe("achievements", () => {
   test("a new user is promised the first unlock instead of being offered it", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 1 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
     await page.goto("/profile");
 
     await expect(page.getByText(/^Next at level 2:/)).toContainText("Bubbles");
@@ -17,7 +15,7 @@ test.describe("achievements", () => {
   });
 
   test("an earned accent can be equipped and shows as selected", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 3 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(3), seenLevel: 3 });
     await page.goto("/profile");
 
     const ember = page.getByRole("button", { name: /^Ember$/ });
@@ -32,13 +30,13 @@ test.describe("achievements", () => {
   });
 
   test("the background stays still until the bubbles are unlocked", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 1 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
     await page.goto("/");
     await expect(page.locator(".circles li")).toHaveCount(0);
   });
 
   test("equipping the bubbles brings the background to life at once", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 2 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(2), seenLevel: 2 });
     await page.goto("/profile");
 
     // The background sits in the layout, so it reacts without a navigation.
@@ -55,7 +53,7 @@ test.describe("achievements", () => {
       !!isMobile,
       "particles are not drawn on touch: an animated full-screen layer costs 140%+ CPU there",
     );
-    await mockLibrary(page, [ENTRY], { seenLevel: 2 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(2), seenLevel: 2 });
     await page.goto("/profile");
     await page.getByRole("button", { name: /^Bubbles$/ }).click();
     await expect(page.locator(".circles li").first()).toBeAttached();
@@ -84,7 +82,7 @@ test.describe("achievements", () => {
       !!isMobile,
       "particles are not drawn on touch: an animated full-screen layer costs 140%+ CPU there",
     );
-    await mockLibrary(page, [ENTRY], { seenLevel: 25 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(25), seenLevel: 25 });
     await page.goto("/profile");
 
     const nameFor = async (label: string) => {
@@ -102,7 +100,7 @@ test.describe("achievements", () => {
   });
 
   test("a locked reward is listed with the level it needs", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 1 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
     await page.goto("/profile");
 
     const ahead = page.getByRole("heading", { name: "Still ahead" });
@@ -115,7 +113,7 @@ test.describe("achievements", () => {
       !!isMobile,
       "the sway is desktop-only: animating ten plants costs 126% CPU on a real phone",
     );
-    await mockLibrary(page, [ENTRY], { seenLevel: 8 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 8 });
     await page.goto("/profile");
 
     await page
@@ -143,7 +141,7 @@ test.describe("achievements", () => {
   });
 
   test("the garden stays still when the sway is not equipped", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 8 });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 8 });
     await page.goto("/library");
     await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Garden" }).click();
     const art = page.locator(".garden .plant-art").first();
@@ -152,7 +150,7 @@ test.describe("achievements", () => {
   });
 
   test("the background slot is blocked while animations are off", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 12, motion: false });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(12), seenLevel: 12, motion: false });
     await page.goto("/profile");
 
     const group = page.getByRole("group", { name: "Background" });
@@ -163,7 +161,7 @@ test.describe("achievements", () => {
   });
 
   test("the colour slots stay usable while animations are off", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { seenLevel: 12, motion: false });
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(12), seenLevel: 12, motion: false });
     await page.goto("/profile");
 
     const accents = page.getByRole("group", { name: "Accent" });

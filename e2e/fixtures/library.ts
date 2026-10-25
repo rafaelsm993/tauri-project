@@ -76,6 +76,7 @@ export interface LibraryFake {
   now?: string;
   // Saved preferences to start from, over the defaults below.
   prefs?: Record<string, unknown>;
+  persistPrefs?: boolean;
   // What catalog_detail adds for a key, e.g. { "tmdb:tv:4": { runtime: 40, episodes: 9 } }.
   details?: Record<string, object>;
 }
@@ -84,13 +85,24 @@ export interface LibraryFake {
 export async function mockLibrary(page: Page, entries: object[], fake: LibraryFake = {}) {
   await page.clock.setFixedTime(new Date(fake.now ?? "2026-10-01T10:00:00"));
   await page.addInitScript(
-    ({ list, events, seenLevel, motion, emptyLength, results, savedPrefs, details }) => {
+    ({
+      list,
+      events,
+      seenLevel,
+      motion,
+      emptyLength,
+      results,
+      savedPrefs,
+      details,
+      persistPrefs,
+    }) => {
       const library = structuredClone(list) as {
         key: string;
         user: Record<string, unknown>;
         snapshot?: { title: string; provider: string };
       }[];
       // Established user by default; welcome.spec sets __freshInstall to be greeted instead.
+      const persisted = persistPrefs ? sessionStorage.getItem("aevum.e2e.prefs") : null;
       const prefs = {
         motion,
         seen_level: seenLevel,
@@ -109,6 +121,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         profile_art: "default",
         particle_count: 12,
         ...savedPrefs,
+        ...(persisted ? JSON.parse(persisted) : {}),
       };
       type Hit = { media_key: string; media_type: string; title: string; provider: string };
       const calls: { cmd: string; args: unknown }[] = [];
@@ -250,7 +263,9 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
           const patch = (args?.patch ?? {}) as Record<string, unknown>;
           const unknown = Object.keys(patch).filter((k) => !(k in prefs));
           if (unknown.length > 0) throw `unknown field \`${unknown[0]}\``;
-          return Object.assign(prefs, patch);
+          Object.assign(prefs, patch);
+          if (persistPrefs) sessionStorage.setItem("aevum.e2e.prefs", JSON.stringify(prefs));
+          return { ...prefs };
         }
         if (cmd === "library_merge_preview") {
           const combined = library.some((e) => e.key === args!.item.media_key);
@@ -309,6 +324,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
       emptyLength: LENGTH,
       results: fake.results ?? [],
       savedPrefs: fake.prefs ?? {},
+      persistPrefs: fake.persistPrefs ?? false,
       details: fake.details ?? {},
     },
   );

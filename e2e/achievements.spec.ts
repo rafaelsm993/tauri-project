@@ -8,15 +8,15 @@ ENTRY.user.progress = 1;
 test.describe("achievements", () => {
   test("a new user is promised the first unlock instead of being offered it", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     await expect(page.getByText(/^Next at level 2:/)).toContainText("Bubbles");
-    await expect(page.getByRole("button", { name: /^Ember$/ })).toBeHidden();
+    await expect(page.getByRole("button", { name: /^Ember$/ })).toBeDisabled();
   });
 
   test("an earned accent can be equipped and shows as selected", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(3), seenLevel: 3 });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     const ember = page.getByRole("button", { name: /^Ember$/ });
     await ember.click();
@@ -37,7 +37,7 @@ test.describe("achievements", () => {
 
   test("equipping the bubbles brings the background to life at once", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(2), seenLevel: 2 });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     // The background sits in the layout, so it reacts without a navigation.
     await expect(page.locator(".circles li")).toHaveCount(0);
@@ -54,7 +54,7 @@ test.describe("achievements", () => {
       "particles are not drawn on touch: an animated full-screen layer costs 140%+ CPU there",
     );
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(2), seenLevel: 2 });
-    await page.goto("/profile");
+    await page.goto("/settings");
     await page.getByRole("button", { name: /^Bubbles$/ }).click();
     await expect(page.locator(".circles li").first()).toBeAttached();
 
@@ -83,7 +83,7 @@ test.describe("achievements", () => {
       "particles are not drawn on touch: an animated full-screen layer costs 140%+ CPU there",
     );
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(25), seenLevel: 25 });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     const nameFor = async (label: string) => {
       await page.getByRole("button", { name: label }).click();
@@ -101,11 +101,12 @@ test.describe("achievements", () => {
 
   test("a locked reward is listed with the level it needs", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
-    const ahead = page.getByRole("heading", { name: "Still ahead" });
-    await expect(ahead).toBeVisible();
-    await expect(page.getByText("Level 25")).toBeVisible();
+    const midnight = page.getByRole("button", { name: "Midnight", exact: true });
+    await expect(midnight).toBeDisabled();
+    await expect(midnight).toHaveAccessibleDescription(/level 25/i);
+    await expect(page.getByRole("img", { name: "Midnight preview" })).toBeVisible();
   });
 
   test("the garden sway animates the plants", async ({ page, isMobile }) => {
@@ -114,7 +115,7 @@ test.describe("achievements", () => {
       "the sway is desktop-only: animating ten plants costs 126% CPU on a real phone",
     );
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 8 });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     await page
       .getByRole("group", { name: "Garden" })
@@ -151,18 +152,21 @@ test.describe("achievements", () => {
 
   test("the background slot is blocked while animations are off", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(12), seenLevel: 12, motion: false });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     const group = page.getByRole("group", { name: "Background" });
     await expect(group.getByRole("button", { name: /^Bubbles$/ })).toBeDisabled();
     await expect(group.getByRole("button", { name: /^Default$/ })).toBeDisabled();
     await expect(page.getByText(/animations are off/i).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: /settings/i }).first()).toBeVisible();
+    await expect(page.getByRole("switch", { name: "Animations" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 
   test("the colour slots stay usable while animations are off", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(12), seenLevel: 12, motion: false });
-    await page.goto("/profile");
+    await page.goto("/settings");
 
     const accents = page.getByRole("group", { name: "Accent" });
     await expect(accents.getByRole("button", { name: /^Ember$/ })).toBeEnabled();

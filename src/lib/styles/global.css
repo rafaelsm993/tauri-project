@@ -10,10 +10,13 @@
    ============================================================ */
 :root {
   /* ── Palette (Netflix): channel tokens are the theme surface; colors derive from them ── */
-  --clr-bg-rgb: 0 0 0;
-  --clr-surface-rgb: 10 10 10;
+  --clr-base-bg-rgb: 0 0 0;
+  --clr-bg-rgb: var(--clr-base-bg-rgb);
+  --clr-base-surface-rgb: 10 10 10;
+  --clr-surface-rgb: var(--clr-base-surface-rgb);
   --clr-surface-2-rgb: 20 20 20;
-  --clr-primary-rgb: 229 9 20;
+  --clr-base-primary-rgb: 229 9 20;
+  --clr-primary-rgb: var(--clr-base-primary-rgb);
   --clr-accent-rgb: 178 7 16;
   --clr-teal-rgb: 70 211 105;
   --clr-error-rgb: 255 82 99;
@@ -92,8 +95,8 @@
 
 /* ── Light palette: chosen in Settings, or followed from the system ── */
 :root[data-theme="light"] {
-  --clr-bg-rgb: 247 246 243;
-  --clr-surface-rgb: 255 255 255;
+  --clr-base-bg-rgb: 247 246 243;
+  --clr-base-surface-rgb: 255 255 255;
   --clr-surface-2-rgb: 236 234 229;
   --clr-teal-rgb: 21 128 61;
   --clr-error-rgb: 200 30 50;
@@ -112,8 +115,8 @@
 
 @media (prefers-color-scheme: light) {
   :root[data-theme="system"] {
-    --clr-bg-rgb: 247 246 243;
-    --clr-surface-rgb: 255 255 255;
+    --clr-base-bg-rgb: 247 246 243;
+    --clr-base-surface-rgb: 255 255 255;
     --clr-surface-2-rgb: 236 234 229;
     --clr-teal-rgb: 21 128 61;
     --clr-error-rgb: 200 30 50;

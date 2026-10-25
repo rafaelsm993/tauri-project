@@ -290,7 +290,7 @@ test.describe("touch devices", () => {
   test("reward chips are at least 44px tall on coarse pointers", async ({ page, isMobile }) => {
     test.skip(!isMobile, "mouse viewports may use compact targets");
     await mockLibrary(page, [], { events: eventsAtLevel(25), seenLevel: 25 });
-    await page.goto("/profile");
+    await page.goto("/settings");
     const chips = page.getByRole("group", { name: "Accent" }).getByRole("button");
     await expect(chips.first()).toBeVisible();
     const heights = await chips.evaluateAll((els) =>

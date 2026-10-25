@@ -17,7 +17,7 @@ function block(selector) {
 
 function rgbOf(value, vars) {
   if (value === undefined) throw new Error("missing colour token");
-  const ref = value.match(/^rgb\(var\((--[\w-]+)\)\)$/);
+  const ref = value.match(/^rgb\(var\((--[\w-]+)\)\)$/) ?? value.match(/^var\((--[\w-]+)\)$/);
   if (ref) return rgbOf(vars[ref[1]], vars);
   const hex = value.match(/^#([0-9a-f]{6})$/i);
   if (hex) return [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16));
@@ -118,7 +118,10 @@ for (const [base, baseVars] of Object.entries(PALETTES)) {
 }
 
 test("a light palette exists and differs from the dark one", () => {
-  assert.notEqual(PALETTES.light["--clr-bg-rgb"], dark["--clr-bg-rgb"]);
+  assert.notDeepEqual(
+    rgbOf(PALETTES.light["--clr-bg-rgb"], PALETTES.light),
+    rgbOf(dark["--clr-bg-rgb"], dark),
+  );
 });
 
 test("following the system in light mode uses exactly the light palette", () => {

@@ -1,17 +1,22 @@
 <script lang="ts">
   import AppHeader from "$lib/components/ui/AppHeader.svelte";
-  import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import ThemeSection from "./ThemeSection.svelte";
+  import TitlesSection from "./TitlesSection.svelte";
+  import { unlocksStore } from "$lib/stores/unlocks.svelte";
   import Switch from "$lib/components/ui/Switch.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import BackupSection from "./BackupSection.svelte";
   import KeysSection from "./KeysSection.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
-  import type { Theme } from "$lib/types/prefs";
+
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
 
   // The store prop exists for tests; the app uses the singleton.
-  let { store = prefsStore }: { store?: PrefsStore } = $props();
+  let {
+    store = prefsStore,
+    currentLevel = unlocksStore.level,
+  }: { store?: PrefsStore; currentLevel?: number | null } = $props();
 
   async function replayWelcome() {
     if (await store.update({ welcomed: false, welcome_beat: 0 })) await goto(resolve("/welcome"));
@@ -36,12 +41,6 @@
     paceError = { ...paceError, [field]: undefined };
     void store.update({ [field]: value });
   }
-
-  const THEME_OPTIONS: { value: Theme; label: string }[] = [
-    { value: "system", label: "System" },
-    { value: "dark", label: "Dark" },
-    { value: "light", label: "Light" },
-  ];
 </script>
 
 <main class="settings">
@@ -57,19 +56,8 @@
     />
   </section>
 
-  <section class="settings-row">
-    <div class="settings-text">
-      <h2 class="settings-label">Theme</h2>
-      <p class="settings-hint">System follows your device's light or dark setting.</p>
-    </div>
-    <SegmentedControl
-      label="Theme"
-      options={THEME_OPTIONS}
-      value={store.prefs.theme}
-      disabled={!store.ready}
-      onchange={(theme) => store.update({ theme })}
-    />
-  </section>
+  <ThemeSection prefs={store} {currentLevel} />
+  <TitlesSection prefs={store} {currentLevel} />
 
   <section class="settings-row" aria-labelledby="{id}-pace">
     <div class="settings-text">

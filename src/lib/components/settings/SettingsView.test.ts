@@ -16,10 +16,22 @@ function storeWith(
     update,
   });
   store.ready = true;
+  store.loaded = true;
   return { store, update };
 }
 
 describe("SettingsView", () => {
+  it("hosts one Theme and Animations control with shared equipment and title preferences", async () => {
+    const { store, update } = storeWith();
+    render(SettingsView, { store, currentLevel: 3 });
+    expect(screen.getAllByRole("heading", { name: "Theme" })).toHaveLength(1);
+    expect(screen.getAllByRole("switch", { name: "Animations" })).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Ember" }));
+    expect(update).toHaveBeenCalledWith({ accent: "ember" });
+    await userEvent.click(screen.getByRole("button", { name: "Curious Mind" }));
+    expect(update).toHaveBeenCalledWith({ title: "Curious Mind" });
+    expect(screen.getByRole("button", { name: "Dusk" })).toBeDisabled();
+  });
   const animations = () => screen.getByRole("switch", { name: "Animations" });
   const theme = () => screen.getByRole("group", { name: "Theme" });
 

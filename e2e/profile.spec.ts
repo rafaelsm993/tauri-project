@@ -22,6 +22,9 @@ test.describe("profile dashboard", () => {
       page.getByRole("region", { name: "Progression" }).locator("svg").first(),
     ).toBeVisible();
     await expect(page.getByText("Coming soon.")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Garden", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Achievements", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Accent", exact: true })).toHaveCount(0);
   });
 
   test("the range switch changes the selected range", async ({ page }) => {

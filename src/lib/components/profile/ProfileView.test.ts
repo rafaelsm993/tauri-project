@@ -111,6 +111,13 @@ async function burstingStore() {
 }
 
 describe("ProfileView", () => {
+  it("keeps Garden and charts but leaves equipment selection to Settings", async () => {
+    render(ProfileView, { store: storeWith(LOG) });
+    expect(await screen.findByRole("region", { name: "Progression" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Garden" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Achievements" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Accent" })).not.toBeInTheDocument();
+  });
   it("links to Settings from its header, which phones reach no other way", async () => {
     render(ProfileView, { store: storeWith(LOG) });
     expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");

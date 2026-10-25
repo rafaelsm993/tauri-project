@@ -1,6 +1,7 @@
 import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
 import { gamificationStore } from "$lib/stores/gamification.svelte";
 import { libraryStore } from "$lib/stores/library.svelte";
+import { MediaQuery } from "svelte/reactivity";
 import {
   ACCENTS,
   PACKS,
@@ -12,6 +13,11 @@ import {
 import { UNLOCKS, isUnlocked, nextUnlock, type Unlock, type UnlockId } from "$lib/domain/unlocks";
 
 export type Slot = "accent" | "pack" | "motif" | "garden";
+
+const systemLight =
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? new MediaQuery("prefers-color-scheme: light")
+    : { current: false };
 
 // Current eligibility changes the display without rewriting stored selections.
 export class UnlocksStore {
@@ -41,9 +47,10 @@ export class UnlocksStore {
     return nextUnlock(this.level);
   }
 
-  // `system` is resolved by the document; for offer rules treat it as dark, the app's default.
+  // Palette suitability follows the same live system preference as the document.
   get baseTheme(): "light" | "dark" {
-    return this.prefs.prefs.theme === "light" ? "light" : "dark";
+    const theme = this.prefs.prefs.theme;
+    return theme === "light" || (theme === "system" && systemLight.current) ? "light" : "dark";
   }
 
   // An id only counts if it is both unlocked and suitable for the current base theme.

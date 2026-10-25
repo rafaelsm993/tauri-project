@@ -21,6 +21,8 @@
   --clr-shade-rgb: 0 0 0;
   --clr-scrim-rgb: 8 11 16;
   --clr-highlight-rgb: 232 184 75;
+  /* The light that a lit rating star's glint mixes into the accent; the same in every theme. */
+  --clr-glint-rgb: 255 255 255;
 
   --clr-bg: rgb(var(--clr-bg-rgb));
   --clr-surface: rgb(var(--clr-surface-rgb));

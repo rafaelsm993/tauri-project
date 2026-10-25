@@ -196,22 +196,15 @@ test("a saved item's known length can be edited from its page", async ({ page })
   await expect(page.getByRole("button", { name: "Edit length" })).toBeVisible();
 });
 
-test("every rating pill is visible without scrolling", async ({ page }) => {
+test("the stars and their word fit on screen", async ({ page }) => {
   await mockIpc(page, false);
   await page.goto("/media/movie/1");
   await page.getByRole("button", { name: /add to library/i }).click();
   await page.getByRole("button", { name: /skip/i }).click();
 
-  const group = page.getByRole("group", { name: "Rating" });
-  await expect(group).toBeVisible();
-  const { scroll, client } = await group.evaluate((el) => ({
-    scroll: el.scrollWidth,
-    client: el.clientWidth,
-  }));
-  expect(scroll).toBeLessThanOrEqual(client);
-  for (const name of ["Unrated", "1", "10"]) {
-    await expect(group.getByRole("button", { name, exact: true })).toBeInViewport({ ratio: 1 });
-  }
+  await expect(page.getByRole("slider", { name: "Rating" })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByText("Not rated")).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
 });
 
 test("on a phone the add sheet sits at the bottom and Back closes it, not the page", async ({

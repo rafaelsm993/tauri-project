@@ -85,7 +85,7 @@ describe("ProgressEditor", () => {
       onprogress,
       onaddlength: vi.fn(),
     });
-    expect(screen.queryByRole("slider")).toBeNull();
+    expect(screen.queryByRole("slider", { name: "Progress" })).toBeNull();
     expect(document.querySelector(".count")).toHaveTextContent("41 chapters");
     await userEvent.click(screen.getByRole("button", { name: "One chapter more" }));
     expect(onprogress).toHaveBeenLastCalledWith(42);
@@ -104,7 +104,7 @@ describe("ProgressEditor", () => {
     });
     const watched = screen.getByRole("button", { name: "Watched" });
     expect(watched).toHaveAttribute("aria-pressed", "false");
-    expect(screen.queryByRole("slider")).toBeNull();
+    expect(screen.queryByRole("slider", { name: "Progress" })).toBeNull();
     await userEvent.click(watched);
     expect(onprogress).toHaveBeenLastCalledWith(1);
   });
@@ -132,17 +132,13 @@ describe("ProgressEditor", () => {
     expect(onaddlength).toHaveBeenCalledOnce();
   });
 
-  it("offers ratings 1 to 10 and reports the chosen one", async () => {
-    const onrating = vi.fn();
-    render(ProgressEditor, { ...base, onrating });
-    await userEvent.click(screen.getByRole("button", { name: "8" }));
-    expect(onrating).toHaveBeenLastCalledWith(8);
-  });
-
-  it("reports an unrated selection as null", async () => {
+  it("rates with the stars", async () => {
     const onrating = vi.fn();
     render(ProgressEditor, { ...base, rating: 8, onrating });
-    await userEvent.click(screen.getByRole("button", { name: /unrated/i }));
+    const stars = screen.getByRole("slider", { name: "Rating" });
+    expect(stars).toHaveAttribute("aria-valuetext", "8 · Great");
+    stars.focus();
+    await userEvent.keyboard("{Delete}");
     expect(onrating).toHaveBeenLastCalledWith(null);
   });
 

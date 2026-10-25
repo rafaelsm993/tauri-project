@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
+  import StarRating from "./StarRating.svelte";
   import LengthNote from "./LengthNote.svelte";
   import { EDIT_ICON } from "$lib/components/ui/icons";
   import { clampProgress, isBinary, percent, unitLabel } from "$lib/domain/progress";
@@ -45,19 +45,11 @@
       ? `${shown} ${unitLabel(mediaType, shown)}`
       : `${shown} of ${total} ${unitLabel(mediaType, total)}`,
   );
-  const ratingOptions = [
-    { value: "", label: "Unrated" },
-    ...Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
-  ];
 
   function commit(value: number) {
     dragging = null;
     const next = clampProgress(mediaType, value);
     if (next !== progress) onprogress(next);
-  }
-
-  function changeRating(raw: string) {
-    onrating(raw === "" ? null : Number(raw));
   }
 </script>
 
@@ -158,16 +150,7 @@
 
   <div class="rating-field">
     <span class="field-label" aria-hidden="true">Rating</span>
-    <div class="rating-control">
-      <SegmentedControl
-        label="Rating"
-        wrap
-        options={ratingOptions}
-        value={rating === null ? "" : String(rating)}
-        {disabled}
-        onchange={changeRating}
-      />
-    </div>
+    <StarRating value={rating} {disabled} onchange={onrating} />
   </div>
 </section>
 
@@ -503,11 +486,6 @@
     align-items: center;
     gap: $spacing-sm;
     flex-wrap: wrap;
-  }
-
-  .rating-control {
-    min-width: 0;
-    max-width: 100%;
   }
 
   .sr {

@@ -110,3 +110,87 @@ test("with Animations off, or the system asking for less motion, the stripes sta
   await expect(page.locator("html")).toHaveAttribute("data-motion", "off");
   expect(await stripes(page)).toBe("none");
 });
+
+const rating = (page: Page) => page.getByRole("slider", { name: "Rating" });
+
+// The x of a point along the stars, as a fraction of their width.
+async function at(page: Page, fraction: number) {
+  const box = (await rating(page).boundingBox())!;
+  return { x: box.x + box.width * fraction, y: box.y + box.height / 2 };
+}
+
+test("tap a half star, swipe across the stars, tap again to clear", async ({ page }) => {
+  await open(page, 5, "in_progress");
+  const half = await at(page, 0.65); // 6.5 → 7
+  await page.mouse.click(half.x, half.y);
+  await expect(page.getByText("7 · Good")).toBeVisible();
+
+  const start = await at(page, 0.02);
+  const end = await at(page, 0.99);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 6 });
+  await expect(page.getByText("10 · Masterpiece")).toBeVisible();
+  await page.mouse.up();
+
+  await page.mouse.click(end.x, end.y);
+  await expect(page.getByText("Not rated")).toBeVisible();
+  expect(await patches(page)).toEqual(
+    expect.arrayContaining([{ rating: 7 }, { rating: 10 }, { rating: null }]),
+  );
+});
+
+test("a half star lights 8 of its 15 columns", async ({ page }) => {
+  await open(page, 5, "in_progress");
+  await rating(page).focus();
+  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowLeft"); // 9: four full stars and a half
+  const widths = await page
+    .locator(".star clipPath rect")
+    .evaluateAll((rects) => rects.map((r) => r.getAttribute("width")));
+  expect(widths).toEqual(["15", "15", "15", "15", "8"]);
+});
+
+test("a raise pops the stars it lights, only with Animations on", async ({ page }) => {
+  await open(page, 5, "in_progress");
+  await rating(page).focus();
+  await page.keyboard.press("End");
+  const names = await page
+    .locator(".sprite.pop")
+    .first()
+    .evaluate((el) => el.getAnimations().map((a) => (a as CSSAnimation).animationName));
+  expect(names.join()).toContain("star-pop");
+});
+
+test("with Animations off the stars change without a burst", async ({ page }) => {
+  await open(page, 5, "in_progress", { motion: false });
+  await rating(page).focus();
+  await page.keyboard.press("End");
+  await expect(page.getByText("10 · Masterpiece")).toBeVisible();
+  expect(
+    await page
+      .locator(".sparks")
+      .first()
+      .evaluate((el) => getComputedStyle(el).display),
+  ).toBe("none");
+  expect(
+    await page
+      .locator(".sprite.pop")
+      .first()
+      .evaluate((el) => el.getAnimations().length),
+  ).toBe(0);
+});
+
+test("lit stars take the equipped accent", async ({ page }) => {
+  await open(page, 5, "in_progress", { seenLevel: 99, prefs: { accent: "ember" } });
+  await rating(page).focus();
+  await page.keyboard.press("End");
+  const [body, accent] = await page
+    .locator(".star .lit .body")
+    .first()
+    .evaluate((el) => [
+      getComputedStyle(el).fill,
+      getComputedStyle(document.documentElement).getPropertyValue("--clr-accent-rgb").trim(),
+    ]);
+  expect(body).toBe(`rgb(${accent.split(/\s+/).join(", ")})`);
+});

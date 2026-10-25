@@ -7,7 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
-- Matching a manual item to the catalog: the matched item's data wins (AniList's 25 episodes over a typed 300). Your item's numbers and details (year, author, overview, genres, platforms, poster) only fill what the catalog leaves empty; when combining with a saved catalog item, the order is catalog → saved item → yours. Progress past the new length stops at its end and the item is marked Completed, instead of the match being refused. The compare step now shows yours → the catalog's and lists only what changes (old struck through, new in bold), with what stays on one line.
+- Matching a manual item to the catalog: the matched item's data wins (AniList's 25 episodes over a typed 300). Your item's numbers and details (year, author, overview, genres, platforms, poster) only fill what the catalog leaves empty; when combining with a saved catalog item, the order is catalog → saved item → yours. Progress past the new length stops at its end and the item is marked Completed, instead of the match being refused. The compare step now shows yours → the catalog's and lists only what changes (old struck through, new in bold), with what stays on one line. Each side shows its title, length and type · year under its label; a length the catalog replaces is struck through (~~666 chapters~~ **189 chapters**).
 - Renamed from the `tauri-app` placeholder to **Aevum** (Latin: an age, a lifetime); bundle identifier `com.user.tauri-app` → `com.rafaelsm993.aevum`. The Android project was regenerated for the new package; a device with the old debug APK must reinstall.
 
 ### Added

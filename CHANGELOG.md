@@ -7,6 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Matching a manual item to the catalog: the matched item's data wins (AniList's 25 episodes over a typed 300). Your item's numbers and details (year, author, overview, genres, platforms, poster) only fill what the catalog leaves empty; when combining with a saved catalog item, the order is catalog → saved item → yours. Progress past the new length stops at its end and the item is marked Completed, instead of the match being refused. The compare step now shows yours → the catalog's and lists only what changes (old struck through, new in bold), with what stays on one line.
 - Renamed from the `tauri-app` placeholder to **Aevum** (Latin: an age, a lifetime); bundle identifier `com.user.tauri-app` → `com.rafaelsm993.aevum`. The Android project was regenerated for the new package; a device with the old debug APK must reinstall.
 
 ### Added
@@ -35,6 +36,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Svelte 5 runes and class-based application stores
 
 ### Fixed
+- The Genres panel's Clear on Home is no longer hidden under Android's navigation bar: popovers end above it.
+- The session picker no longer shows "NaN" when Custom's minutes are emptied in the Plan and Log session sheets; it says the shortest session instead, and "At most 12 h." past the limit.
 - An accent's own text colour (Ember's dark text) now reaches every filled button, in the dark, light and system themes.
 - The length and Log session sheets no longer open the phone keyboard over their own buttons.
 - An open toast (today's reminder, a level-up) no longer covers the end of a page: the page can scroll its last cards above it.

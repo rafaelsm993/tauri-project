@@ -38,11 +38,16 @@ function normalize(raw: unknown): Prefs {
     accent: name(r.accent, DEFAULT_PREFS.accent),
     pack: name(r.pack, DEFAULT_PREFS.pack),
     motif: name(r.motif, DEFAULT_PREFS.motif),
+    title: selection(r.title, DEFAULT_PREFS.title),
+    profile_art: selection(r.profile_art, DEFAULT_PREFS.profile_art),
   };
 }
 
 const name = (v: unknown, fallback: string): string =>
   typeof v === "string" && v.length > 0 ? v : fallback;
+
+const selection = (v: unknown, fallback: string): string =>
+  typeof v === "string" && v.trim().length > 0 && [...v].length <= 80 ? v : fallback;
 
 const strings = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
@@ -53,6 +58,7 @@ export class PrefsStore {
 
   prefs = $state<Prefs>({ ...DEFAULT_PREFS });
   ready = $state(false);
+  loaded = $state(false);
   error = $state("");
 
   constructor(client: PrefsClient = defaultClient) {
@@ -63,6 +69,7 @@ export class PrefsStore {
     if (this.ready) return;
     try {
       this.prefs = normalize(await this.client.load());
+      this.loaded = true;
     } catch (e) {
       this.error = errorMessage(e, "Failed to load your settings.");
     } finally {
@@ -73,6 +80,7 @@ export class PrefsStore {
   // An import replaced the data underneath; read it again.
   async reload(): Promise<void> {
     this.ready = false;
+    this.loaded = false;
     this.error = "";
     await this.hydrate();
   }

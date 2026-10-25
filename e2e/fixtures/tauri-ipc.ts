@@ -125,6 +125,8 @@ export const test = base.extend({
         motif: "default",
         particle_count: 12,
         garden: "default",
+        title: "automatic",
+        profile_art: "default",
       };
       Object.assign(window, { __ipcCalls: calls });
       (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {

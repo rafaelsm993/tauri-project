@@ -7,7 +7,6 @@ import {
   levelOf,
   savedLengths,
   streaks,
-  titleFor,
   totalXp,
   type Moment,
 } from "$lib/domain/gamification";
@@ -21,6 +20,7 @@ import {
   statusCounts,
   xpByWeek,
 } from "$lib/domain/dashboard";
+import { displayedTitle } from "$lib/domain/titles";
 import { asAliases, rekey, withAliasEvents, type Aliases } from "$lib/domain/reconcile";
 import { libraryStore } from "$lib/stores/library.svelte";
 import { prefsStore } from "$lib/stores/prefs.svelte";
@@ -58,6 +58,7 @@ export class GamificationStore {
   private entriesOf: () => LibraryEntry[];
   private todayOf: () => string;
   private seen: SeenLevel;
+  private selectionOf: () => { title: string };
   // One queue per load in flight; only the newest load's answer is kept.
   private queues: LibraryEvent[][] = [];
   private loads = 0;
@@ -80,7 +81,7 @@ export class GamificationStore {
   awards = $derived(awards(this.history, savedLengths(this.entries)));
   xp = $derived(totalXp(this.awards));
   level = $derived(levelOf(this.xp));
-  title = $derived(titleFor(this.level.level));
+  title = $derived.by(() => displayedTitle(this.level.level, this.selectionOf().title));
   streak = $derived(streaks(activeDays(this.events), this.today));
   statuses = $derived(statusCounts(this.entries));
   families = $derived(familyBreakdown(this.entries));
@@ -98,11 +99,15 @@ export class GamificationStore {
     entries: () => LibraryEntry[] = () => libraryStore.entries,
     today: () => string = localDay,
     seen: SeenLevel = seenInPrefs,
+    selection: () => { title: string } = () => ({
+      title: prefsStore.loaded ? prefsStore.prefs.title : "automatic",
+    }),
   ) {
     this.client = client;
     this.entriesOf = entries;
     this.todayOf = today;
     this.seen = seen;
+    this.selectionOf = selection;
     this.today = today();
     client.onEvent?.((e) => this.record(e));
   }

@@ -12,6 +12,127 @@ function fakeClient(over: Partial<PrefsClient> = {}): PrefsClient {
 }
 
 describe("PrefsStore", () => {
+  it("defaults the new selections when an older backend file omits them", async () => {
+    const store = new PrefsStore(
+      fakeClient({ load: vi.fn(async () => ({ motion: false }) as never) }),
+    );
+    await store.hydrate();
+    expect(store.prefs.title).toBe("automatic");
+    expect(store.prefs.profile_art).toBe("default");
+  });
+
+  it("preserves shaped unknown selection IDs for future versions", async () => {
+    const store = new PrefsStore(
+      fakeClient({
+        load: vi.fn(async () => ({ title: "Future title", profile_art: "future:crest" }) as never),
+      }),
+    );
+    await store.hydrate();
+    expect(store.prefs.title).toBe("Future title");
+    expect(store.prefs.profile_art).toBe("future:crest");
+  });
+
+  it.each([null, 7, "", " \t", "x".repeat(81), "\u{1f31f}".repeat(81)])(
+    "falls back for invalid selection shape %j",
+    async (invalid) => {
+      const store = new PrefsStore(
+        fakeClient({
+          load: vi.fn(async () => ({ title: invalid, profile_art: invalid }) as never),
+        }),
+      );
+      await store.hydrate();
+      expect(store.prefs.title).toBe("automatic");
+      expect(store.prefs.profile_art).toBe("default");
+    },
+  );
+
+  it("accepts eighty Unicode characters without counting surrogate pairs twice", async () => {
+    const value = "\u{1f31f}".repeat(80);
+    const store = new PrefsStore(
+      fakeClient({ load: vi.fn(async () => ({ title: value, profile_art: value }) as never) }),
+    );
+    await store.hydrate();
+    expect(store.prefs.title).toBe(value);
+    expect(store.prefs.profile_art).toBe(value);
+  });
+
+  it("saves both selections without rewriting unrelated preferences", async () => {
+    const client = fakeClient();
+    const store = new PrefsStore(client);
+    expect(await store.update({ title: "Curious Mind", profile_art: "manga:5" })).toBe(true);
+    expect(client.update).toHaveBeenCalledExactlyOnceWith({
+      title: "Curious Mind",
+      profile_art: "manga:5",
+    });
+    expect(store.prefs.title).toBe("Curious Mind");
+    expect(store.prefs.profile_art).toBe("manga:5");
+  });
+
+  it("marks successful hydration independently from an attempted load", async () => {
+    const store = new PrefsStore(fakeClient());
+    expect(store.loaded).toBe(false);
+    await store.hydrate();
+    expect(store.ready).toBe(true);
+    expect(store.loaded).toBe(true);
+  });
+
+  it("does not report known prefs after an initial load failure, even if a save clears the error", async () => {
+    const store = new PrefsStore(fakeClient({ load: vi.fn().mockRejectedValue("unreadable") }));
+    await store.hydrate();
+    expect(store.ready).toBe(true);
+    expect(store.loaded).toBe(false);
+    await store.update({ motion: false });
+    expect(store.error).toBe("");
+    expect(store.loaded).toBe(false);
+  });
+
+  it("keeps known prefs and rolls back both selections after a later failed save", async () => {
+    const store = new PrefsStore(
+      fakeClient({
+        load: vi.fn(async () => ({
+          ...DEFAULT_PREFS,
+          title: "Curious Mind",
+          profile_art: "manga:5",
+        })),
+        update: vi.fn().mockRejectedValue("read-only disk"),
+      }),
+    );
+    await store.hydrate();
+    expect(await store.update({ title: "automatic", profile_art: "default" })).toBe(false);
+    expect(store.error).toBe("read-only disk");
+    expect(store.loaded).toBe(true);
+    expect(store.prefs.title).toBe("Curious Mind");
+    expect(store.prefs.profile_art).toBe("manga:5");
+  });
+
+  it("invalidates known prefs during import reload and restores that state only on success", async () => {
+    const load = vi.fn(async () => ({ ...DEFAULT_PREFS }));
+    const store = new PrefsStore(fakeClient({ load }));
+    await store.hydrate();
+    let finish!: (value: typeof DEFAULT_PREFS) => void;
+    load.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const pending = store.reload();
+    expect(store.loaded).toBe(false);
+    expect(store.ready).toBe(false);
+    finish({ ...DEFAULT_PREFS, title: "Regular", profile_art: "book:5" });
+    await pending;
+    expect(store.loaded).toBe(true);
+    expect(store.prefs.title).toBe("Regular");
+    expect(store.prefs.profile_art).toBe("book:5");
+    load.mockRejectedValueOnce("import reload failed");
+    await store.reload();
+    expect(store.loaded).toBe(false);
+    expect(store.ready).toBe(true);
+    await store.reload();
+    expect(store.loaded).toBe(true);
+    expect(store.error).toBe("");
+  });
+
   it("reload re-reads the backend after an import", async () => {
     const load = vi.fn(async () => ({ ...DEFAULT_PREFS }));
     const store = new PrefsStore(fakeClient({ load }));
@@ -64,6 +185,8 @@ describe("PrefsStore", () => {
       motif: "default",
       particle_count: 12,
       garden: "default",
+      title: "automatic",
+      profile_art: "default",
     });
   });
 

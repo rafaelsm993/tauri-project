@@ -24,6 +24,8 @@ export interface Prefs {
   garden: string;
   // How many particles the equipped motif draws; 0 means none, MAX_PARTICLES is the cap.
   particle_count: number;
+  title: string;
+  profile_art: string;
 }
 
 export type Theme = "system" | "dark" | "light";
@@ -47,4 +49,6 @@ export const DEFAULT_PREFS: Prefs = {
   motif: "default",
   garden: "default",
   particle_count: 12,
+  title: "automatic",
+  profile_art: "default",
 };

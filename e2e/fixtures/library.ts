@@ -87,6 +87,8 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         pack: "default",
         motif: "default",
         garden: "default",
+        title: "automatic",
+        profile_art: "default",
         particle_count: 12,
         ...savedPrefs,
       };

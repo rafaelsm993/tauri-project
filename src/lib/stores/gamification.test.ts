@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { GamificationStore } from "./gamification.svelte";
-import { XP } from "$lib/domain/gamification";
+import { XP, xpForLevel } from "$lib/domain/gamification";
+import { PrefsStore } from "./prefs.svelte";
+import { DEFAULT_PREFS, type PrefsPatch } from "$lib/types/prefs";
 import type { LibraryEntry, LibraryEvent } from "$lib/types/library";
 
 const ev = (id: string, payload: unknown, local_date = "2026-09-20"): LibraryEvent => ({
@@ -327,6 +329,84 @@ describe("level-up moment", () => {
     emit(ev("4", { status: "completed" }));
     expect(store.level.level).toBe(2);
     expect(store.moment).toBeNull();
+  });
+});
+
+describe("selected profile title", () => {
+  function selectedAt(level: number, title: string) {
+    const count = Math.ceil(xpForLevel(level) / (XP.add + XP.completion));
+    const log = Array.from({ length: count }, (_, i) => ev(String(i + 1), { status: "completed" }));
+    const prefs: PrefsStore = new PrefsStore({
+      load: vi.fn(async () => ({ ...DEFAULT_PREFS, title })),
+      update: vi.fn(async (patch: PrefsPatch) => ({ ...prefs.prefs, ...patch })),
+    });
+    prefs.prefs = { ...DEFAULT_PREFS, title };
+    const client = { events: vi.fn(async () => log) };
+    const seen = { get: () => level, set: vi.fn(async () => {}) };
+    const store = new GamificationStore(
+      client,
+      () => [],
+      () => "2026-09-20",
+      seen,
+      () => prefs.prefs,
+    );
+    return { store, prefs, client, seen };
+  }
+
+  it("displays the injected older earned title while preserving next-title progression", async () => {
+    const { store } = selectedAt(8, "Curious Mind");
+    await store.load();
+    expect(store.level.level).toBe(8);
+    expect(store.title).toEqual({ name: "Curious Mind", next: { name: "Connoisseur", level: 12 } });
+  });
+
+  it.each(["automatic", "unknown", "Aevum Eternal"])(
+    "uses the current automatic title for %j",
+    async (title) => {
+      const { store } = selectedAt(8, title);
+      await store.load();
+      expect(store.title.name).toBe("Enthusiast");
+    },
+  );
+
+  it("reacts to selection changes without reading events, awarding XP or celebrating", async () => {
+    const { store, prefs, client, seen } = selectedAt(8, "Curious Mind");
+    await store.load();
+    const before = JSON.stringify({ xp: store.xp, events: store.events, awards: store.awards });
+    expect(store.title.name).toBe("Curious Mind");
+    await prefs.update({ title: "Newcomer" });
+    expect(store.title.name).toBe("Newcomer");
+    await prefs.update({ title: "automatic" });
+    expect(store.title.name).toBe("Enthusiast");
+    expect(JSON.stringify({ xp: store.xp, events: store.events, awards: store.awards })).toBe(
+      before,
+    );
+    expect(client.events).toHaveBeenCalledTimes(1);
+    expect(store.moment).toBeNull();
+    expect(seen.set).not.toHaveBeenCalled();
+  });
+
+  it("relocks a selected title after XP removal and restores it when re-earned", async () => {
+    const { store } = selectedAt(8, "Enthusiast");
+    await store.load();
+    const original = store.events.map((event) => ({ ...event }));
+    for (const event of original) {
+      store.record({ ...event, id: `remove-${event.id}`, kind: "library_remove" });
+    }
+    expect(store.level.level).toBe(1);
+    expect(store.title.name).toBe("Newcomer");
+    for (const event of original) store.record({ ...event, id: `readd-${event.id}` });
+    expect(store.level.level).toBe(8);
+    expect(store.title.name).toBe("Enthusiast");
+  });
+
+  it("announces newly earned progression titles rather than the selected old one", async () => {
+    const { store } = selectedAt(2, "Newcomer");
+    await store.load();
+    for (let i = 100; store.level.level < 3; i++)
+      store.record(ev(String(i), { status: "completed" }));
+    expect(store.title.name).toBe("Newcomer");
+    expect(store.moment).toEqual({ level: 3, newTitle: "Curious Mind" });
   });
 });
 

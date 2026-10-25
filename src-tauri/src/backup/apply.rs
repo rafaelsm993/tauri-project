@@ -326,7 +326,14 @@ mod tests {
         assert_eq!((r.added, r.posters, r.prefs_restored), (2, 1, true));
         assert_eq!(load(&lib).await.len(), 2);
         assert_eq!(read_events(&lib.events).unwrap().len(), 2);
-        assert!(!crate::prefs::ipc::load(&prefs).await.motion);
+        let restored = crate::prefs::ipc::load(&prefs).await;
+        assert!(!restored.motion);
+        assert_eq!(restored.title, "Curious Mind");
+        assert_eq!(restored.profile_art, "manga:5");
+        assert_eq!(
+            crate::prefs::ipc::load(&crate::prefs::ipc::init(&dir).unwrap()).await,
+            restored
+        );
         let poster = std::fs::read(lib.posters.join("tmdb_movie_1.png")).unwrap();
         assert_eq!(poster, PNG);
         let on_disk = crate::store::load::<LibraryFile>(&dir.join("library.json"), MIGRATIONS)
@@ -376,11 +383,24 @@ mod tests {
     #[tokio::test]
     async fn merge_keeps_this_devices_settings() {
         let (dir, lib, prefs) = fresh("apply-merge");
+        let before_prefs = crate::prefs::ipc::update(
+            &prefs,
+            serde_json::from_value(serde_json::json!({
+                "title": "Newcomer", "profile_art": "game:1"
+            }))
+            .unwrap(),
+        )
+        .await
+        .unwrap();
         let r = apply(&lib, &prefs, sample(), ImportMode::Merge)
             .await
             .unwrap();
         assert!(!r.prefs_restored);
-        assert!(crate::prefs::ipc::load(&prefs).await.motion);
+        assert_eq!(crate::prefs::ipc::load(&prefs).await, before_prefs);
+        assert_eq!(
+            crate::prefs::ipc::load(&crate::prefs::ipc::init(&dir).unwrap()).await,
+            before_prefs
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

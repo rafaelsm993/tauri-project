@@ -55,6 +55,8 @@ pub struct Prefs {
     pub garden: String,
     // How many particles the equipped motif draws; 0 means none, 20 is the cap.
     pub particle_count: u8,
+    pub title: String,
+    pub profile_art: String,
 }
 
 impl Default for Prefs {
@@ -74,6 +76,8 @@ impl Default for Prefs {
             motif: default_decoration(),
             garden: default_decoration(),
             particle_count: DEFAULT_PARTICLES,
+            title: "automatic".to_string(),
+            profile_art: default_decoration(),
         }
     }
 }
@@ -98,6 +102,8 @@ pub struct PrefsPatch {
     pub motif: Option<String>,
     pub garden: Option<String>,
     pub particle_count: Option<u8>,
+    pub title: Option<String>,
+    pub profile_art: Option<String>,
 }
 
 // v1 → v2: the background-only switch became the app-wide motion switch.
@@ -110,6 +116,13 @@ fn rename_background_animation(mut v: Value) -> Result<Value, String> {
 }
 
 pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
+    for (field, selection) in [("title", &patch.title), ("profile_art", &patch.profile_art)] {
+        if let Some(value) = selection {
+            if value.trim().is_empty() || value.chars().count() > 80 {
+                return Err(format!("{field} must contain 1–80 characters"));
+            }
+        }
+    }
     if let Some(n) = patch.particle_count {
         if n > MAX_PARTICLES {
             return Err(format!("{n} particles is above the {MAX_PARTICLES} cap"));
@@ -129,6 +142,12 @@ pub fn validate_patch(patch: &PrefsPatch) -> Result<(), String> {
 }
 
 pub fn apply_patch(prefs: &mut Prefs, patch: PrefsPatch) {
+    if let Some(title) = patch.title {
+        prefs.title = title;
+    }
+    if let Some(art) = patch.profile_art {
+        prefs.profile_art = art;
+    }
     if let Some(on) = patch.motion {
         prefs.motion = on;
     }
@@ -449,6 +468,88 @@ mod tests {
     fn the_old_patch_field_is_refused() {
         let old = serde_json::from_value::<PrefsPatch>(json!({ "background_animation": false }));
         assert!(old.is_err());
+    }
+
+    #[test]
+    fn runewood_old_prefs_default_title_and_art_without_a_migration() {
+        let old: Prefs =
+            serde_json::from_value(json!({ "motion": false, "seen_level": 8 })).unwrap();
+        let value = serde_json::to_value(&old).unwrap();
+        assert_eq!(value["title"], "automatic");
+        assert_eq!(value["profile_art"], "default");
+        assert!(!old.motion);
+        assert_eq!(old.seen_level, 8);
+        assert_eq!(SCHEMA_VERSION, 2);
+    }
+
+    #[test]
+    fn runewood_selection_patch_round_trips_and_omission_preserves_it() {
+        let mut prefs = Prefs::default();
+        let patch: PrefsPatch = serde_json::from_value(json!({
+            "title": "Curious Mind", "profile_art": "manga:5"
+        }))
+        .unwrap();
+        validate_patch(&patch).unwrap();
+        apply_patch(&mut prefs, patch);
+        apply_patch(&mut prefs, PrefsPatch::default());
+        let value = serde_json::to_value(&prefs).unwrap();
+        assert_eq!(value["title"], "Curious Mind");
+        assert_eq!(value["profile_art"], "manga:5");
+        assert_eq!(serde_json::from_value::<Prefs>(value).unwrap(), prefs);
+        assert!(prefs.motion);
+        assert_eq!(prefs.seen_level, 0);
+    }
+
+    #[test]
+    fn runewood_each_selection_rejects_blank_or_more_than_eighty_characters() {
+        for field in ["title", "profile_art"] {
+            for value in ["".to_string(), " \t\n".to_string(), "x".repeat(81)] {
+                let patch: PrefsPatch = serde_json::from_value(json!({ (field): value })).unwrap();
+                let err = validate_patch(&patch).expect_err("invalid selection must be refused");
+                assert!(err.contains(field), "{err}");
+            }
+        }
+    }
+
+    #[test]
+    fn runewood_selection_limits_count_characters_not_utf8_bytes() {
+        for field in ["title", "profile_art"] {
+            for value in ["x".repeat(80), "\u{1f31f}".repeat(80)] {
+                let patch: PrefsPatch = serde_json::from_value(json!({ (field): value })).unwrap();
+                assert!(validate_patch(&patch).is_ok());
+            }
+            let too_long: PrefsPatch =
+                serde_json::from_value(json!({ (field): "\u{1f31f}".repeat(81) })).unwrap();
+            assert!(validate_patch(&too_long).is_err());
+        }
+    }
+
+    #[test]
+    fn runewood_unknown_shaped_selections_are_preserved_without_unlock_validation() {
+        let mut prefs = Prefs::default();
+        let patch: PrefsPatch = serde_json::from_value(json!({
+            "title": "Future title", "profile_art": "future:crest"
+        }))
+        .unwrap();
+        validate_patch(&patch).unwrap();
+        apply_patch(&mut prefs, patch);
+        let value = serde_json::to_value(&prefs).unwrap();
+        assert_eq!(value["title"], "Future title");
+        assert_eq!(value["profile_art"], "future:crest");
+    }
+
+    #[test]
+    fn runewood_selection_fields_validate_independently_in_one_patch() {
+        for value in [
+            json!({ "title": "automatic", "profile_art": "" }),
+            json!({ "title": "", "profile_art": "default" }),
+        ] {
+            let patch: PrefsPatch = serde_json::from_value(value).unwrap();
+            assert!(validate_patch(&patch).is_err());
+        }
+        for field in ["title", "profile_art"] {
+            assert!(serde_json::from_value::<PrefsPatch>(json!({ (field): 7 })).is_err());
+        }
     }
 
     const CONTRACT: &str = concat!(

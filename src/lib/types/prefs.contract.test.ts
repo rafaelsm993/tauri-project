@@ -17,6 +17,8 @@ const PREFS_KEYS = {
   taste_genres: 0,
   particle_count: 0,
   garden: 0,
+  title: 0,
+  profile_art: 0,
 } satisfies Record<keyof Prefs, 0>;
 
 const keys = (o: object) => Object.keys(o).sort();

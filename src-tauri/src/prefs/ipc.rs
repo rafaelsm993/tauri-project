@@ -155,6 +155,92 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    #[tokio::test]
+    async fn runewood_selections_survive_a_real_save_and_restart() {
+        let dir = scratch("prefs-runewood-restart");
+        let state = init(&dir).unwrap();
+        let patch = serde_json::from_value(serde_json::json!({
+            "title": "Curious Mind", "profile_art": "manga:5"
+        }))
+        .unwrap();
+        let answer = update(&state, patch).await.unwrap();
+        assert_eq!(answer.title, "Curious Mind");
+        assert_eq!(answer.profile_art, "manga:5");
+        let disk: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(dir.join("prefs.json")).unwrap()).unwrap();
+        assert_eq!(disk["data"]["title"], "Curious Mind");
+        assert_eq!(disk["data"]["profile_art"], "manga:5");
+        assert_eq!(disk["schema_version"], 2);
+        drop(state);
+        let restarted = init(&dir).unwrap();
+        assert_eq!(load(&restarted).await, answer);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn runewood_invalid_selection_writes_nothing() {
+        for (index, value) in [
+            serde_json::json!({ "title": "" }),
+            serde_json::json!({ "profile_art": "x".repeat(81) }),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let dir = scratch(&format!("prefs-runewood-invalid-{index}"));
+            let state = init(&dir).unwrap();
+            let patch = serde_json::from_value(value).unwrap();
+            assert!(update(&state, patch).await.is_err());
+            assert_eq!(load(&state).await, Prefs::default());
+            assert!(!dir.join("prefs.json").exists());
+            std::fs::remove_dir_all(&dir).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn runewood_failed_selection_save_keeps_previous_memory_and_disk() {
+        let dir = scratch("prefs-runewood-rollback");
+        let state = init(&dir).unwrap();
+        let saved = update(
+            &state,
+            serde_json::from_value(serde_json::json!({
+                "title": "Curious Mind", "profile_art": "manga:5"
+            }))
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+        let path = dir.join("prefs.json");
+        let before = std::fs::read(&path).unwrap();
+        std::fs::create_dir(dir.join("prefs.json.tmp")).unwrap();
+        let result = update(
+            &state,
+            serde_json::from_value(serde_json::json!({
+                "title": "automatic", "profile_art": "default"
+            }))
+            .unwrap(),
+        )
+        .await;
+        assert!(result.is_err());
+        assert_eq!(load(&state).await, saved);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn runewood_old_file_loads_defaults_without_rewriting_it() {
+        let dir = scratch("prefs-runewood-old");
+        let path = dir.join("prefs.json");
+        let before = br#"{"schema_version":2,"data":{"motion":false,"seen_level":8}}"#;
+        std::fs::write(&path, before).unwrap();
+        let state = init(&dir).unwrap();
+        let loaded = load(&state).await;
+        assert_eq!(loaded.title, "automatic");
+        assert_eq!(loaded.profile_art, "default");
+        state.store.flush().await.unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn init_refuses_prefs_from_a_newer_app() {
         let dir = scratch("prefs-newer");

@@ -360,6 +360,8 @@ pub(crate) mod tests {
             prefs: Prefs {
                 motion: false,
                 seen_level: 3,
+                title: "Curious Mind".into(),
+                profile_art: "manga:5".into(),
                 reading_pages_per_hour: Some(40),
                 theme: crate::prefs::Theme::Light,
                 ..Prefs::default()

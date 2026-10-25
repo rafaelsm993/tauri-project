@@ -2,6 +2,8 @@ import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
 import { gamificationStore } from "$lib/stores/gamification.svelte";
 import { libraryStore } from "$lib/stores/library.svelte";
 import { MediaQuery } from "svelte/reactivity";
+import { completionAchievements, effectiveProfileArt } from "$lib/domain/completionAchievements";
+import type { LibraryEntry } from "$lib/types/library";
 import {
   ACCENTS,
   PACKS,
@@ -27,6 +29,8 @@ export class UnlocksStore {
     prefs: PrefsStore = prefsStore,
     private currentLevel: () => number | null = () =>
       libraryStore.ready && gamificationStore.loaded ? gamificationStore.level.level : null,
+    private currentEntries: () => LibraryEntry[] | null = () =>
+      libraryStore.ready ? libraryStore.entries : null,
   ) {
     this.prefs = prefs;
   }
@@ -81,6 +85,29 @@ export class UnlocksStore {
 
   get tokens(): Tokens {
     return tokensFor(this.accent, this.pack);
+  }
+
+  get artRewards() {
+    return completionAchievements(this.currentEntries() ?? [], this.level);
+  }
+
+  get profileArt(): string {
+    return effectiveProfileArt(
+      this.prefs.prefs.profile_art,
+      this.currentEntries() ?? [],
+      this.level,
+    );
+  }
+
+  canEquipArt(id: string): boolean {
+    return (
+      this.prefs.loaded &&
+      (id === "default" || this.artRewards.some((art) => art.id === id && art.unlocked))
+    );
+  }
+
+  async equipArt(id: string): Promise<boolean> {
+    return this.canEquipArt(id) ? this.prefs.update({ profile_art: id }) : false;
   }
 
   canEquip(slot: Slot, id: string): boolean {

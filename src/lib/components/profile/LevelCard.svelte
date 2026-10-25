@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ArcChart, Text } from "layerchart";
   import ChartCard from "./ChartCard.svelte";
+  import ProfileArtwork from "./ProfileArtwork.svelte";
   import { XP_COLOR } from "./chartTheme";
   import type { LevelInfo, Title } from "$lib/domain/gamification";
 
@@ -10,12 +11,14 @@
     xp,
     burst = false,
     onburstend,
+    art = "default",
   }: {
     level: LevelInfo;
     title: Title;
     xp: number;
     burst?: boolean;
     onburstend?: () => void;
+    art?: string;
   } = $props();
 
   const series = $derived([
@@ -64,6 +67,7 @@
       </ArcChart>
     </div>
     <div class="level-text">
+      <ProfileArtwork {art} size={32} scale={2} />
       <p class="level-title">{title.name}</p>
       <p class="level-xp">{xp} XP · {toNext} XP to level {level.level + 1}</p>
       {#if title.next}
@@ -123,6 +127,7 @@
   .level-text {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: $spacing-xs;
     min-width: 0;
     text-align: center;

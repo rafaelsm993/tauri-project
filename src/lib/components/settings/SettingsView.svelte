@@ -3,6 +3,8 @@
   import ThemeSection from "./ThemeSection.svelte";
   import TitlesSection from "./TitlesSection.svelte";
   import { unlocksStore } from "$lib/stores/unlocks.svelte";
+  import { libraryStore } from "$lib/stores/library.svelte";
+  import type { LibraryEntry } from "$lib/types/library";
   import Switch from "$lib/components/ui/Switch.svelte";
   import ErrorNote from "$lib/components/ui/ErrorNote.svelte";
   import BackupSection from "./BackupSection.svelte";
@@ -16,7 +18,12 @@
   let {
     store = prefsStore,
     currentLevel = unlocksStore.level,
-  }: { store?: PrefsStore; currentLevel?: number | null } = $props();
+    currentEntries = libraryStore.ready ? libraryStore.entries : null,
+  }: {
+    store?: PrefsStore;
+    currentLevel?: number | null;
+    currentEntries?: LibraryEntry[] | null;
+  } = $props();
 
   async function replayWelcome() {
     if (await store.update({ welcomed: false, welcome_beat: 0 })) await goto(resolve("/welcome"));
@@ -56,7 +63,7 @@
     />
   </section>
 
-  <ThemeSection prefs={store} {currentLevel} />
+  <ThemeSection prefs={store} {currentLevel} {currentEntries} />
   <TitlesSection prefs={store} {currentLevel} />
 
   <section class="settings-row" aria-labelledby="{id}-pace">

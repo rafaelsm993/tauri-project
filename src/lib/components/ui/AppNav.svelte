@@ -1,6 +1,8 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import LevelRing from "./LevelRing.svelte";
+  import ProfileArtwork from "$lib/components/profile/ProfileArtwork.svelte";
+  import { PROFILE_ART } from "$lib/domain/profileArt";
   import type { Section } from "$lib/domain/navigation";
   import type { LevelInfo } from "$lib/domain/gamification";
 
@@ -8,7 +10,13 @@
   let {
     section,
     progress,
-  }: { section: Section | null; progress?: { level: LevelInfo; title: string } } = $props();
+    art = "default",
+  }: {
+    section: Section | null;
+    progress?: { level: LevelInfo; title: string };
+    art?: string;
+  } = $props();
+  const hasArt = $derived(PROFILE_ART.some((reward) => reward.id === art));
 
   const ICONS: Record<Section, string> = {
     home: "M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z",
@@ -43,7 +51,11 @@
           aria-label={name(tab)}
         >
           <span class="icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d={ICONS[tab.section]} /></svg>
+            {#if tab.section === "profile" && hasArt}
+              <ProfileArtwork {art} size={24} decorative />
+            {:else}
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d={ICONS[tab.section]} /></svg>
+            {/if}
             {#if tab.section === "profile" && progress}
               <LevelRing level={progress.level} />
             {/if}

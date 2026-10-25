@@ -24,6 +24,9 @@ import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import ProfileView from "./ProfileView.svelte";
 import { GamificationStore } from "$lib/stores/gamification.svelte";
 import { prefsStore } from "$lib/stores/prefs.svelte";
+import { PrefsStore } from "$lib/stores/prefs.svelte";
+import { LibraryStore } from "$lib/stores/library.svelte";
+import { library as libraryApi } from "$lib/api/library";
 import { DEFAULT_PREFS } from "$lib/types/prefs";
 import type { Length, LibraryEntry, LibraryEvent, LibraryStatus } from "$lib/types/library";
 import type { MediaType } from "$lib/types/media";
@@ -111,6 +114,43 @@ async function burstingStore() {
 }
 
 describe("ProfileView", () => {
+  it("resolves artwork from the same injected prefs, library and successfully loaded activity", async () => {
+    let collection = LIBRARY;
+    const library = new LibraryStore({
+      ...libraryApi,
+      load: async () => collection,
+      posterDir: async () => "",
+    });
+    await library.hydrate();
+    const store = storeWith(LOG);
+    await store.load();
+    const update = vi.fn();
+    const prefs = new PrefsStore({
+      load: async () => ({ ...DEFAULT_PREFS, profile_art: "movie:1" }),
+      update,
+    });
+    await prefs.hydrate();
+    render(ProfileView, { store, library, prefs });
+    expect(await screen.findByRole("img", { name: "Silver Screen artwork" })).toBeInTheDocument();
+    prefs.loaded = false;
+    await tick();
+    expect(screen.queryByRole("img", { name: "Silver Screen artwork" })).toBeNull();
+    prefs.loaded = true;
+    await tick();
+    expect(screen.getByRole("img", { name: "Silver Screen artwork" })).toBeInTheDocument();
+    store.loaded = false;
+    await tick();
+    expect(screen.queryByRole("img", { name: "Silver Screen artwork" })).toBeNull();
+    store.loaded = true;
+    await tick();
+    expect(screen.getByRole("img", { name: "Silver Screen artwork" })).toBeInTheDocument();
+    collection = [];
+    await library.reload();
+    await tick();
+    expect(screen.queryByRole("img", { name: "Silver Screen artwork" })).toBeNull();
+    expect(prefs.prefs.profile_art).toBe("movie:1");
+    expect(update).not.toHaveBeenCalled();
+  });
   it("keeps Garden and charts but leaves equipment selection to Settings", async () => {
     render(ProfileView, { store: storeWith(LOG) });
     expect(await screen.findByRole("region", { name: "Progression" })).toBeInTheDocument();

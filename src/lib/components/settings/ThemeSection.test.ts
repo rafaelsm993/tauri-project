@@ -16,6 +16,13 @@ function setup(overrides: Partial<Prefs> = {}) {
 }
 
 describe("ThemeSection", () => {
+  it("hosts artwork using the same injected preferences", async () => {
+    const { prefs, update } = setup({ profile_art: "future:99" });
+    render(ThemeSection, { prefs, currentLevel: 1, currentEntries: [] });
+    expect(screen.getByText(/Saved choice: future:99/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Default artwork" }));
+    expect(update).toHaveBeenCalledWith({ profile_art: "default" });
+  });
   it.each(UNLOCKS)(
     "enforces $id's current boundary and restores its retained selection",
     async (reward) => {

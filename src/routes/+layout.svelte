@@ -150,7 +150,7 @@
   </div>
 {:else}
   <div class="app-shell">
-    <AppNav {section} {progress} />
+    <AppNav {section} {progress} art={unlocksStore.profileArt} />
     <div class="app-content">
       {@render children()}
     </div>

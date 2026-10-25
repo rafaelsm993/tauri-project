@@ -1,5 +1,8 @@
 <script lang="ts">
   import RewardPreview from "./RewardPreview.svelte";
+  import ProfileArtworkSection from "./ProfileArtworkSection.svelte";
+  import { libraryStore } from "$lib/stores/library.svelte";
+  import type { LibraryEntry } from "$lib/types/library";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import type { Theme } from "$lib/types/prefs";
   import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
@@ -10,7 +13,12 @@
   let {
     prefs = prefsStore,
     currentLevel = unlocksStore.level,
-  }: { prefs?: PrefsStore; currentLevel?: number | null } = $props();
+    currentEntries = libraryStore.ready ? libraryStore.entries : null,
+  }: {
+    prefs?: PrefsStore;
+    currentLevel?: number | null;
+    currentEntries?: LibraryEntry[] | null;
+  } = $props();
   const equipment = $derived(new UnlocksStore(prefs, () => currentLevel));
   const slots: { slot: Slot; label: string }[] = [
     { slot: "accent", label: "Accent" },
@@ -99,6 +107,7 @@
       </div>
     </div>
   {/each}
+  <ProfileArtworkSection {prefs} {currentLevel} entries={currentEntries} />
 </section>
 
 <style lang="scss">

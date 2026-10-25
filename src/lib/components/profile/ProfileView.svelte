@@ -16,13 +16,28 @@
   import { gamificationStore, GamificationStore } from "$lib/stores/gamification.svelte";
   import { libraryStore, LibraryStore } from "$lib/stores/library.svelte";
   import { motionStore } from "$lib/stores/motion.svelte";
+  import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
+  import { UnlocksStore } from "$lib/stores/unlocks.svelte";
 
   // `store`, `library` and `motion` exist for tests; the app uses the singletons and the OS.
   let {
     store = gamificationStore,
     library = libraryStore,
     motion,
-  }: { store?: GamificationStore; library?: LibraryStore; motion?: boolean } = $props();
+    prefs = prefsStore,
+  }: {
+    store?: GamificationStore;
+    library?: LibraryStore;
+    motion?: boolean;
+    prefs?: PrefsStore;
+  } = $props();
+  const equipment = $derived(
+    new UnlocksStore(
+      prefs,
+      () => (library.ready && store.loaded ? store.level.level : null),
+      () => (library.ready ? library.entries : null),
+    ),
+  );
 
   const moves = $derived(motion ?? motionStore.on);
 
@@ -66,6 +81,7 @@
       level={store.level}
       title={store.title}
       xp={store.xp}
+      art={equipment.profileArt}
       burst={store.burst && moves}
       onburstend={() => store.burstDone()}
     />

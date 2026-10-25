@@ -5,7 +5,7 @@ use super::reconcile;
 use super::types::{
     Event, EventKind, Length, LibraryEntry, MediaSnapshot, Plan, Status, Tombstone, UserData,
 };
-use crate::api::types::{MediaItem, MediaKey, MediaType, ProviderId};
+use crate::api::types::{MediaDetail, MediaItem, MediaKey, MediaType, ProviderId};
 use crate::store::writer::StoreHandle;
 use crate::store::{current_version, Migration};
 use serde::{Deserialize, Serialize};
@@ -442,12 +442,13 @@ pub async fn merge_preview(
     state: &LibraryState,
     key: &str,
     item: &MediaItem,
+    detail: Option<&MediaDetail>,
     catalog: &Length,
 ) -> Result<MergePreview, String> {
     state
         .store
         .read(|f| {
-            let plan = reconcile::plan_merge(f, key, item, catalog, "")?;
+            let plan = reconcile::plan_merge(f, key, item, detail, catalog, "")?;
             Ok(MergePreview {
                 combined: plan.tombstone.existing.is_some(),
                 entry: plan.entry,
@@ -461,6 +462,7 @@ pub async fn merge(
     state: &LibraryState,
     key: &str,
     item: &MediaItem,
+    detail: Option<&MediaDetail>,
     catalog: &Length,
     mut event: Event,
 ) -> Result<LibraryEntry, String> {
@@ -469,7 +471,7 @@ pub async fn merge(
     let entry = state
         .store
         .commit(|f| {
-            let plan = reconcile::plan_merge(f, key, item, catalog, &at)?;
+            let plan = reconcile::plan_merge(f, key, item, detail, catalog, &at)?;
             let entry = plan.entry.clone();
             reconcile::apply_merge(f, key, plan);
             Ok(entry)
@@ -755,6 +757,7 @@ mod tests {
             &state,
             &key,
             &piranesi(),
+            None,
             &pages(320),
             ev("library_merge", &key, "m", "t2"),
         )
@@ -778,13 +781,14 @@ mod tests {
         let dir = scratch("f3-capped");
         let state = state_in(&dir);
         let key = manual_book(&state, 380).await;
-        let preview = merge_preview(&state, &key, &piranesi(), &pages(320))
+        let preview = merge_preview(&state, &key, &piranesi(), None, &pages(320))
             .await
             .unwrap();
         let entry = merge(
             &state,
             &key,
             &piranesi(),
+            None,
             &pages(320),
             ev("library_merge", &key, "m", "t2"),
         )
@@ -810,6 +814,7 @@ mod tests {
             &state,
             &key,
             &piranesi(),
+            None,
             &pages(320),
             ev("library_merge", &key, "m", "t2"),
         )
@@ -828,7 +833,7 @@ mod tests {
         let state = state_in(&dir);
         let key = manual_book(&state, 30).await;
         let before = saved(&dir);
-        let p = merge_preview(&state, &key, &piranesi(), &pages(320))
+        let p = merge_preview(&state, &key, &piranesi(), None, &pages(320))
             .await
             .unwrap();
         assert_eq!((p.entry.key.as_str(), p.combined), (PIRANESI, false));
@@ -848,6 +853,7 @@ mod tests {
             &state,
             &key,
             &piranesi(),
+            None,
             &pages(320),
             ev("library_merge", &key, "m", "t2"),
         )
@@ -887,6 +893,7 @@ mod tests {
             &state,
             &key,
             &piranesi(),
+            None,
             &pages(320),
             ev("library_merge", &key, "m", "t2"),
         )
@@ -905,9 +912,11 @@ mod tests {
         let state = state_in(&dir);
         let key = manual_book(&state, 0).await;
         let wrong = ev("library_update", &key, "x", "t2");
-        assert!(merge(&state, &key, &piranesi(), &pages(1), wrong.clone())
-            .await
-            .is_err());
+        assert!(
+            merge(&state, &key, &piranesi(), None, &pages(1), wrong.clone())
+                .await
+                .is_err()
+        );
         assert!(unmerge(&state, &key, wrong).await.is_err());
         assert_eq!(saved(&dir).entries.len(), 1);
         std::fs::remove_dir_all(&dir).unwrap();

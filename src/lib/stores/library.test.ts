@@ -440,14 +440,14 @@ describe("merge", () => {
 
   it("changes nothing and says why when the backend refuses", async () => {
     const merge = vi.fn(async () => {
-      throw "your progress is past this match's length";
+      throw "a match must be the same type";
     });
     const store = new LibraryStore(fakeClient({ load: vi.fn(async () => [manual]), merge }));
     await store.hydrate();
     expect(await store.merge(MANUAL, ITEM, emptyLength())).toBeNull();
     expect(store.get(MANUAL)).toEqual(manual);
     expect(store.has("tmdb:tv:7")).toBe(false);
-    expect(store.error).toMatch(/past this match/);
+    expect(store.error).toMatch(/same type/);
   });
 
   it("refuses an item that is not in the library without asking the backend", async () => {
@@ -469,17 +469,17 @@ describe("preview", () => {
       ok: true,
       preview: { entry: entry(), combined: true },
     });
-    expect(mergePreview).toHaveBeenCalledWith(MANUAL, ITEM, emptyLength());
+    expect(mergePreview).toHaveBeenCalledWith(MANUAL, ITEM, emptyLength(), null);
   });
 
   it("returns the backend's reason when it would be refused, without touching `error`", async () => {
     const mergePreview = vi.fn(async () => {
-      throw "Your progress (380 pages) is past this match's length (320).";
+      throw "a match must be the same type";
     });
     const store = new LibraryStore(fakeClient({ mergePreview }));
     expect(await store.preview(MANUAL, ITEM, emptyLength())).toEqual({
       ok: false,
-      reason: "Your progress (380 pages) is past this match's length (320).",
+      reason: "a match must be the same type",
     });
     expect(store.error).toBe("");
   });

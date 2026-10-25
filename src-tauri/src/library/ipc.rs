@@ -4,7 +4,7 @@ use super::commands::{
 use super::manual::ManualDraft;
 use super::posters;
 use super::types::{Event, Length, LibraryEntry, UserData};
-use crate::api::types::MediaItem;
+use crate::api::types::{MediaDetail, MediaItem};
 use crate::store;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -115,9 +115,10 @@ pub async fn library_merge_preview(
     state: State<'_, LibraryState>,
     key: String,
     item: MediaItem,
+    detail: Option<MediaDetail>,
     catalog_length: Length,
 ) -> Result<MergePreview, String> {
-    commands::merge_preview(&state, &key, &item, &catalog_length).await
+    commands::merge_preview(&state, &key, &item, detail.as_ref(), &catalog_length).await
 }
 
 #[tauri::command]
@@ -125,10 +126,12 @@ pub async fn library_merge(
     state: State<'_, LibraryState>,
     key: String,
     item: MediaItem,
+    detail: Option<MediaDetail>,
     catalog_length: Length,
     event: Event,
 ) -> Result<LibraryEntry, String> {
-    let entry = commands::merge(&state, &key, &item, &catalog_length, event).await?;
+    let entry =
+        commands::merge(&state, &key, &item, detail.as_ref(), &catalog_length, event).await?;
     tauri::async_runtime::spawn(posters::fill(state.inner().clone()));
     Ok(entry)
 }

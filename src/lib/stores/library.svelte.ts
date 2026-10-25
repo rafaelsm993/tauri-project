@@ -13,7 +13,7 @@ import type {
   Unmerged,
   UserData,
 } from "$lib/types/library";
-import type { MediaItem, MediaKey } from "$lib/types/media";
+import type { MediaDetail, MediaItem, MediaKey } from "$lib/types/media";
 
 export type LibraryClient = {
   load: () => Promise<LibraryEntry[]>;
@@ -25,8 +25,18 @@ export type LibraryClient = {
   retryPosters: () => Promise<void>;
   addManual: (draft: ManualDraft, user?: Partial<UserData>) => Promise<LibraryEntry>;
   editManual: (key: MediaKey, draft: ManualDraft) => Promise<LibraryEntry>;
-  mergePreview: (key: MediaKey, item: MediaItem, length: Length) => Promise<MergePreview>;
-  merge: (key: MediaKey, item: MediaItem, length: Length) => Promise<LibraryEntry>;
+  mergePreview: (
+    key: MediaKey,
+    item: MediaItem,
+    length: Length,
+    detail?: MediaDetail | null,
+  ) => Promise<MergePreview>;
+  merge: (
+    key: MediaKey,
+    item: MediaItem,
+    length: Length,
+    detail?: MediaDetail | null,
+  ) => Promise<LibraryEntry>;
   unmerge: (key: MediaKey) => Promise<Unmerged>;
   retypeManual: (key: MediaKey, draft: ManualDraft, length: Length) => Promise<LibraryEntry>;
 };
@@ -230,21 +240,31 @@ export class LibraryStore {
   }
 
   // A refusal is an answer here, not a failure: the sheet shows the reason in place of "Use this".
-  async preview(key: MediaKey, item: MediaItem, length: Length): Promise<PreviewResult> {
+  async preview(
+    key: MediaKey,
+    item: MediaItem,
+    length: Length,
+    detail: MediaDetail | null = null,
+  ): Promise<PreviewResult> {
     try {
-      return { ok: true, preview: await this.client.mergePreview(key, item, length) };
+      return { ok: true, preview: await this.client.mergePreview(key, item, length, detail) };
     } catch (e) {
       return { ok: false, reason: errorMessage(e, "This match can't be used.") };
     }
   }
 
   // Not optimistic: the merged entry comes from Rust. Resolves it, or null with `error` set.
-  async merge(key: MediaKey, item: MediaItem, length: Length): Promise<LibraryEntry | null> {
+  async merge(
+    key: MediaKey,
+    item: MediaItem,
+    length: Length,
+    detail: MediaDetail | null = null,
+  ): Promise<LibraryEntry | null> {
     if (!this.map.has(key)) return null;
     this.error = "";
     this.mark(key, true);
     try {
-      const saved = await this.client.merge(key, item, length);
+      const saved = await this.client.merge(key, item, length, detail);
       this.drop(key);
       this.write(saved.key, saved);
       return saved;

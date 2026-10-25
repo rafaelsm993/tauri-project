@@ -11,7 +11,7 @@ import type {
   UserData,
 } from "$lib/types/library";
 
-import type { MediaItem, MediaKey } from "$lib/types/media";
+import type { MediaDetail, MediaItem, MediaKey } from "$lib/types/media";
 
 // Only the fields the caller wants to change; the rest stay as they are.
 export type UserPatch = Partial<UserData>;
@@ -127,17 +127,33 @@ function events(): Promise<LibraryEvent[]> {
 }
 
 // A dry run of `merge`: what would be saved, or the reason it would be refused.
-function mergePreview(key: MediaKey, item: MediaItem, length: Length): Promise<MergePreview> {
-  return invoke<MergePreview>("library_merge_preview", { key, item, catalogLength: length });
+function mergePreview(
+  key: MediaKey,
+  item: MediaItem,
+  length: Length,
+  detail: MediaDetail | null = null,
+): Promise<MergePreview> {
+  return invoke<MergePreview>("library_merge_preview", {
+    key,
+    item,
+    catalogLength: length,
+    detail,
+  });
 }
 
 // Rust fills the payload with the catalog key, so listeners get the event as it was logged.
-async function merge(key: MediaKey, item: MediaItem, length: Length): Promise<LibraryEntry> {
+async function merge(
+  key: MediaKey,
+  item: MediaItem,
+  length: Length,
+  detail: MediaDetail | null = null,
+): Promise<LibraryEntry> {
   const event = stamp("library_merge", key);
   const entry = await invoke<LibraryEntry>("library_merge", {
     key,
     item,
     catalogLength: length,
+    detail,
     event,
   });
   return saved({ ...event, payload: { into: entry.key } }, Promise.resolve(entry));

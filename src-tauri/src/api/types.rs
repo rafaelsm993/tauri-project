@@ -214,13 +214,13 @@ impl MediaItem {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Genre {
     pub id: Id,
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CastMember {
     pub id: u64,
     pub name: String,
@@ -228,7 +228,7 @@ pub struct CastMember {
     pub profile_path: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VideoClip {
     pub key: String,
     pub site: String,
@@ -237,7 +237,7 @@ pub struct VideoClip {
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MediaDetail {
     pub id: Id,
     pub provider: ProviderId,

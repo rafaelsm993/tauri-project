@@ -1,4 +1,4 @@
-use crate::api::types::{MediaItem, MediaType, ProviderId};
+use crate::api::types::{MediaDetail, MediaItem, MediaType, ProviderId};
 use serde::{Deserialize, Serialize};
 
 // Where the user is with an item.
@@ -26,7 +26,7 @@ pub struct MediaSnapshot {
     pub poster_file: Option<String>,
     #[serde(default)]
     pub year: Option<String>,
-    // The rest are only filled for manual items, except a provider book's author.
+    // Metadata from catalog details or manual entries.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub creator: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -59,9 +59,42 @@ impl MediaSnapshot {
                 .map(str::trim)
                 .filter(|a| !a.is_empty())
                 .map(String::from),
-            overview: None,
+            overview: (!item.overview.trim().is_empty()).then(|| item.overview.clone()),
             genres: Vec::new(),
             platforms: Vec::new(),
+        }
+    }
+
+    pub fn from_detail(detail: &MediaDetail) -> Self {
+        let creator = detail
+            .author
+            .as_ref()
+            .or(detail.developer.as_ref())
+            .or_else(|| detail.studios.as_ref().and_then(|s| s.first()))
+            .or(detail.publisher.as_ref())
+            .map(|value| value.trim())
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        Self {
+            media_key: detail.media_key.clone(),
+            provider: detail.provider,
+            media_type: detail.media_type,
+            title: detail.title.clone(),
+            poster_path: detail.poster_path.clone(),
+            poster_file: None,
+            year: detail
+                .release_date
+                .get(..4)
+                .filter(|year| year.len() == 4)
+                .map(str::to_string),
+            creator,
+            overview: (!detail.overview.trim().is_empty()).then(|| detail.overview.clone()),
+            genres: detail
+                .genres
+                .iter()
+                .map(|genre| genre.name.clone())
+                .collect(),
+            platforms: detail.platforms.clone().unwrap_or_default(),
         }
     }
 }

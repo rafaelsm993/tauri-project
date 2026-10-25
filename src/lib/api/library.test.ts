@@ -3,7 +3,7 @@ import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { library } from "./library";
 import { emptyLength } from "$lib/domain/length";
 import type { ManualDraft } from "$lib/types/library";
-import type { MediaItem } from "$lib/types/media";
+import type { MediaDetail, MediaItem } from "$lib/types/media";
 
 afterEach(() => {
   clearMocks();
@@ -22,6 +22,22 @@ function record(reply: unknown = null) {
 }
 
 describe("library client", () => {
+  it("sends the same catalog detail to preview and save", async () => {
+    const calls = record({ key: ITEM.media_key });
+    const detail = {
+      media_key: ITEM.media_key,
+      title: "Fresh",
+      genres: [],
+    } as unknown as MediaDetail;
+    const length = emptyLength();
+    await library.mergePreview(ITEM.media_key, ITEM, length, detail);
+    await library.merge(ITEM.media_key, ITEM, length, detail);
+    expect(calls.map(({ cmd }) => cmd)).toEqual(["library_merge_preview", "library_merge"]);
+    for (const call of calls) {
+      expect(call.args.detail).toEqual(detail);
+      expect(call.args.catalogLength).toEqual(length);
+    }
+  });
   it("load sends one library_load call with no arguments", async () => {
     const calls = record([]);
     await library.load();

@@ -1,6 +1,6 @@
 use super::commands::{validate_user_data, LibraryFile};
 use super::types::{Length, LibraryEntry, MediaSnapshot, Status, Tombstone, UserData};
-use crate::api::types::{MediaItem, MediaKey, MediaType, ProviderId};
+use crate::api::types::{MediaDetail, MediaItem, MediaKey, MediaType, ProviderId};
 use std::collections::BTreeMap;
 
 // The library change a merge makes, built before anything is written.
@@ -62,6 +62,24 @@ fn fill(first: &Length, second: &Length) -> Length {
     }
 }
 
+// Fill only catalog blanks from the saved entry, then the manual entry.
+fn fill_snapshot(mut base: MediaSnapshot, fallback: &MediaSnapshot) -> MediaSnapshot {
+    base.year = base.year.or_else(|| fallback.year.clone());
+    base.creator = base.creator.or_else(|| fallback.creator.clone());
+    base.overview = base.overview.or_else(|| fallback.overview.clone());
+    if base.genres.is_empty() {
+        base.genres = fallback.genres.clone();
+    }
+    if base.platforms.is_empty() {
+        base.platforms = fallback.platforms.clone();
+    }
+    if base.poster_path.is_none() && base.poster_file.is_none() {
+        base.poster_path = fallback.poster_path.clone();
+        base.poster_file = fallback.poster_file.clone();
+    }
+    base
+}
+
 // Further along wins; Dropped loses to an active status and ties Planning, where the newer side wins.
 fn status(newer: Status, older: Status) -> Status {
     let rank = |s: Status| match s {
@@ -102,6 +120,7 @@ pub fn plan_merge(
     file: &LibraryFile,
     from: &str,
     item: &MediaItem,
+    detail: Option<&MediaDetail>,
     catalog: &Length,
     at: &str,
 ) -> Result<MergePlan, String> {
@@ -130,9 +149,26 @@ pub fn plan_merge(
             (&e.created_at).min(&manual.created_at)
         })
         .clone();
+    let list_snapshot = MediaSnapshot::from_item(item);
+    let catalog_snapshot = detail
+        .filter(|d| d.media_key == item.media_key && d.media_type == item.media_type)
+        .map_or_else(
+            || list_snapshot.clone(),
+            |d| fill_snapshot(MediaSnapshot::from_detail(d), &list_snapshot),
+        );
+    let snapshot = match existing {
+        Some(entry) => fill_snapshot(catalog_snapshot, &entry.snapshot),
+        None => catalog_snapshot,
+    };
+    let mut snapshot = fill_snapshot(snapshot, &manual.snapshot);
+    if let Some(saved) = existing {
+        if snapshot.poster_path == saved.snapshot.poster_path {
+            snapshot.poster_file = saved.snapshot.poster_file.clone();
+        }
+    }
     let entry = LibraryEntry {
         key: item.media_key.clone(),
-        snapshot: existing.map_or_else(|| MediaSnapshot::from_item(item), |e| e.snapshot.clone()),
+        snapshot,
         user,
         created_at,
         updated_at: at.to_string(),
@@ -198,7 +234,7 @@ pub fn aliases(file: &LibraryFile) -> BTreeMap<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::types::Id;
+    use crate::api::types::{Genre, Id, MediaDetail};
     use crate::library::types::Plan;
 
     const MANUAL: &str = "manual:book:0b6f1c1e-5d3a-4c2b-9b7e-2f1d3c4b5a69";
@@ -266,6 +302,190 @@ mod tests {
             created_at: "2026-10-01T10:00:00Z".into(),
             updated_at: updated_at.into(),
         }
+    }
+
+    #[test]
+    fn detail_metadata_reaches_the_saved_plan() {
+        let file = library(vec![manual_entry(user(Status::InProgress, 4), "t1")]);
+        let detail = MediaDetail {
+            release_date: "2024-09-15".into(),
+            overview: "Catalog description".into(),
+            genres: vec![Genre {
+                id: Id::Num(1),
+                name: "Literary fiction".into(),
+            }],
+            platforms: Some(vec!["Library".into()]),
+            author: Some("Catalog author".into()),
+            poster_path: Some("https://example.com/new.jpg".into()),
+            ..MediaDetail::new(
+                Id::Num(42),
+                "Piranesi".into(),
+                MediaType::Book,
+                ProviderId::Itunes,
+            )
+        };
+        let plan = plan_merge(&file, MANUAL, &book(), Some(&detail), &pages(320), "t2").unwrap();
+        let snap = &plan.entry.snapshot;
+        assert_eq!(snap.title, "Piranesi");
+        assert_eq!(snap.year.as_deref(), Some("2024"));
+        assert_eq!(snap.creator.as_deref(), Some("Catalog author"));
+        assert_eq!(snap.overview.as_deref(), Some("Catalog description"));
+        assert_eq!(snap.genres, ["Literary fiction"]);
+        assert_eq!(snap.platforms, ["Library"]);
+        assert_eq!(
+            snap.poster_path.as_deref(),
+            Some("https://example.com/new.jpg")
+        );
+        let mut applied = file.clone();
+        apply_merge(&mut applied, MANUAL, plan.clone());
+        assert_eq!(applied.entries["itunes:book:42"], plan.entry);
+    }
+
+    #[test]
+    fn fresh_catalog_details_beat_stale_saved_metadata_and_keep_matching_cached_poster() {
+        let manual = manual_entry(UserData::default(), "t1");
+        let mut saved_snapshot = MediaSnapshot::from_item(&book());
+        saved_snapshot.year = Some("1990".into());
+        saved_snapshot.creator = Some("Stale author".into());
+        saved_snapshot.overview = Some("Stale overview".into());
+        saved_snapshot.genres = vec!["Stale genre".into()];
+        saved_snapshot.platforms = vec!["Old platform".into()];
+        saved_snapshot.poster_file = Some("itunes_book_42.jpg".into());
+        let saved = LibraryEntry {
+            key: book().media_key,
+            snapshot: saved_snapshot,
+            user: UserData::default(),
+            created_at: "t0".into(),
+            updated_at: "t0".into(),
+        };
+        let file = library(vec![manual, saved]);
+        let detail = MediaDetail {
+            title: "New title".into(),
+            release_date: "2026-04-05".into(),
+            author: Some("New author".into()),
+            overview: "New overview".into(),
+            genres: vec![Genre {
+                id: Id::Num(2),
+                name: "New genre".into(),
+            }],
+            platforms: Some(vec!["New platform".into()]),
+            poster_path: book().poster_path,
+            ..MediaDetail::new(
+                Id::Num(42),
+                "Piranesi".into(),
+                MediaType::Book,
+                ProviderId::Itunes,
+            )
+        };
+        let snap = plan_merge(
+            &file,
+            MANUAL,
+            &book(),
+            Some(&detail),
+            &Length::default(),
+            "t2",
+        )
+        .unwrap()
+        .entry
+        .snapshot;
+        assert_eq!(snap.title, "New title");
+        assert_eq!(snap.year.as_deref(), Some("2026"));
+        assert_eq!(snap.creator.as_deref(), Some("New author"));
+        assert_eq!(snap.overview.as_deref(), Some("New overview"));
+        assert_eq!(snap.genres, ["New genre"]);
+        assert_eq!(snap.platforms, ["New platform"]);
+        assert_eq!(
+            snap.poster_path.as_deref(),
+            Some("https://example.com/piranesi.jpg")
+        );
+        assert_eq!(snap.poster_file.as_deref(), Some("itunes_book_42.jpg"));
+    }
+
+    #[test]
+    fn catalog_list_fields_fill_detail_blanks_before_saved_and_manual_fields() {
+        let mut item = book();
+        item.overview = "List description".into();
+        item.author = Some("List author".into());
+        let detail = MediaDetail::new(
+            Id::Num(42),
+            "Piranesi".into(),
+            MediaType::Book,
+            ProviderId::Itunes,
+        );
+        let mut saved = manual_entry(UserData::default(), "t0");
+        saved.key = item.media_key.clone();
+        saved.snapshot = MediaSnapshot::from_item(&book());
+        saved.snapshot.overview = Some("Stale description".into());
+        saved.snapshot.creator = Some("Stale author".into());
+        let file = library(vec![manual_entry(UserData::default(), "t1"), saved]);
+        let snap = plan_merge(
+            &file,
+            MANUAL,
+            &item,
+            Some(&detail),
+            &Length::default(),
+            "t2",
+        )
+        .unwrap()
+        .entry
+        .snapshot;
+        assert_eq!(snap.year.as_deref(), Some("2020"));
+        assert_eq!(
+            snap.poster_path.as_deref(),
+            Some("https://example.com/piranesi.jpg")
+        );
+        assert_eq!(snap.overview.as_deref(), Some("List description"));
+        assert_eq!(snap.creator.as_deref(), Some("List author"));
+    }
+
+    #[test]
+    fn the_manual_details_fill_what_the_catalog_left_blank() {
+        let mut manual = manual_entry(UserData::default(), "t1");
+        manual.snapshot.year = Some("2019".into());
+        manual.snapshot.platforms = vec!["PC".into()];
+        manual.snapshot.poster_file = Some("manual_book_piranesi.jpg".into());
+        let file = library(vec![manual]);
+        let bare = MediaItem {
+            release_date: None,
+            poster_path: None,
+            author: Some("Susanna Clarke".into()),
+            ..book()
+        };
+        let snap = plan_merge(&file, MANUAL, &bare, None, &Length::default(), "t2")
+            .unwrap()
+            .entry
+            .snapshot;
+        // The catalog wins what it has: title and author.
+        assert_eq!(snap.title, "Piranesi");
+        assert_eq!(snap.creator.as_deref(), Some("Susanna Clarke"));
+        // Yours fills what it lacks.
+        assert_eq!(snap.year.as_deref(), Some("2019"));
+        assert_eq!(snap.overview.as_deref(), Some("My own notes"));
+        assert_eq!(snap.genres, vec!["Fantasy".to_string()]);
+        assert_eq!(snap.platforms, ["PC"]);
+        assert_eq!(
+            snap.poster_file.as_deref(),
+            Some("manual_book_piranesi.jpg")
+        );
+    }
+
+    #[test]
+    fn a_catalog_poster_replaces_the_manual_one() {
+        let mut manual = manual_entry(UserData::default(), "t1");
+        manual.snapshot.poster_file = Some("manual_book_piranesi.jpg".into());
+        // A year on both sides: the catalog's must win.
+        manual.snapshot.year = Some("2019".into());
+        let file = library(vec![manual]);
+        let snap = plan_merge(&file, MANUAL, &book(), None, &Length::default(), "t2")
+            .unwrap()
+            .entry
+            .snapshot;
+        assert_eq!(
+            snap.poster_path.as_deref(),
+            Some("https://example.com/piranesi.jpg")
+        );
+        assert_eq!(snap.poster_file, None);
+        assert_eq!(snap.year.as_deref(), Some("2020"));
     }
 
     fn library(entries: Vec<LibraryEntry>) -> LibraryFile {
@@ -533,9 +753,25 @@ mod tests {
             ..user(Status::InProgress, 120)
         };
         let file = library(vec![manual_entry(mine.clone(), "2026-10-02T09:00:00Z")]);
-        let plan = plan_merge(&file, MANUAL, &book(), &pages(320), "2026-10-19T12:00:00Z").unwrap();
+        let plan = plan_merge(
+            &file,
+            MANUAL,
+            &book(),
+            None,
+            &pages(320),
+            "2026-10-19T12:00:00Z",
+        )
+        .unwrap();
         assert_eq!(plan.entry.key, "itunes:book:42");
-        assert_eq!(plan.entry.snapshot, MediaSnapshot::from_item(&book()));
+        assert_eq!(
+            plan.entry.snapshot,
+            MediaSnapshot {
+                creator: Some("S. Clarke".into()),
+                overview: Some("My own notes".into()),
+                genres: vec!["Fantasy".into()],
+                ..MediaSnapshot::from_item(&book())
+            }
+        );
         assert_eq!(
             plan.entry.user,
             UserData {
@@ -572,8 +808,16 @@ mod tests {
             manual_entry(user(Status::InProgress, 30), "2026-10-02T09:00:00Z"),
             saved.clone(),
         ]);
-        let plan = plan_merge(&file, MANUAL, &book(), &Length::default(), "t9").unwrap();
-        assert_eq!(plan.entry.snapshot, saved.snapshot);
+        let plan = plan_merge(&file, MANUAL, &book(), None, &Length::default(), "t9").unwrap();
+        assert_eq!(
+            plan.entry.snapshot,
+            MediaSnapshot {
+                creator: Some("S. Clarke".into()),
+                overview: Some("My own notes".into()),
+                genres: vec!["Fantasy".into()],
+                ..saved.snapshot.clone()
+            }
+        );
         assert_eq!(
             (plan.entry.user.status, plan.entry.user.progress),
             (Status::Completed, 30)
@@ -633,7 +877,7 @@ mod tests {
         ];
         for (f, from, item, want) in cases {
             assert_eq!(
-                plan_merge(f, from, item, &none, "t3").unwrap_err(),
+                plan_merge(f, from, item, None, &none, "t3").unwrap_err(),
                 want,
                 "{from}"
             );
@@ -642,7 +886,7 @@ mod tests {
 
     fn merged(file: &LibraryFile, at: &str) -> LibraryFile {
         let mut out = file.clone();
-        let plan = plan_merge(file, MANUAL, &book(), &pages(320), at).unwrap();
+        let plan = plan_merge(file, MANUAL, &book(), None, &pages(320), at).unwrap();
         apply_merge(&mut out, MANUAL, plan);
         out
     }

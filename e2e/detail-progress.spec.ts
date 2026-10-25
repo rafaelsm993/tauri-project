@@ -74,6 +74,21 @@ test("the bar's fill is the equipped accent, as wide as the progress", async ({ 
   expect(fillBox.width / meter.width).toBeCloseTo(0.5, 1);
 });
 
+test("the bar's frame is quiet: a faint line, no glow", async ({ page }) => {
+  await open(page, 5, "in_progress", { prefs: { theme: "dark" } });
+  const { alpha, filter } = await page.locator(".px-top").evaluate((el) => {
+    const parts = getComputedStyle(el)
+      .backgroundColor.match(/[\d.]+/g)!
+      .map(Number);
+    return {
+      alpha: parts.length === 4 ? parts[3] : 1,
+      filter: getComputedStyle(el.closest(".boss-bar")!).filter,
+    };
+  });
+  expect(alpha).toBeLessThanOrEqual(0.25);
+  expect(filter).toBe("none");
+});
+
 const stripes = (page: Page) =>
   page.locator(".px-empty").evaluate((el) => getComputedStyle(el).animationName);
 

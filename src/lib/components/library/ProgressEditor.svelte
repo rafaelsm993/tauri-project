@@ -255,7 +255,6 @@
     display: grid;
     grid-template-columns: var(--px) var(--px) minmax(0, 1fr) var(--px) var(--px);
     grid-template-rows: var(--px) var(--px) calc(var(--px) * 5) var(--px) var(--px);
-    filter: drop-shadow(0 0 6px rgb(var(--clr-accent-rgb) / 0.35));
 
     // Bigger pixels on a phone: a thicker bar to hit with a thumb.
     @include respond-to(md) {
@@ -264,7 +263,8 @@
   }
 
   .px-border {
-    background: rgb(var(--clr-ink-rgb) / 0.85);
+    // A faint line, like the app's other borders: the stepped corners carry the pixel look, not contrast.
+    background: rgb(var(--clr-ink-rgb) / 0.18);
   }
 
   // Straight edges stop one pixel short of each corner; the corner pixels step in (the reference's border blocks 1–8).

@@ -77,7 +77,7 @@ export class UnlocksStore {
     return isUnlocked(id, this.level, "motif") ? id : "default";
   }
 
-  // The garden slot holds one reward, so prefs store it as the motif-style id or "default".
+  // The legacy garden slot holds Runic shimmer without migrating saved choices.
   get garden(): string {
     const id = this.prefs.prefs.garden;
     return isUnlocked(id, this.level, "garden") ? id : "default";

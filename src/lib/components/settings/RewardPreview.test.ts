@@ -3,6 +3,12 @@ import { render, screen } from "@testing-library/svelte";
 import RewardPreview from "./RewardPreview.svelte";
 
 describe("RewardPreview", () => {
+  it("uses stepped pixel runes instead of the retired plant preview", () => {
+    render(RewardPreview, { slot: "garden", reward: "sway", label: "Runic shimmer" });
+    const preview = screen.getByRole("img", { name: "Runic shimmer preview" });
+    expect(preview).toHaveAttribute("shape-rendering", "crispEdges");
+    expect(preview.querySelector(".mark")?.getAttribute("d")).not.toMatch(/[QqCc]/);
+  });
   it("names a static local preview without repainting the document", () => {
     const before = document.documentElement.style.cssText;
     render(RewardPreview, { slot: "accent", reward: "ember", label: "Ember" });

@@ -4,14 +4,15 @@
   import AddManuallyButton from "$lib/components/library/AddManuallyButton.svelte";
   import PlannableCard from "$lib/components/library/PlannableCard.svelte";
   import LibraryFilterBar from "$lib/components/library/LibraryFilterBar.svelte";
-  import GardenScene from "$lib/components/garden/GardenScene.svelte";
+  import ProgressionTree from "$lib/components/progression/ProgressionTree.svelte";
+  import { gamificationStore } from "$lib/stores/gamification.svelte";
   import { reminderStore } from "$lib/stores/reminders.svelte";
   import SearchField from "$lib/components/ui/SearchField.svelte";
   import AppHeader from "$lib/components/ui/AppHeader.svelte";
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import { libraryStore, LibraryStore, STATUS_LABELS } from "$lib/stores/library.svelte";
   import { libraryFilters, LibraryFilters } from "$lib/stores/libraryFilters.svelte";
-  import { VIEW_OPTIONS } from "$lib/domain/garden";
+  import { VIEW_OPTIONS } from "$lib/domain/libraryView";
   import {
     filterEntries,
     searchEntries,
@@ -27,8 +28,10 @@
     filters = libraryFilters,
     reminders = reminderStore,
     narrowFilters = undefined,
+    progression = gamificationStore,
   }: {
     store?: LibraryStore;
+    progression?: Pick<typeof gamificationStore, "loaded" | "level" | "error">;
     filters?: LibraryFilters;
     reminders?: Reminders;
     // Tests pin the phone layout; the app follows the window.
@@ -66,9 +69,8 @@
       {/if}
     {/snippet}
     {#snippet collapsible()}
-      {#if store.entries.length > 0}
-        <div class="library-filters">
-          <LibraryFilterBar
+      <div class="library-filters">
+        {#if store.entries.length > 0}<LibraryFilterBar
             {statuses}
             {types}
             {status}
@@ -77,17 +79,17 @@
             ontype={(v) => (filters.type = v)}
             narrow={narrowFilters}
           />
-          <div class="filter-row">
-            <span class="filter-label" aria-hidden="true">View</span>
-            <SegmentedControl
-              label="View"
-              options={VIEW_OPTIONS}
-              value={filters.view}
-              onchange={(v) => (filters.view = v)}
-            />
-          </div>
+        {/if}
+        <div class="filter-row">
+          <span class="filter-label" aria-hidden="true">View</span>
+          <SegmentedControl
+            label="View"
+            options={VIEW_OPTIONS}
+            value={filters.view}
+            onchange={(v) => (filters.view = v)}
+          />
         </div>
-      {/if}
+      </div>
     {/snippet}
   </AppHeader>
 
@@ -97,6 +99,19 @@
 
   {#if !store.ready && !store.error}
     <p class="library-note" aria-busy="true">Loading your library…</p>
+  {:else if filters.view === "garden"}
+    <ProgressionTree
+      entries={visible}
+      allEntries={store.entries}
+      currentLevel={progression.level.level}
+      loaded={store.ready && progression.loaded}
+      error={!store.ready ? store.error : progression.error}
+      onclear={() => {
+        filters.query = "";
+        filters.status = "all";
+        filters.type = "all";
+      }}
+    />
   {:else if store.entries.length === 0}
     <div class="library-empty">
       <p>Nothing saved yet.</p>
@@ -106,23 +121,18 @@
   {:else if visible.length === 0}
     <p class="library-note">{emptyFilterText}</p>
   {:else}
-    {#if filters.view === "garden"}
-      <GardenScene entries={visible} />
-    {:else}
-      <ul class="library-grid">
-        {#each visible as entry (entry.key)}
-          <li>
-            <PlannableCard
-              {entry}
-              posterDir={store.posterDir}
-              library={store}
-              dueMinutes={reminders.data.due.find((d) => d.entry.key === entry.key)?.minutes ??
-                null}
-            />
-          </li>
-        {/each}
-      </ul>
-    {/if}
+    <ul class="library-grid">
+      {#each visible as entry (entry.key)}
+        <li>
+          <PlannableCard
+            {entry}
+            posterDir={store.posterDir}
+            library={store}
+            dueMinutes={reminders.data.due.find((d) => d.entry.key === entry.key)?.minutes ?? null}
+          />
+        </li>
+      {/each}
+    </ul>
   {/if}
 </main>
 

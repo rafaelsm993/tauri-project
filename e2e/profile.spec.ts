@@ -16,20 +16,20 @@ test.describe("profile dashboard", () => {
 
   test("draws every chart card", async ({ page }) => {
     for (const name of ["Stats", "Progression", "Activity", "Library", "Taste", "Forecast"]) {
-      await expect(page.getByRole("region", { name })).toBeVisible();
+      await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
     }
     await expect(
-      page.getByRole("region", { name: "Progression" }).locator("svg").first(),
+      page.getByRole("region", { name: "Progression", exact: true }).locator("svg").first(),
     ).toBeVisible();
     await expect(page.getByText("Coming soon.")).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Garden", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Runewood", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Achievements", exact: true })).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Accent", exact: true })).toHaveCount(0);
   });
 
   test("the range switch changes the selected range", async ({ page }) => {
     const range = page
-      .getByRole("region", { name: "Progression" })
+      .getByRole("region", { name: "Progression", exact: true })
       .getByRole("group", { name: "Range" });
     await range.getByRole("button", { name: "All" }).click();
     await expect(range.getByRole("button", { name: "All" })).toHaveAttribute(

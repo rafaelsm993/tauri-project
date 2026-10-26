@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
+import { levelOf } from "$lib/domain/gamification";
 import LibraryPage from "./LibraryView.svelte";
 import { LibraryStore } from "$lib/stores/library.svelte";
 import { LibraryFilters } from "$lib/stores/libraryFilters.svelte";
@@ -75,6 +76,19 @@ describe("LibraryView: add manually", () => {
 });
 
 describe("LibraryView", () => {
+  it("keeps the Tree view reachable with an empty library", async () => {
+    render(LibraryPage, {
+      store: await storeWith([]),
+      filters: new LibraryFilters(),
+      progression: { loaded: true, error: "", level: levelOf(0) },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Tree" }));
+    expect(screen.getByRole("region", { name: "Main progression tree" })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: "Explore media trees" })).getAllByRole("button"),
+    ).toHaveLength(6);
+  });
+
   it("shows the empty state with a way to browse", async () => {
     render(LibraryPage, { store: await storeWith([]), filters: new LibraryFilters() });
     expect(screen.getByRole("heading", { level: 1, name: "Library" })).toBeInTheDocument();
@@ -205,66 +219,82 @@ describe("LibraryView", () => {
   });
 });
 
-describe("LibraryView: garden view", () => {
+describe("LibraryView: tree view", () => {
+  const progression = { loaded: true, error: "", level: levelOf(2000) };
   const view = () => within(screen.getByRole("group", { name: "View" }));
-
-  it("keeps View as its own row beside the filter bar", async () => {
-    render(LibraryPage, {
-      store: await storeWith([entry(1, "movie", "completed"), entry(2, "tv", "planning")]),
-      filters: new LibraryFilters(),
-    });
-    expect(view().getByRole("button", { name: "Grid", pressed: true })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
-  });
-  // A plant's name is exactly "T1, movie, completed"; a card's name has no commas.
-  const plants = () => screen.queryAllByRole("link", { name: /^T\d, \w+, / });
-  const posters = () => cards().filter((el) => !/,/.test(el.getAttribute("aria-label") ?? ""));
-
-  it("shows the grid first and switches to the garden", async () => {
+  it("keeps the Grid default and replaces the grid with Tree", async () => {
     render(LibraryPage, {
       store: await storeWith([entry(1, "movie", "completed"), entry(2, "book", "planning")]),
       filters: new LibraryFilters(),
+      progression,
     });
-    expect(posters()).toHaveLength(2);
-    expect(plants()).toHaveLength(0);
-
-    await userEvent.click(view().getByRole("button", { name: "Garden" }));
-    expect(plants()).toHaveLength(2);
-    expect(posters()).toHaveLength(0);
+    expect(cards()).toHaveLength(2);
+    expect(screen.queryByRole("region", { name: "Main progression tree" })).toBeNull();
+    await userEvent.click(view().getByRole("button", { name: "Tree" }));
+    expect(screen.getByRole("region", { name: "Main progression tree" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "T1 Completed" })).toHaveAttribute(
+      "href",
+      "/media/movie/1",
+    );
+    expect(document.querySelector(".library-grid")).toBeNull();
   });
-
   it("shows which view is active", async () => {
-    const filters = new LibraryFilters();
-    render(LibraryPage, { store: await storeWith([entry(1, "movie", "completed")]), filters });
+    render(LibraryPage, { store: await storeWith([]), filters: new LibraryFilters(), progression });
     expect(view().getByRole("button", { name: "Grid", pressed: true })).toBeInTheDocument();
-    await userEvent.click(view().getByRole("button", { name: "Garden" }));
-    expect(view().getByRole("button", { name: "Garden", pressed: true })).toBeInTheDocument();
+    await userEvent.click(view().getByRole("button", { name: "Tree" }));
+    expect(view().getByRole("button", { name: "Tree", pressed: true })).toBeInTheDocument();
   });
-
   it("keeps the chosen view when you come back", async () => {
     const store = await storeWith([entry(1, "movie", "completed")]);
     const filters = new LibraryFilters();
-    const first = render(LibraryPage, { store, filters });
-    await userEvent.click(view().getByRole("button", { name: "Garden" }));
+    const first = render(LibraryPage, { store, filters, progression });
+    await userEvent.click(view().getByRole("button", { name: "Tree" }));
     first.unmount();
-    render(LibraryPage, { store, filters });
-    expect(plants()).toHaveLength(1);
+    render(LibraryPage, { store, filters, progression });
+    expect(filters.view).toBe("garden");
+    expect(screen.getByRole("region", { name: "Main progression tree" })).toBeInTheDocument();
   });
-
-  it("plants only what the filters leave visible", async () => {
+  it("filters leaves without filtering the main tree, rewards or media selection", async () => {
     const filters = new LibraryFilters();
     filters.view = "garden";
     render(LibraryPage, {
       store: await storeWith([entry(1, "movie", "completed"), entry(2, "book", "planning")]),
       filters,
+      progression,
     });
-    expect(plants()).toHaveLength(2);
-    await userEvent.type(search(), "t1");
-    expect(plants()).toHaveLength(1);
+    const main = screen.getByRole("region", { name: "Main progression tree" });
+    await userEvent.type(search(), "t2");
+    expect(screen.getByRole("region", { name: "Main progression tree" })).toBe(main);
+    expect(within(main).getByRole("group", { name: "Movies" })).toHaveTextContent("1 completed");
+    const detail = screen.getByRole("region", { name: "Movies subtree" });
+    expect(within(detail).queryByRole("link")).toBeNull();
+    expect(
+      within(detail).getByRole("button", { name: "Preview Silver Screen tier 1" }),
+    ).toHaveTextContent("Available");
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Explore media trees" })).getByRole("button", {
+        name: "Books",
+      }),
+    );
+    expect(screen.getByRole("region", { name: "Books subtree" })).toHaveTextContent("T2");
+    expect(filters.query).toBe("t2");
+    expect(filters.type).toBe("all");
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Explore media trees" })).getByRole("button", {
+        name: "Movies",
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Clear tree filters" }));
+    expect(filters.query).toBe("");
+    expect(filters.status).toBe("all");
+    expect(within(detail).getByRole("link", { name: "T1 Completed" })).toBeInTheDocument();
   });
-
-  it("offers no view toggle while the library is empty", async () => {
-    render(LibraryPage, { store: await storeWith([]), filters: new LibraryFilters() });
-    expect(screen.queryByRole("group", { name: "View" })).toBeNull();
+  it("does not treat unsettled activity as current eligibility", async () => {
+    const filters = new LibraryFilters();
+    filters.view = "garden";
+    const store = await storeWith([entry(1, "movie", "completed")]);
+    render(LibraryPage, { store, filters, progression: { ...progression, loaded: false } });
+    expect(screen.queryByRole("region", { name: "Main progression tree" })).toBeNull();
+    expect(screen.getByRole("status", { name: "Tree availability" })).toBeInTheDocument();
   });
 });

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { motionStore } from "$lib/stores/motion.svelte";
+  import { unlocksStore } from "$lib/stores/unlocks.svelte";
   import type { LibraryEntry } from "$lib/types/library";
   import type { MediaType } from "$lib/types/media";
   const MEDIA_LABELS: Record<MediaType, string> = {
@@ -27,6 +29,8 @@
     loaded = false,
     error = "",
     onclear,
+    motion,
+    shimmer,
   }: {
     entries: LibraryEntry[];
     allEntries: LibraryEntry[];
@@ -34,6 +38,8 @@
     loaded?: boolean;
     error?: string;
     onclear?: () => void;
+    motion?: boolean;
+    shimmer?: boolean;
   } = $props();
   const id = $props.id();
   let selected = $state<MediaType>("movie");
@@ -45,6 +51,12 @@
   let openBranch = $state<{ id: string; label: string } | null>(null);
   let openReward = $state<{ kind: UnlockKind | "title" | "art"; id: string } | null>(null);
   const available = $derived(loaded && currentLevel !== null && !error);
+  const shines = $derived(
+    available &&
+      (currentLevel ?? 0) >= 8 &&
+      (motion ?? motionStore.on) &&
+      (shimmer ?? unlocksStore.garden === "sway"),
+  );
   const rewards = $derived(completionAchievements(allEntries, currentLevel ?? 0));
   const canonical = $derived(new Map(allEntries.map((entry) => [entry.key, entry])));
   const visible = $derived(
@@ -67,7 +79,7 @@
   const options = COMPLETION_TYPES.map((type) => ({ value: type, label: MEDIA_LABELS[type] }));
 </script>
 
-<div class="progression-tree">
+<div class="progression-tree" class:shimmer={shines}>
   {#if !available}
     <p role="status" aria-label="Tree availability">
       {error ? `Progression unavailable: ${error}` : "Loading progression…"}
@@ -257,6 +269,25 @@
 </div>
 
 <style lang="scss">
+  .shimmer .rune {
+    animation: runic-reveal 600ms ease-out 1;
+  }
+  @keyframes runic-reveal {
+    0% {
+      opacity: 0.25;
+    }
+    55% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer .rune {
+      animation: none;
+    }
+  }
   .progression-tree {
     --bark: color-mix(in srgb, var(--clr-accent) 24%, var(--clr-surface));
     --bark-light: color-mix(in srgb, var(--clr-accent) 46%, var(--clr-surface));

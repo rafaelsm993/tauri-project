@@ -24,7 +24,7 @@
     { slot: "accent", label: "Accent" },
     { slot: "pack", label: "Palette" },
     { slot: "motif", label: "Background" },
-    { slot: "garden", label: "Garden" },
+    { slot: "garden", label: "Tree effect" },
   ];
   const id = $props.id();
   const bases: { value: Theme; label: string }[] = [
@@ -79,12 +79,12 @@
             prefs.prefs[slot]}. Using Default until it is available again.
         </p>
       {/if}
-      {#if slot === "motif" || slot === "garden"}
-        <p class="hint">
-          {slot === "motif" ? "Backgrounds draw" : "The garden sway runs"} only on the desktop app; phones
-          stay still.
+      {#if slot === "motif"}<p class="hint">
+          Backgrounds draw only on the desktop app; phones stay still.
         </p>
-      {/if}
+      {:else if slot === "garden"}<p class="hint">
+          A brief rune reveal when the tree opens; no continuous animation.
+        </p>{/if}
       <div class="choices">
         {#each [{ id: "default", label: "Default", level: 0 }, ...UNLOCKS.filter((u) => u.kind === slot)] as reward (reward.id)}
           <button

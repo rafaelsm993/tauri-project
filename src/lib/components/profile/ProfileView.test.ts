@@ -151,10 +151,26 @@ describe("ProfileView", () => {
     expect(prefs.prefs.profile_art).toBe("movie:1");
     expect(update).not.toHaveBeenCalled();
   });
-  it("keeps Garden and charts but leaves equipment selection to Settings", async () => {
+  it("shows the shared tree even when there are no activity charts", async () => {
+    const library = new LibraryStore({
+      ...libraryApi,
+      load: async () => [],
+      posterDir: async () => "",
+    });
+    await library.hydrate();
+    render(ProfileView, { store: storeWith([], []), library });
+    expect(
+      await screen.findByRole("region", { name: "Main progression tree" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Progression" })).toBeNull();
+    expect(
+      within(screen.getByRole("group", { name: "Explore media trees" })).getAllByRole("button"),
+    ).toHaveLength(6);
+  });
+  it("keeps the tree region and charts but leaves equipment selection to Settings", async () => {
     render(ProfileView, { store: storeWith(LOG) });
     expect(await screen.findByRole("region", { name: "Progression" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Garden" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Tree availability" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Achievements" })).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Accent" })).not.toBeInTheDocument();
   });

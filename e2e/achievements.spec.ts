@@ -109,45 +109,61 @@ test.describe("achievements", () => {
     await expect(page.getByRole("img", { name: "Midnight preview" })).toBeVisible();
   });
 
-  test("the garden sway animates the plants", async ({ page, isMobile }) => {
-    test.skip(
-      !!isMobile,
-      "the sway is desktop-only: animating ten plants costs 126% CPU on a real phone",
-    );
-    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 8 });
+  test("Runic shimmer reveals once and settles, never continuously", async ({ page }) => {
+    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 50 });
+    await page.addInitScript(() => {
+      Object.assign(window, { __runeStarts: [] });
+      document.addEventListener("animationstart", (event) => {
+        if (event.animationName.includes("runic-reveal"))
+          (window as unknown as { __runeStarts: string[] }).__runeStarts.push(event.animationName);
+      });
+    });
     await page.goto("/settings");
-
     await page
-      .getByRole("group", { name: "Garden" })
-      .getByRole("button", { name: /^Garden sway$/ })
+      .getByRole("group", { name: "Tree effect" })
+      .getByRole("button", { name: "Runic shimmer", exact: true })
       .click();
-    // In-app navigation, not goto: a reload restarts the IPC fake and forgets the equip.
     await page
       .getByRole("link", { name: /library/i })
       .first()
       .click();
-    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Garden" }).click();
-    const art = page.locator(".garden .plant-art").first();
-    await expect(art).toBeAttached();
-
-    const anims = await art.evaluate((el) =>
-      el.getAnimations().map((a) => ({
-        name: (a as CSSAnimation).animationName,
-        state: a.playState,
-      })),
-    );
-    expect(anims.length).toBeGreaterThan(0);
-    expect(anims[0].name).toContain("garden-sway");
-    expect(anims[0].state).toBe("running");
+    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Tree" }).click();
+    const rune = page.locator(".tree-crown .rune");
+    await expect(rune).toBeAttached();
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { __runeStarts: string[] }).__runeStarts.length),
+      )
+      .toBe(1);
+    await expect
+      .poll(() =>
+        rune.evaluate((el) => el.getAnimations().filter((a) => a.playState === "running").length),
+      )
+      .toBe(0);
+    await page
+      .getByRole("group", { name: "Explore media trees" })
+      .getByRole("button", { name: "Books", exact: true })
+      .click();
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __runeStarts: string[] }).__runeStarts.length,
+      ),
+    ).toBe(1);
   });
 
-  test("the garden stays still when the sway is not equipped", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 8 });
+  test("a saved shimmer stays off with Animations off or reduced", async ({ page }) => {
+    await mockLibrary(page, [ENTRY], {
+      events: eventsAtLevel(8),
+      seenLevel: 50,
+      motion: false,
+      prefs: { garden: "sway" },
+    });
     await page.goto("/library");
-    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Garden" }).click();
-    const art = page.locator(".garden .plant-art").first();
-    await expect(art).toBeAttached();
-    expect(await art.evaluate((el) => el.getAnimations().length)).toBe(0);
+    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Tree" }).click();
+    await expect(page.locator(".progression-tree")).not.toHaveClass(/shimmer/);
+    expect(
+      await page.locator(".tree-crown .rune").evaluate((el) => el.getAnimations().length),
+    ).toBe(0);
   });
 
   test("the background slot is blocked while animations are off", async ({ page }) => {

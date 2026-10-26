@@ -24,26 +24,13 @@ test.describe("welcome", () => {
     await expect(page.getByRole("heading", { level: 1, name: /grow/i })).toHaveCount(0);
   });
 
-  test("the sample garden stands on one unbroken soil line", async ({ page }) => {
+  test("the read-only preview shows all six Runewood paths without overflow", async ({ page }) => {
     await mockLibrary(page, []);
     await page.goto("/welcome");
-
-    const plants = page.locator(".garden-bed > li");
-    // evaluateAll does not auto-wait; assert the garden is mounted before measuring it.
-    await expect(plants.first()).toBeVisible();
-
-    const rows = await plants.evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { bottom: Math.round(r.bottom), right: Math.round(r.right), w: Math.round(r.width) };
-      }),
-    );
-    expect(rows.length).toBe(5);
-    // The soil line is each plant's bottom border: one row means one shared bottom edge,
-    // so no plant sits on a stub of its own. Tops differ because plants grow to their stage.
-    expect(new Set(rows.map((r) => r.bottom)).size).toBe(1);
-    // Each plant is a real target, not a collapsed box.
-    for (const r of rows) expect(r.w).toBeGreaterThan(20);
+    const preview = page.getByRole("img", { name: /Six Runewood paths/ });
+    await expect(preview.locator("svg")).toHaveCount(6);
+    await expect(preview.locator("a,button")).toHaveCount(0);
+    expect(await preview.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
   });
 
   test("the welcome clears the system status bar", async ({ page }) => {

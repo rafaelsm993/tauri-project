@@ -9,7 +9,7 @@
   import ProgressionCard from "./ProgressionCard.svelte";
   import ActivityCard from "./ActivityCard.svelte";
   import StatusCard from "./StatusCard.svelte";
-  import GardenCard from "./GardenCard.svelte";
+  import ProgressionTree from "$lib/components/progression/ProgressionTree.svelte";
   import TasteCard from "./TasteCard.svelte";
 
   import ForecastCard from "./ForecastCard.svelte";
@@ -95,7 +95,6 @@
       <ProgressionCard weeks={store.weeks} today={store.today} />
       <ActivityCard activity={store.activity} today={store.today} streak={store.streak} />
       <StatusCard counts={store.statuses} />
-      <GardenCard entries={library.entries} />
       <TasteCard families={store.families} />
       <ForecastCard
         backlog={store.backlog}
@@ -110,6 +109,15 @@
         up here.
       </p>
     {/if}
+    <div class="profile-tree">
+      <ProgressionTree
+        entries={library.entries}
+        allEntries={library.entries}
+        currentLevel={store.level.level}
+        loaded={library.ready && store.loaded}
+        error={!library.ready ? library.error : store.error}
+      />
+    </div>
   </div>
 </main>
 
@@ -160,7 +168,7 @@
     grid-template-areas:
       "level level level level stats stats stats stats stats stats stats stats"
       "progression progression progression progression progression progression progression progression activity activity activity activity"
-      "garden garden garden garden garden garden garden garden garden garden garden garden"
+      "tree tree tree tree tree tree tree tree tree tree tree tree"
       "library library library library taste taste taste taste forecast forecast forecast forecast";
 
     @include respond-to(lg) {
@@ -168,7 +176,7 @@
       grid-template-areas:
         "level stats"
         "progression progression"
-        "garden garden"
+        "tree tree"
         "activity library"
         "taste forecast";
     }
@@ -179,7 +187,7 @@
         "level"
         "stats"
         "progression"
-        "garden"
+        "tree"
         "activity"
         "library"
         "taste"
@@ -188,9 +196,14 @@
 
     &.empty {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-areas: "level" "hint";
+      grid-template-areas: "level" "hint" "tree";
       max-width: 40rem;
     }
+  }
+
+  .profile-tree {
+    grid-area: tree;
+    min-width: 0;
   }
 
   // LayerChart reads these; its tooltip can be portaled outside the page, so it is global.

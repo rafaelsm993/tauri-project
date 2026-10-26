@@ -126,7 +126,7 @@ The Library's filters on one row: `[Filters ⊙n] [In progress ✕] [Movie 1] [A
 - The panel holds Status and Type as wrapping `SegmentedControl`s with Reset (disabled while nothing is on). Type hides when the library holds one type.
 - The row has no All chip: nothing picked means all. A picked type stands alone, filled, with ✕ (`aria-pressed="true"`, "Anime 2, remove filter"); a picked status shows as a filled token ("Remove filter: In progress"). Chips with a 0 count are disabled through `withEmptyDisabled`, except the one picked.
 - The chip row scrolls sideways; a mask fades whichever edge hides more chips. Chips animate (flip + fade) only while Animations are on.
-- `LibraryFilters` and `filterEntries` are unchanged; the View row (Grid/Garden) stays its own row.
+- `LibraryFilters` and `filterEntries` are unchanged; the View row (Grid/Tree) stays its own row.
 
 ## SessionPicker
 
@@ -242,7 +242,7 @@ The shared renderer and the Settings grid for 30 original pixel crests earned by
   grouped by media, each with its completed count and the level it needs; a locked crest previews
   but cannot be equipped, and a saved-but-now-locked choice explains itself and falls back to Default.
 
-## Runewood tree (component checkpoint; production integration pending)
+## Runewood tree (Library and Profile)
 
 - Files: `src/lib/components/progression/ProgressionTree.svelte`, `BranchSheet.svelte`, `RewardSheet.svelte`.
 - Tree props: `entries: LibraryEntry[]` (visible entries), `allEntries: LibraryEntry[]` (successful full-library authority), `currentLevel: number | null`, `loaded?: boolean` (defaults false), `error?: string`, `onclear?: () => void`.
@@ -252,7 +252,9 @@ The shared renderer and the Settings grid for 30 original pixel crests earned by
 - The shared SegmentedControl now accepts optional `controls?: string` for its buttons' `aria-controls`. Runewood connects the menu to the labelled detail region and gives its buttons 44 px targets on mouse and touch.
 - RewardSheet accepts `kind`, `rewardId`, `entries`, `currentLevel`, `onclose`; it resolves the existing catalogue, previews current requirements and links to Settings. It never equips. Real destinations are `#theme`, `#titles`, `#profile-artwork`; modal navigation waits for Sheet's history entry to close.
 - Pixel bark/runes and crest tones follow the current accent; the tree has no continuous animation, DOM-scanning effect or new persistence/IPC. Media-arm crests are decorative type identities, not claims that a reward is earned.
-- Garden remains the production view. Library/Profile wiring and natural route acceptance belong to Wave 7; the new component is reviewed through a scratch browser harness, not a shipped preview route.
+- Library Tree preserves the internal session value `garden` and Grid default. Its selector remains reachable with an empty library; Library passes filtered and full entries separately, while Profile always shows the shared tree outside the chart condition. Both require successful activity/library authority. No preview route ships.
+- Runic shimmer retains stored id `sway`, kind/prefs slot `garden` and minimum level 8. When equipped and motion is permitted, the crown runes reveal once for 600ms on mount, then remain still; media changes do not restart it. Reduced motion and Animations off override it. `motion?` and `shimmer?` are test overrides, still gated by current level and successful authority.
+- Old plant/scene/card/domain/sample modules are retired. Welcome now uses a read-only six-media crest example with no fake item links.
 
 ## AppHeader
 

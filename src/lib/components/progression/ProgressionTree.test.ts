@@ -5,6 +5,17 @@ import { entry } from "./fixtures.test-utils";
 import ProgressionTree from "./ProgressionTree.svelte";
 
 describe("Runewood tree", () => {
+  it.each([
+    { motion: true, shimmer: true, currentLevel: 8, loaded: true, expected: true },
+    { motion: false, shimmer: true, currentLevel: 8, loaded: true, expected: false },
+    { motion: true, shimmer: false, currentLevel: 8, loaded: true, expected: false },
+    { motion: true, shimmer: true, currentLevel: 7, loaded: true, expected: false },
+    { motion: true, shimmer: true, currentLevel: 8, loaded: false, expected: false },
+  ])("gates the finite rune reveal: %o", ({ expected, ...props }) => {
+    const { container } = render(ProgressionTree, { entries: [], allEntries: [], ...props });
+    expect(!!container.querySelector(".shimmer")).toBe(expected);
+  });
+
   it("offers the caller's clear-filter action only for a filtered empty subtree", async () => {
     const onclear = vi.fn();
     render(ProgressionTree, {
@@ -126,7 +137,7 @@ describe("Runewood tree", () => {
     const main = screen.getByRole("region", { name: "Main progression tree" });
     expect(within(main).getAllByRole("listitem")).toHaveLength(10);
     expect(within(main).getByLabelText("Current level 8")).toBeInTheDocument();
-    expect(within(main).getByRole("button", { name: "Preview Garden sway" })).toBeInTheDocument();
+    expect(within(main).getByRole("button", { name: "Preview Runic shimmer" })).toBeInTheDocument();
     expect(within(main).getByRole("button", { name: "Preview Dusk" })).toBeInTheDocument();
     await userEvent.click(within(main).getByRole("button", { name: "Later levels" }));
     expect(within(main).getByText("Levels 11–20")).toBeInTheDocument();

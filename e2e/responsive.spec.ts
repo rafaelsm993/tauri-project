@@ -10,6 +10,7 @@ const SCREENS = [
   { name: "detail", path: "/media/movie/1", chrome: null },
   { name: "library", path: "/library", chrome: { heading: "Library" } },
   { name: "profile", path: "/profile", chrome: { heading: "Profile" } },
+  { name: "library-tree", path: "/library", chrome: { heading: "Library" }, tree: true },
   { name: "planner", path: "/planner", chrome: { heading: "Planner" } },
   { name: "welcome", path: "/welcome", chrome: null },
   { name: "settings", path: "/settings", chrome: { heading: "Settings" } },
@@ -20,6 +21,11 @@ for (const screen of SCREENS) {
     test.beforeEach(async ({ page }) => {
       await page.goto(screen.path);
       await page.waitForLoadState("networkidle");
+      if ("tree" in screen && screen.tree)
+        await page
+          .getByRole("group", { name: "View" })
+          .getByRole("button", { name: "Tree" })
+          .click();
     });
 
     test("has no horizontal page overflow", async ({ page }) => {

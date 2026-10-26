@@ -1,6 +1,6 @@
 <script lang="ts">
-  import GardenScene from "$lib/components/garden/GardenScene.svelte";
-  import { SAMPLE_GARDEN } from "$lib/domain/sampleGarden";
+  import ProfileArtwork from "$lib/components/profile/ProfileArtwork.svelte";
+  import { COMPLETION_TYPES } from "$lib/domain/completionAchievements";
   import { FAMILIES, FAMILY_LABELS, type Family } from "$lib/domain/dashboard";
   import { beatAfter, beatBefore, isLastBeat, resumeBeat, type Beat } from "$lib/domain/welcome";
   import { keysStore, KeysStore } from "$lib/stores/keys.svelte";
@@ -62,11 +62,20 @@
     {#if beat === "garden"}
       <h1 class="welcome-title">Your library is a thing you grow</h1>
       <p class="welcome-text">
-        Everything you save takes root here. Finish something and it blooms; set something aside and
-        it rests. This is an example &mdash; yours starts empty.
+        Everything you save takes root in Runewood. Complete stories across six media paths to earn
+        artwork; your current level and completions determine what you can equip. This is an example
+        &mdash; yours starts empty.
       </p>
-      <div class="welcome-garden">
-        <GardenScene entries={SAMPLE_GARDEN} motion={false} />
+      <div
+        class="welcome-roots"
+        role="img"
+        aria-label="Six Runewood paths: movies, TV, anime, manga, books and games"
+      >
+        {#each COMPLETION_TYPES as type (type)}<ProfileArtwork
+            art={`${type}:1`}
+            size={32}
+            decorative
+          />{/each}
       </div>
     {:else if beat === "keys"}
       <h1 class="welcome-title">Bring your own keys</h1>
@@ -186,7 +195,10 @@
     color: var(--clr-text-2);
   }
 
-  .welcome-garden {
+  .welcome-roots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-md;
     padding: $spacing-md;
     border-radius: $radius-md;
     background: var(--clr-surface-2);

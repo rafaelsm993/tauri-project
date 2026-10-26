@@ -40,8 +40,8 @@ export const UNLOCKS: readonly Unlock[] = [
     id: "sway",
     kind: "garden",
     level: 8,
-    label: "Garden sway",
-    blurb: "Your plants lean in a soft breeze.",
+    label: "Runic shimmer",
+    blurb: "A brief light reveals the tree runes, then rests.",
   },
   {
     id: "dusk",

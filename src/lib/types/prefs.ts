@@ -20,7 +20,7 @@ export interface Prefs {
   accent: string;
   pack: string;
   motif: string;
-  // The equipped garden reward ("sway"); "default" leaves the plants still.
+  // Legacy slot for Runic shimmer ("sway"); "default" leaves the runes still.
   garden: string;
   // How many particles the equipped motif draws; 0 means none, MAX_PARTICLES is the cap.
   particle_count: number;

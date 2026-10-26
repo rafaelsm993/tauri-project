@@ -58,7 +58,7 @@ describe("ThemeSection", () => {
   it("never saves an animation choice while motion is off", async () => {
     const { prefs, update } = setup({ motion: false });
     render(ThemeSection, { prefs, currentLevel: 25 });
-    for (const label of ["Background", "Garden"]) {
+    for (const label of ["Background", "Tree effect"]) {
       for (const button of within(screen.getByRole("group", { name: label })).getAllByRole(
         "button",
       )) {
@@ -122,7 +122,8 @@ describe("ThemeSection", () => {
       /available.*animations are off/i,
     );
     expect(screen.getByRole("button", { name: "Ember" })).toBeEnabled();
-    expect(screen.getAllByText(/only on the desktop app/i)).toHaveLength(2);
+    expect(screen.getAllByText(/only on the desktop app/i)).toHaveLength(1);
+    expect(screen.getByText(/no continuous animation/i)).toBeInTheDocument();
   });
   it("equips an earned accent, marks it filled and permits clearing", async () => {
     const { prefs, update } = setup();
@@ -142,7 +143,7 @@ describe("ThemeSection", () => {
   it("keeps every slot accessible with Default and visible locked previews", () => {
     const { prefs, update } = setup({ seen_level: 25 });
     render(ThemeSection, { prefs, currentLevel: 1 });
-    for (const label of ["Accent", "Palette", "Background", "Garden"]) {
+    for (const label of ["Accent", "Palette", "Background", "Tree effect"]) {
       expect(
         within(screen.getByRole("group", { name: label })).getByRole("button", { name: "Default" }),
       ).toHaveAttribute("aria-pressed", "true");

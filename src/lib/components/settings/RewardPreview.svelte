@@ -19,6 +19,7 @@
   class="reward-preview"
   role="img"
   aria-label="{label} preview"
+  shape-rendering={slot === "garden" ? "crispEdges" : undefined}
   viewBox="0 0 100 56"
   style={local}
 >
@@ -40,8 +41,8 @@
     <path
       class="mark"
       d={reward === "sway"
-        ? "M48 44V26Q28 28 28 13q20 0 20 13Q60 11 76 11q0 20-28 20"
-        : "M50 44V26Q30 26 30 12q20 0 20 14Q50 12 70 12q0 14-20 14"}
+        ? "M46 44V30H38V26H30V22H22V14H26V20H34V24H42V28H48V12H52V24H60V20H68V12H72V22H64V26H56V30H52V44Z M45 18H55V20H51V26H49V20H45Z"
+        : "M46 44V30H38V26H30V22H24V16H28V20H36V24H44V28H48V14H52V28H60V24H68V16H72V26H64V30H54V44Z"}
     />
   {:else}
     <rect class="mark" x="16" y="16" width="30" height="24" rx="2" />

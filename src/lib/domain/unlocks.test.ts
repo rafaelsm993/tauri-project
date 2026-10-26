@@ -127,6 +127,7 @@ describe("what the user may equip", () => {
   it("counts the garden sway as its own kind, not a background motif", () => {
     const sway = UNLOCKS.find((u) => u.id === "sway");
     expect(sway?.kind).toBe("garden");
+    expect(sway?.label).toBe("Runic shimmer");
   });
 
   it("keeps the background motifs to the ones the background can draw", () => {

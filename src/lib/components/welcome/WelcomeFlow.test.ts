@@ -48,6 +48,9 @@ describe("WelcomeFlow", () => {
   it("opens on the garden beat with an example, not the user's library", async () => {
     await mount();
     expect(screen.getByText(/an example/i)).toBeTruthy();
+    const preview = screen.getByRole("img", { name: /Six Runewood paths/ });
+    expect(preview.querySelectorAll("svg")).toHaveLength(6);
+    expect(preview.querySelectorAll("a,button")).toHaveLength(0);
   });
 
   it("walks the four beats in order", async () => {

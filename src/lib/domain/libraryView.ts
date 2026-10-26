@@ -3,6 +3,12 @@ import { MEDIA_LABELS, type MediaType } from "$lib/types/media";
 import type { DueSession } from "./reminders";
 import type { LibraryEntry, LibraryStatus } from "$lib/types/library";
 
+export type LibraryViewMode = "grid" | "garden";
+export const VIEW_OPTIONS: { value: LibraryViewMode; label: string }[] = [
+  { value: "grid", label: "Grid" },
+  { value: "garden", label: "Tree" },
+];
+
 export type StatusFilter = LibraryStatus | "all";
 export type TypeFilter = MediaType | "all";
 export type FilterOption<T extends string> = { value: T; label: string; count: number };

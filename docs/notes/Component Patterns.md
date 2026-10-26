@@ -242,6 +242,18 @@ The shared renderer and the Settings grid for 30 original pixel crests earned by
   grouped by media, each with its completed count and the level it needs; a locked crest previews
   but cannot be equipped, and a saved-but-now-locked choice explains itself and falls back to Default.
 
+## Runewood tree (component checkpoint; production integration pending)
+
+- Files: `src/lib/components/progression/ProgressionTree.svelte`, `BranchSheet.svelte`, `RewardSheet.svelte`.
+- Tree props: `entries: LibraryEntry[]` (visible entries), `allEntries: LibraryEntry[]` (successful full-library authority), `currentLevel: number | null`, `loaded?: boolean` (defaults false), `error?: string`, `onclear?: () => void`.
+- Render order is fixed: persistent main tree containing all six media types → media menu below → selected detailed subtree below the menu. Switching media preserves the main-tree DOM, global level page and full-library completion counts. Empty types remain selectable.
+- `treeBranches`, `levelWindow` and `completionAchievements` remain the domain authorities. Visible leaves are resolved against canonical keys from `allEntries`; filters never grant/remove rewards. Missing authority hides stale progress instead of fabricating empty/earned states.
+- Bounds: ten global level rows; six genre branches per page; six preview links per branch; thirty item links per BranchSheet page. Only one detailed media subtree is mounted. Branch paging clamps when entries disappear. Manual IDs use the normal encoded media routes.
+- The shared SegmentedControl now accepts optional `controls?: string` for its buttons' `aria-controls`. Runewood connects the menu to the labelled detail region and gives its buttons 44 px targets on mouse and touch.
+- RewardSheet accepts `kind`, `rewardId`, `entries`, `currentLevel`, `onclose`; it resolves the existing catalogue, previews current requirements and links to Settings. It never equips. Real destinations are `#theme`, `#titles`, `#profile-artwork`; modal navigation waits for Sheet's history entry to close.
+- Pixel bark/runes and crest tones follow the current accent; the tree has no continuous animation, DOM-scanning effect or new persistence/IPC. Media-arm crests are decorative type identities, not claims that a reward is earned.
+- Garden remains the production view. Library/Profile wiring and natural route acceptance belong to Wave 7; the new component is reviewed through a scratch browser harness, not a shipped preview route.
+
 ## AppHeader
 
 - File: `src/lib/components/ui/AppHeader.svelte`

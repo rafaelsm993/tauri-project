@@ -43,7 +43,7 @@
   }
 </script>
 
-<section class="artwork-section" aria-labelledby="{id}-heading">
+<section id="profile-artwork" class="artwork-section" aria-labelledby="{id}-heading">
   <h3 id="{id}-heading">Profile artwork</h3>
   <p class="hint">
     Completion crests appear in Profile and navigation. Both the current level and completed count

@@ -53,7 +53,7 @@
   }
 </script>
 
-<section class="theme-section" aria-labelledby="{id}-heading">
+<section id="theme" class="theme-section" aria-labelledby="{id}-heading">
   <h2 id="{id}-heading">Theme</h2>
   <p class="hint">System follows your device's light or dark setting.</p>
   <SegmentedControl

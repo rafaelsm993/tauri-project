@@ -25,7 +25,7 @@
   }
 </script>
 
-<section class="titles-section" aria-labelledby="{id}-heading">
+<section id="titles" class="titles-section" aria-labelledby="{id}-heading">
   <h2 id="{id}-heading">Titles</h2>
   <p class="hint">
     Displayed title: <strong>{shown}</strong>. Automatic follows your current level.

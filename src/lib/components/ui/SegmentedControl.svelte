@@ -7,6 +7,7 @@
     disabled = false,
     wrap = false,
     fill = false,
+    controls,
   }: {
     label: string;
     options: { value: T; label: string; count?: number; disabled?: boolean }[];
@@ -17,6 +18,7 @@
     wrap?: boolean;
     /** Share the row equally with tighter padding, wrapping only when even that won't fit. */
     fill?: boolean;
+    controls?: string;
   } = $props();
 </script>
 
@@ -28,6 +30,7 @@
       class:active={option.value === value}
       class:empty={option.disabled}
       aria-pressed={option.value === value}
+      aria-controls={controls}
       disabled={disabled || option.disabled}
       onclick={() => onchange(option.value)}
     >

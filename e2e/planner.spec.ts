@@ -1,3 +1,4 @@
+import { openSettingsSection } from "./fixtures/settings";
 import { expect, test, type Page } from "@playwright/test";
 import { eventsAtLevel, ipcCalls, item, mockLibrary, type LibraryFake } from "./fixtures/library";
 
@@ -123,6 +124,7 @@ test("a plan that needs a length asks for it and then joins the week", async ({ 
 test("minutes per chapter set in Settings prefill a manga's plan", async ({ page }) => {
   await mockPlanner(page);
   await page.goto("/settings");
+  await openSettingsSection(page, "Preferences");
   const chapter = page.getByLabel("Minutes per chapter (manga)");
   await chapter.fill("6");
   await chapter.blur();

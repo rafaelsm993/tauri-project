@@ -11,12 +11,14 @@
     selected = [],
     onchange,
     disabled = false,
+    iconOnly = false,
   }: {
     label: string;
     options: Option[];
     selected: Value[];
     onchange: (next: Value[]) => void;
     disabled?: boolean;
+    iconOnly?: boolean;
   } = $props();
 
   const id = $props.id();
@@ -25,6 +27,7 @@
   let trigger = $state<HTMLButtonElement>();
   let panel = $state<HTMLDivElement>();
   let open = $state(false);
+  let positionedOpen = $state(false);
 
   const count = $derived(selected.length);
 
@@ -35,12 +38,13 @@
 
   function onToggle(e: ToggleEvent) {
     open = e.newState === "open";
+    positionedOpen = open;
   }
 
   // Keep the panel attached to the trigger while open (scroll / resize).
   $effect(() => {
-    if (!open || !trigger || !panel) return;
-    return followTrigger(trigger, panel);
+    if (!positionedOpen || !trigger || !panel) return;
+    return followTrigger(trigger, panel, "end", true);
   });
 </script>
 
@@ -48,13 +52,15 @@
   bind:this={trigger}
   type="button"
   class="ms-trigger"
+  class:icon-only={iconOnly}
+  aria-label={iconOnly ? (count > 0 ? `${label} ${count}` : label) : undefined}
   class:has-value={count > 0}
   popovertarget={panelId}
   aria-expanded={open}
   {disabled}
 >
   <svg class="ms-trigger__icon" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M4 6h16M7 12h10M10 18h4" />
+    <path d={iconOnly ? "M4 5h16l-6 7v7l-4-2v-5z" : "M4 6h16M7 12h10M10 18h4"} />
   </svg>
   <span class="ms-trigger__label">{label}</span>
   {#if count > 0}
@@ -65,7 +71,14 @@
   </svg>
 </button>
 
-<div bind:this={panel} id={panelId} class="ms-panel" popover="auto" ontoggle={onToggle}>
+<div
+  bind:this={panel}
+  id={panelId}
+  class="ms-panel"
+  popover="auto"
+  onbeforetoggle={(event) => (open = event.newState === "open")}
+  ontoggle={onToggle}
+>
   <fieldset class="ms-group">
     <legend class="ms-legend">{label}</legend>
     {#each options as o (o.value)}
@@ -85,6 +98,34 @@
 </div>
 
 <style lang="scss">
+  .ms-trigger.icon-only {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: $touch-target;
+    height: $touch-target;
+    padding: 0;
+    .ms-trigger__icon {
+      display: block;
+    }
+    .ms-trigger__label {
+      @include sr-only;
+    }
+    .ms-trigger__chevron {
+      display: none;
+    }
+    .ms-trigger__count {
+      position: absolute;
+      top: 0;
+      right: 0;
+      color: var(--clr-on-primary);
+    }
+    &.has-value .ms-trigger__icon {
+      fill: var(--clr-accent);
+      stroke: var(--clr-accent);
+    }
+  }
+
   .ms-trigger__icon {
     display: none;
     width: 18px;

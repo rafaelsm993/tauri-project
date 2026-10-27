@@ -107,7 +107,10 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    transition: all $dur-normal ease;
+    transition:
+      color $dur-normal ease,
+      background-color $dur-normal ease,
+      box-shadow $dur-normal ease;
 
     // Desktop has room for all six text labels, so the icon only earns its place where space
     // is short; hiding it here keeps the familiar pill row unchanged.

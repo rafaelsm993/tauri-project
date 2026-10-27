@@ -1,3 +1,4 @@
+import { openSettingsPicker } from "./fixtures/settings";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
 import { eventsAtLevel, manualItem, mockLibrary } from "./fixtures/library";
@@ -11,6 +12,13 @@ const SCREENS = [
   { name: "library", path: "/library", chrome: { heading: "Library" } },
   { name: "profile", path: "/profile", chrome: { heading: "Profile" } },
   { name: "library-tree", path: "/library", chrome: { heading: "Library" }, tree: true },
+  {
+    name: "library-media-tree",
+    path: "/library",
+    chrome: { heading: "Library" },
+    tree: true,
+    media: "TV",
+  },
   { name: "planner", path: "/planner", chrome: { heading: "Planner" } },
   { name: "welcome", path: "/welcome", chrome: null },
   { name: "settings", path: "/settings", chrome: { heading: "Settings" } },
@@ -25,6 +33,11 @@ for (const screen of SCREENS) {
         await page
           .getByRole("group", { name: "View" })
           .getByRole("button", { name: "Tree" })
+          .click();
+      if ("media" in screen)
+        await page
+          .getByRole("group", { name: "Explore media trees" })
+          .getByRole("button", { name: screen.media, exact: true })
           .click();
     });
 
@@ -128,7 +141,10 @@ test.describe("the library filters", () => {
       ).toBeLessThanOrEqual(1);
     } else {
       expect(p.y, "the popover opens under the button").toBeGreaterThanOrEqual(b.y + b.height);
-      expect(Math.abs(p.x - b.x), "the popover lines up with the button").toBeLessThanOrEqual(8);
+      expect(
+        Math.abs(p.x + p.width - b.x - b.width),
+        "the popover lines up with the trailing filter button",
+      ).toBeLessThanOrEqual(8);
     }
     await page.keyboard.press("Escape");
     await expect(panel).toBeHidden();
@@ -293,11 +309,15 @@ test.describe("touch devices", () => {
     await page.waitForLoadState("networkidle");
   });
 
-  test("reward chips are at least 44px tall on coarse pointers", async ({ page, isMobile }) => {
+  test("reward dropdown rows are at least 44px tall on coarse pointers", async ({
+    page,
+    isMobile,
+  }) => {
     test.skip(!isMobile, "mouse viewports may use compact targets");
     await mockLibrary(page, [], { events: eventsAtLevel(25), seenLevel: 25 });
     await page.goto("/settings");
-    const chips = page.getByRole("group", { name: "Accent" }).getByRole("button");
+    const panel = await openSettingsPicker(page, "Accent");
+    const chips = panel.getByRole("button");
     await expect(chips.first()).toBeVisible();
     const heights = await chips.evaluateAll((els) =>
       els.map((e) => e.getBoundingClientRect().height),
@@ -359,7 +379,7 @@ test.describe("touch devices", () => {
     expect(height, "main column collapsed to 0 px and clips its content").toBeGreaterThan(0);
   });
 
-  test("genre filter sits beside the search field and hides during search", async ({
+  test("genre filter sits inside the search field and hides during search", async ({
     page,
     isMobile,
   }) => {
@@ -373,9 +393,11 @@ test.describe("touch devices", () => {
     const placed = await trigger.evaluate((t) => ({
       inCategoryBar: t.closest(".category-bar") !== null,
       inHeaderRow: t.closest(".app-header .row") !== null,
+      inSearch: t.closest(".search-bar") !== null,
     }));
     expect(placed.inCategoryBar, "trigger is still in the category bar").toBe(false);
     expect(placed.inHeaderRow, "trigger is not in the header's persistent row").toBe(true);
+    expect(placed.inSearch, "trigger is outside the search field").toBe(true);
     if (isMobile) expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     const barRight = await nav.evaluate((n) => n.getBoundingClientRect().right);
     expect(barRight, "category bar is wider than the viewport").toBeLessThanOrEqual(

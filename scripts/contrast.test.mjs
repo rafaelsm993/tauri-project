@@ -59,6 +59,11 @@ const PAIRS = [
 ];
 
 for (const [name, vars] of Object.entries(PALETTES)) {
+  test(`the ${name} Default primary supports small button text`, () => {
+    const fg = rgbOf(vars["--clr-on-primary"], vars);
+    const bg = rgbOf(vars["--clr-primary"], vars);
+    assert.ok(contrast(fg, bg) >= 4.5);
+  });
   test(`the ${name} palette meets contrast`, () => {
     const color = (token) => rgbOf(vars[token] ?? `rgb(var(${token}-rgb))`, vars);
     const low = PAIRS.map(([fg, bg, min]) => [fg, bg, min, contrast(color(fg), color(bg))])

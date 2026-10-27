@@ -87,3 +87,17 @@ describe("AppHeader", () => {
     expect(() => scrollTo(900)).not.toThrow();
   });
 });
+
+it("leaves a non-sticky page header expanded while scrolling", async () => {
+  const { container } = render(AppHeader, {
+    sticky: false,
+    heading: "Library",
+    collapsible: snippet("<button>Filters</button>"),
+  });
+  scrollTo(300);
+  await tick();
+  expect(container.querySelector("header")).toHaveAttribute("data-collapsed", "false");
+  expect(container.querySelector("header")).toHaveAttribute("data-stuck", "false");
+  expect(container.querySelector(".collapsible")).not.toHaveAttribute("inert");
+  expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
+});

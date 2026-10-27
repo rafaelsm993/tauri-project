@@ -1,3 +1,4 @@
+import { openSettingsSection } from "./fixtures/settings";
 import { expect, test } from "./fixtures/tauri-ipc";
 
 test.describe("api keys", () => {
@@ -25,6 +26,7 @@ test.describe("api keys", () => {
       Object.assign(window, { __noKeys: true });
     });
     await page.goto("/settings");
+    await openSettingsSection(page, "Preferences");
 
     const field = page.getByLabel(/TMDB key/i);
     await expect(field).toBeVisible();
@@ -36,6 +38,7 @@ test.describe("api keys", () => {
 
   test("the settings field never shows a saved key", async ({ page }) => {
     await page.goto("/settings");
+    await openSettingsSection(page, "Preferences");
 
     const field = page.getByLabel(/TMDB key/i);
     await expect(field).toHaveValue("");
@@ -45,6 +48,7 @@ test.describe("api keys", () => {
 
   test("the settings section fits its width", async ({ page, isMobile }) => {
     await page.goto("/settings");
+    await openSettingsSection(page, "Preferences");
 
     const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientW = await page.evaluate(() => document.documentElement.clientWidth);

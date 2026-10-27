@@ -1,14 +1,17 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { motionStore } from "$lib/stores/motion.svelte";
   import { collapseOnScroll, type HeaderScroll } from "$lib/domain/navigation";
 
   // `heading` is the page's own <h1> ("Library"). Home has none: its search takes the first row.
   let {
+    sticky = true,
     heading,
     action,
     persistent,
     collapsible,
   }: {
+    sticky?: boolean;
     heading?: string;
     action?: Snippet;
     persistent?: Snippet;
@@ -18,6 +21,7 @@
   let scroll = $state<HeaderScroll>({ y: 0, collapsed: false });
 
   $effect(() => {
+    if (!sticky) return;
     const onScroll = () => {
       scroll = collapseOnScroll(scroll, window.scrollY);
     };
@@ -26,7 +30,13 @@
   });
 </script>
 
-<header class="app-header" data-collapsed={scroll.collapsed} data-stuck={scroll.y > 0}>
+<header
+  class="app-header"
+  class:sticky
+  data-collapsed={sticky && scroll.collapsed}
+  data-stuck={sticky && scroll.y > 0}
+  data-motion={motionStore.on}
+>
   <div class="row">
     <!-- A page with a heading gets a title row (Library, Planner, Settings, Profile); Home has
          no <h1>, so its search shares this row rather than burning a whole one. -->
@@ -41,20 +51,25 @@
     <div class="row">{@render persistent()}</div>
   {/if}
   {#if collapsible}
-    <div class="collapsible">{@render collapsible()}</div>
+    <div class="collapsible" inert={sticky && scroll.collapsed}>
+      <div class="collapsible-content">{@render collapsible()}</div>
+    </div>
   {/if}
 </header>
 
 <style lang="scss">
   .app-header {
-    position: sticky;
-    top: calc(var(--safe-top) + #{$spacing-sm});
-    z-index: var(--z-raised);
     display: flex;
     flex-direction: column;
     // Only the rows take taps: a collapsed row keeps its box, and the cards showing through that
     // gap must still be tappable. `visibility: hidden` already drops the hidden row's own taps.
     pointer-events: none;
+  }
+
+  .app-header.sticky {
+    position: sticky;
+    top: calc(var(--safe-top) + #{$spacing-sm});
+    z-index: var(--z-raised);
   }
 
   // While stuck, paint from the screen edge down to the header: the status bar sits over the
@@ -64,8 +79,8 @@
     content: "";
     position: absolute;
     inset-inline: 0;
-    bottom: 100%;
-    height: calc(var(--safe-top) + #{$spacing-sm});
+    bottom: calc(100% + #{$spacing-sm});
+    height: var(--safe-top);
     background: var(--clr-bg);
     // Painted over the content, so it takes the taps that content can no longer be seen for.
     pointer-events: auto;
@@ -75,7 +90,7 @@
   // hidden row must leave a transparent gap, not a painted blank band.
   .row,
   .collapsible {
-    background: var(--clr-bg);
+    background: transparent;
     pointer-events: auto;
   }
 
@@ -99,11 +114,28 @@
     padding-bottom: $spacing-sm;
   }
 
-  // `visibility` keeps the row's box and paints nothing, so the page below never moves. Shrinking
-  // or animating the row instead reflows the whole page on every scroll tick, and the reflow
-  // shifts scrollY, which flips this very state back — the header then refuses to reappear on an
-  // upward scroll. Content simply shows through the gap it leaves.
+  .collapsible-content {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    transition:
+      opacity $dur-fast ease-out,
+      transform $dur-fast ease-out,
+      visibility 0s;
+  }
   .app-header[data-collapsed="true"] .collapsible {
+    pointer-events: none;
+  }
+  .app-header[data-collapsed="true"] .collapsible-content {
+    opacity: 0;
+    transform: translateY(-0.5rem);
     visibility: hidden;
+    transition:
+      opacity $dur-fast ease-out,
+      transform $dur-fast ease-out,
+      visibility 0s $dur-fast;
+  }
+  .app-header[data-motion="false"] .collapsible-content {
+    transition: none;
   }
 </style>

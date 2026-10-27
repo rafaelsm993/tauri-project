@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { levelWindow, treeBranches, treeLevels } from "./progressionTree";
+import { treeBranches } from "./progressionTree";
 import { emptyLength } from "./length";
 import type { LibraryEntry } from "$lib/types/library";
 import type { MediaType, ProviderId } from "$lib/types/media";
@@ -129,86 +129,92 @@ describe("treeBranches", () => {
   });
 });
 
-describe("treeLevels", () => {
-  it("keeps the root earned and future catalogue levels discoverable", () => {
-    expect(treeLevels(1)).toEqual({ earned: 1, last: 50 });
+import { journeyNodes, journeyEdges } from "./progressionTree";
+import { COMPLETION_TYPES } from "./completionAchievements";
+import { UNLOCKS } from "./unlocks";
+import { TITLES } from "./gamification";
+
+const completed = (type: MediaType) =>
+  Array.from({ length: 50 }, (_, i) => {
+    const saved = entry(i + 1, type);
+    saved.user.status = "completed";
+    return saved;
   });
 
-  it("uses only the current level after a level drop", () => {
-    expect(treeLevels(12).earned).toBe(12);
-    expect(treeLevels(8).earned).toBe(8);
-    expect(levelWindow(8, 1).rows.find((r) => r.level === 12)?.unlocked).toBe(false);
-  });
-
-  it("keeps a future level after the user exceeds the catalogue", () => {
-    expect(treeLevels(200)).toEqual({ earned: 200, last: 201 });
-  });
+it("journey: presents every existing reward exactly once", () => {
+  const nodes = COMPLETION_TYPES.flatMap((type) => journeyNodes(completed(type), 50, type));
+  expect(nodes).toHaveLength(50);
+  expect(new Set(nodes.map((node) => node.id)).size).toBe(nodes.length);
+  expect(nodes.filter((node) => node.kind === "art")).toHaveLength(30);
+  expect(nodes.filter((node) => node.kind !== "art")).toHaveLength(UNLOCKS.length + TITLES.length);
+  for (const [type, count] of [
+    ["movie", 9],
+    ["tv", 9],
+    ["anime", 8],
+    ["manga", 8],
+    ["book", 8],
+    ["game", 8],
+  ] as const)
+    expect(journeyNodes([], 1, type)).toHaveLength(count);
 });
 
-describe("levelWindow", () => {
-  it("renders each level from top to root without skipping empty reward tiers", () => {
-    const window = levelWindow(8, 0);
-    expect(window.rows.map((r) => r.level)).toEqual([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
-    expect(window.rows.filter((r) => r.unlocked).map((r) => r.level)).toEqual([
-      8, 7, 6, 5, 4, 3, 2, 1,
-    ]);
-    expect(window.rows.filter((r) => r.current).map((r) => r.level)).toEqual([8]);
-    expect(window.rows.find((r) => r.level === 4)).toMatchObject({ rewards: [], titles: [] });
+it("journey: keeps global rewards level-only despite an empty home medium", () => {
+  const nodes = journeyNodes([], 2, "movie");
+  expect(nodes.find((node) => node.rewardId === "bubbles")).toMatchObject({
+    available: true,
+    level: 2,
   });
+  expect(nodes.find((node) => node.rewardId === "ember")).toMatchObject({
+    available: false,
+    level: 3,
+  });
+  expect(nodes.filter((node) => node.kind === "art").every((node) => !node.available)).toBe(true);
+  expect(journeyNodes([], 1, "movie").find((node) => node.rewardId === "bubbles")?.available).toBe(
+    false,
+  );
+});
 
-  it("includes both level-eight rewards and the existing title", () => {
-    const tier = levelWindow(8, 0).rows.find((r) => r.level === 8)!;
-    expect(tier.rewards.map((r) => r.id)).toEqual(["sway", "dusk"]);
-    expect(tier.titles).toEqual([{ level: 8, name: "Enthusiast" }]);
-  });
+it.each(COMPLETION_TYPES)("journey: %s retains art completion and level gates", (type) => {
+  for (const level of [1, 2, 3, 4, 5, 7, 8, 11, 12, 50, 200, 1]) {
+    const art = journeyNodes(completed(type), level, type).filter((node) => node.kind === "art");
+    expect(art.map((node) => node.available)).toEqual(
+      [1, 3, 5, 8, 12].map((gate) => level >= gate),
+    );
+    expect(
+      journeyNodes([], level, type)
+        .filter((node) => node.kind === "art")
+        .every((node) => !node.available),
+    ).toBe(true);
+  }
+});
 
-  it("exposes locked future titles and rewards without earning them", () => {
-    const tier = levelWindow(8, 1).rows.find((r) => r.level === 12)!;
-    expect(tier.unlocked).toBe(false);
-    expect(tier.current).toBe(false);
-    expect(tier.rewards.map((r) => r.id)).toEqual(["aurora"]);
-    expect(tier.titles).toEqual([{ level: 12, name: "Connoisseur" }]);
-  });
-
-  it("bounds level 200 to ten rows and exposes its next locked row", () => {
-    const window = levelWindow(200, 19);
-    expect(window).toMatchObject({
-      earned: 200,
-      last: 201,
-      pages: 21,
-      page: 19,
-      start: 191,
-      end: 200,
-    });
-    expect(window.rows).toHaveLength(10);
-    expect(window.rows[0]).toMatchObject({ level: 200, current: true, unlocked: true });
-    expect(levelWindow(200, 20).rows).toEqual([
-      { level: 201, unlocked: false, current: false, rewards: [], titles: [] },
-    ]);
-  });
-
-  it("clamps out-of-range pages and floors fractional page indices", () => {
-    expect(levelWindow(8, -1).page).toBe(0);
-    expect(levelWindow(8, 99)).toMatchObject({ page: 4, start: 41, end: 50 });
-    expect(levelWindow(8, 1.9)).toMatchObject({ page: 1, start: 11, end: 20 });
-  });
-
-  it("covers every catalogue level once across pages", () => {
-    const rows = Array.from(
-      { length: levelWindow(1, 0).pages },
-      (_, page) => levelWindow(1, page).rows,
-    ).flat();
-    expect(rows).toHaveLength(50);
-    expect(new Set(rows.map((r) => r.level)).size).toBe(50);
-  });
-
-  it("supports a smaller explicit page size without changing level eligibility", () => {
-    const window = levelWindow(8, 2, 3);
-    expect(window).toMatchObject({ page: 2, pages: 17, start: 7, end: 9 });
-    expect(window.rows.map((r) => [r.level, r.unlocked])).toEqual([
-      [9, false],
-      [8, true],
-      [7, true],
-    ]);
-  });
+it.each(COMPLETION_TYPES)("journey: %s graph reaches every seal from the root", (type) => {
+  const nodes = journeyNodes(completed(type), 50, type);
+  const edges = journeyEdges(nodes);
+  const reached = new Set(["root"]);
+  for (let pass = 0; pass <= nodes.length; pass++)
+    for (const edge of edges) {
+      if (reached.has(edge.from)) reached.add(edge.to);
+      if (reached.has(edge.to)) reached.add(edge.from);
+    }
+  expect([...reached].sort()).toEqual(["root", ...nodes.map((node) => node.id)].sort());
+  expect(edges.every((edge) => edge.available)).toBe(true);
+  for (const edge of edges) {
+    const start =
+      edge.from === "root" ? { x: 50, y: 96 } : nodes.find((node) => node.id === edge.from)!;
+    const end = nodes.find((node) => node.id === edge.to)!;
+    expect(edge.d.startsWith(`M${start.x} ${start.y}H`)).toBe(true);
+    expect(edge.d.endsWith(`H${end.x}`)).toBe(true);
+    if (start.y !== end.y) expect(edge.d).toContain(`V${end.y}H`);
+  }
+  const locked = nodes.map((node) => ({ ...node, available: false }));
+  const dim = journeyEdges(locked);
+  expect(dim.map((edge) => edge.d)).toEqual(edges.map((edge) => edge.d));
+  expect(dim.every((edge) => !edge.available)).toBe(true);
+  const partial = nodes.map((node, index) => ({ ...node, available: index % 2 === 0 }));
+  for (const edge of journeyEdges(partial)) {
+    const from = edge.from === "root" || partial.find((node) => node.id === edge.from)!.available;
+    const to = partial.find((node) => node.id === edge.to)!.available;
+    expect(edge.available).toBe(from && to);
+  }
 });

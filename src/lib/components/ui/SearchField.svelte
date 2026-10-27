@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   // `instant` reports every keystroke (library filter); `submit` searches on Enter (home catalog).
   let {
     label,
@@ -9,6 +10,7 @@
     onchange,
     onsubmit,
     onclear,
+    trailing,
   }: {
     label: string;
     value: string;
@@ -18,6 +20,7 @@
     onchange: (value: string) => void;
     onsubmit?: (query: string) => void;
     onclear?: () => void;
+    trailing?: Snippet;
   } = $props();
 
   let input: HTMLInputElement | undefined = $state();
@@ -59,6 +62,7 @@
 {#if mode === "submit"}
   <form
     class="search-bar"
+    class:has-trailing={!!trailing}
     class:focused
     class:loading
     role="search"
@@ -97,9 +101,10 @@
     {#if value}
       {@render clearButton("clear-btn")}
     {/if}
+    {#if trailing}<div class="search-trailing">{@render trailing()}</div>{/if}
   </form>
 {:else}
-  <div class="search-field">
+  <div class="search-field" class:has-trailing={!!trailing}>
     <svg class="search-field__icon" viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="11" cy="11" r="7"></circle>
       <line x1="20" y1="20" x2="16" y2="16"></line>
@@ -119,17 +124,37 @@
     {#if value}
       {@render clearButton("search-field__clear")}
     {/if}
+    {#if trailing}<div class="search-trailing">{@render trailing()}</div>{/if}
   </div>
 {/if}
 
 <style lang="scss">
+  .search-bar.has-trailing {
+    padding-inline-end: $spacing-xs;
+  }
+  .search-trailing {
+    display: grid;
+    place-items: center;
+    flex: 0 0 $touch-target;
+    width: $touch-target;
+    height: $touch-target;
+  }
+  .search-field > .search-trailing {
+    position: absolute;
+    inset-inline-end: 0;
+  }
+  .search-field.has-trailing .search-field__clear {
+    inset-inline-end: $touch-target;
+  }
+  .search-field.has-trailing .search-field__input {
+    padding-inline-end: calc(2 * #{$touch-target} + #{$spacing-xs});
+  }
   /* ── Instant: the library filter ──────────────────────── */
   .search-field {
     position: relative;
     display: flex;
     align-items: center;
     width: 100%;
-    max-width: 480px;
     min-width: 0;
   }
 
@@ -151,7 +176,7 @@
     min-height: $touch-target;
     padding-block: $spacing-xs;
     padding-inline: calc(#{$spacing-md} + 26px) calc(#{$touch-target} + #{$spacing-xs});
-    background: rgb(var(--clr-ink-rgb) / 0.06);
+    background: var(--clr-surface);
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.12);
     border-radius: $radius-full;
     color: var(--clr-text);
@@ -221,7 +246,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    width: min(560px, 100%);
+    width: 100%;
     height: $bar-height;
     border-radius: $radius-full;
     padding: 0 $spacing-sm;

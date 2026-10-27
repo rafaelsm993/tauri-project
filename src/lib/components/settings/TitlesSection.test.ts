@@ -1,5 +1,7 @@
+import type { ComponentProps } from "svelte";
+import { exposeSettings } from "./fixtures.test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/svelte";
+import { render as renderComponent, waitFor, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import TitlesSection from "./TitlesSection.svelte";
 import { TITLES } from "$lib/domain/gamification";
@@ -89,7 +91,7 @@ describe("TitlesSection", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Automatic" })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Automatic" })).toBeEnabled());
   });
   it("offers Automatic, earned titles and locked titles with their level", async () => {
     const { prefs, update } = setup({ seen_level: 50 });
@@ -112,3 +114,9 @@ describe("TitlesSection", () => {
     expect(update).toHaveBeenLastCalledWith({ title: "automatic" });
   });
 });
+
+function render(component: typeof TitlesSection, props: ComponentProps<typeof TitlesSection>) {
+  const result = renderComponent(component, props);
+  exposeSettings(result.container);
+  return result;
+}

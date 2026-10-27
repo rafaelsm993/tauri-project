@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
+import { page } from "$app/state";
 import userEvent from "@testing-library/user-event";
 import { levelOf } from "$lib/domain/gamification";
 import LibraryPage from "./LibraryView.svelte";
@@ -232,6 +233,8 @@ describe("LibraryView: tree view", () => {
     expect(screen.queryByRole("region", { name: "Main progression tree" })).toBeNull();
     await userEvent.click(view().getByRole("button", { name: "Tree" }));
     expect(screen.getByRole("region", { name: "Main progression tree" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await userEvent.click(screen.getByText("Genres & saved items", { selector: "summary" }));
     expect(screen.getByRole("link", { name: "T1 Completed" })).toHaveAttribute(
       "href",
       "/media/movie/1",
@@ -265,25 +268,42 @@ describe("LibraryView: tree view", () => {
     const main = screen.getByRole("region", { name: "Main progression tree" });
     await userEvent.type(search(), "t2");
     expect(screen.getByRole("region", { name: "Main progression tree" })).toBe(main);
-    expect(within(main).getByRole("group", { name: "Movies" })).toHaveTextContent("1 completed");
-    const detail = screen.getByRole("region", { name: "Movies subtree" });
+    expect(within(main).getByRole("button", { name: "Movies" })).toHaveTextContent("1 completed");
+    await userEvent.click(screen.getByRole("button", { name: "Movies" }));
+    await userEvent.click(screen.getByText("Genres & saved items", { selector: "summary" }));
+    let detail = screen.getByRole("region", { name: "Movies subtree" });
     expect(within(detail).queryByRole("link")).toBeNull();
     expect(
       within(detail).getByRole("button", { name: "Preview Silver Screen tier 1" }),
     ).toHaveTextContent("Available");
+    await userEvent.click(screen.getByRole("button", { name: "All media" }));
+    page.state = {};
+    fireEvent(window, new PopStateEvent("popstate"));
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Explore media trees" })).getByRole("button", {
-        name: "Books",
-      }),
+      within(await screen.findByRole("group", { name: "Explore media trees" })).getByRole(
+        "button",
+        {
+          name: "Books",
+        },
+      ),
     );
+    await userEvent.click(screen.getByText("Genres & saved items", { selector: "summary" }));
     expect(screen.getByRole("region", { name: "Books subtree" })).toHaveTextContent("T2");
     expect(filters.query).toBe("t2");
     expect(filters.type).toBe("all");
+    await userEvent.click(screen.getByRole("button", { name: "All media" }));
+    page.state = {};
+    fireEvent(window, new PopStateEvent("popstate"));
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Explore media trees" })).getByRole("button", {
-        name: "Movies",
-      }),
+      within(await screen.findByRole("group", { name: "Explore media trees" })).getByRole(
+        "button",
+        {
+          name: "Movies",
+        },
+      ),
     );
+    await userEvent.click(screen.getByText("Genres & saved items", { selector: "summary" }));
+    detail = screen.getByRole("region", { name: "Movies subtree" });
     await userEvent.click(screen.getByRole("button", { name: "Clear tree filters" }));
     expect(filters.query).toBe("");
     expect(filters.status).toBe("all");

@@ -1,5 +1,7 @@
+import type { ComponentProps } from "svelte";
+import { exposeSettings } from "./fixtures.test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/svelte";
+import { render as renderComponent, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import SettingsView from "./SettingsView.svelte";
 import { PrefsStore } from "$lib/stores/prefs.svelte";
@@ -140,4 +142,23 @@ describe("SettingsView", () => {
       expect(chapter()).toBeDisabled();
     });
   });
+});
+
+function render(component: typeof SettingsView, props: ComponentProps<typeof SettingsView>) {
+  const result = renderComponent(component, props);
+  exposeSettings(result.container);
+  return result;
+}
+
+it("hosts artwork only in Profile with the same injected preferences", async () => {
+  const { store, update } = storeWith();
+  store.prefs = { ...store.prefs, profile_art: "future:99" };
+  const { container } = render(SettingsView, { store, currentLevel: 1, currentEntries: [] });
+  expect(container.querySelector(".theme-section #profile-artwork")).toBeNull();
+  expect(
+    container.querySelector('details[data-section="Profile"] #profile-artwork'),
+  ).not.toBeNull();
+  expect(screen.getByText(/Saved choice: future:99/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Default artwork" }));
+  expect(update).toHaveBeenCalledWith({ profile_art: "default" });
 });

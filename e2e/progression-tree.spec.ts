@@ -11,40 +11,26 @@ const mainTree = (page: import("@playwright/test").Page) =>
 const menu = (page: import("@playwright/test").Page) =>
   page.getByRole("group", { name: "Explore media trees" });
 
-for (const path of ["/library", "/profile"]) {
-  test(`${path}: persistent six-media main tree, menu and isolated detail`, async ({ page }) => {
+for (const path of ["/library"]) {
+  test(`${path}: six sephirot open isolated media maps and Back restores each crest`, async ({
+    page,
+  }, info) => {
     await mockLibrary(page, LIBRARY, { events: eventsAtLevel(8), seenLevel: 50, motion: false });
     await page.goto(path);
-    if (path === "/library")
-      await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Tree" }).click();
+    if (path === "/library") await page.getByRole("button", { name: "Tree", exact: true }).click();
     const main = mainTree(page);
     await expect(main).toBeVisible();
-    await main.getByRole("button", { name: "Later levels" }).click();
-    const original = await main.elementHandle();
-    const contents = await main.textContent();
-    for (const name of names) {
-      await expect(main.getByRole("group", { name })).toBeAttached();
-      await menu(page).getByRole("button", { name, exact: true }).click();
-      await expect(page.getByRole("region", { name: `${name} subtree` })).toBeVisible();
-      await expect(page.locator(".media-detail")).toHaveCount(1);
-      expect(await main.evaluate((node, saved) => node === saved, original)).toBe(true);
-      expect(await main.textContent()).toBe(contents);
-      await expect(main.getByText("Levels 11–20")).toBeAttached();
-    }
-    const ordered = await page.evaluate(() => {
-      const root = document.querySelector(".main-tree")!.getBoundingClientRect();
-      const menu = document
-        .querySelector('[aria-label="Explore media trees"]')!
-        .getBoundingClientRect();
-      const detail = document.querySelector(".media-detail")!.getBoundingClientRect();
-      return root.bottom <= menu.top && menu.bottom <= detail.top;
-    });
-    expect(ordered).toBe(true);
+    await expect(page.locator(".media-detail")).toHaveCount(0);
+    await main.screenshot({ path: info.outputPath("main-tree.png") });
     expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      await main.locator(".node-seal").evaluateAll((nodes) =>
+        nodes.every((node) => {
+          const seal = node.getBoundingClientRect();
+          const art = node.querySelector("svg")!.getBoundingClientRect();
+          return art.width <= seal.width - 8 && art.height <= seal.height - 8;
+        }),
       ),
-    ).toBe(0);
+    ).toBe(true);
     const targets = await menu(page)
       .getByRole("button")
       .evaluateAll((nodes) =>
@@ -58,6 +44,38 @@ for (const path of ["/library", "/profile"]) {
       expect(target.w).toBeGreaterThanOrEqual(44);
       expect(target.h).toBeGreaterThanOrEqual(44);
     }
+    for (const name of names) {
+      await menu(page).getByRole("button", { name, exact: true }).click();
+      const detail = page.getByRole("region", { name: `${name} subtree` });
+      await expect(detail).toBeVisible();
+      await expect(main).toHaveCount(0);
+      await expect(detail.getByRole("heading", { name, exact: true })).toBeFocused();
+      const nodes = detail
+        .getByRole("group", { name: "Journey milestones" })
+        .locator('[data-kind="art"]');
+      await expect(nodes).toHaveCount(5);
+      const reward = nodes.nth(3);
+      await expect(reward).toBeEnabled();
+      await expect(reward).toContainText("Locked");
+      if (name === "TV") await detail.screenshot({ path: info.outputPath("tv-tree.png") });
+      await reward.click();
+      const dialog = page.getByRole("dialog");
+      await expect(dialog).toBeFocused();
+      await expect(dialog).toContainText("Requires level 8");
+      await page.goBack();
+      await expect(dialog).toHaveCount(0);
+      await expect(reward).toBeFocused();
+      await expect(detail).toBeVisible();
+      await page.goBack();
+      await expect(main).toBeVisible();
+      await expect(menu(page).getByRole("button", { name, exact: true })).toBeFocused();
+    }
+    await expect(main.locator(".level-spine")).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBe(0);
   });
   test(`${path}: empty library still exposes all six paths`, async ({ page }) => {
     await mockLibrary(page, []);
@@ -79,19 +97,27 @@ test("Library filters only leaves; menu selection never changes filters or saves
   await page.getByRole("button", { name: "Tree", exact: true }).click();
   const main = mainTree(page);
   await page.getByRole("searchbox", { name: "Search your library" }).fill("piranesi");
-  await expect(main.getByRole("group", { name: "Movies" })).toContainText("1 completed");
+  await expect(main.getByRole("button", { name: "Movies", exact: true })).toContainText(
+    "1 completed",
+  );
+  await menu(page).getByRole("button", { name: "Movies", exact: true }).click();
+  await page.getByText("Genres & saved items", { exact: true }).click();
   await expect(page.getByRole("region", { name: "Movies subtree" }).getByRole("link")).toHaveCount(
     0,
   );
   await expect(page.getByRole("button", { name: "Preview Silver Screen tier 1" })).toContainText(
     "Available",
   );
+  await page.getByRole("button", { name: "All media", exact: true }).click();
   await menu(page).getByRole("button", { name: "Books", exact: true }).click();
+  await page.getByText("Genres & saved items", { exact: true }).click();
   await expect(page.getByRole("link", { name: "Piranesi Planning" })).toBeVisible();
   await expect(page.getByRole("searchbox", { name: "Search your library" })).toHaveValue(
     "piranesi",
   );
+  await page.getByRole("button", { name: "All media", exact: true }).click();
   await menu(page).getByRole("button", { name: "Movies", exact: true }).click();
+  await page.getByText("Genres & saved items", { exact: true }).click();
   await page.getByRole("button", { name: "Clear tree filters" }).click();
   await expect(page.getByRole("link", { name: "Dune Completed" })).toBeVisible();
   expect(
@@ -108,6 +134,7 @@ test("manual leaves open their actual item and Back keeps the selected view", as
   await page.goto("/library");
   await page.getByRole("button", { name: "Tree", exact: true }).click();
   await menu(page).getByRole("button", { name: "Books", exact: true }).click();
+  await page.getByText("Genres & saved items", { exact: true }).click();
   await page.getByRole("link", { name: "Piranesi Planning" }).click();
   await expect(page.getByRole("heading", { name: "Piranesi", level: 1 })).toBeVisible();
   await page.goBack();
@@ -125,6 +152,8 @@ test("complete branch pages real items and Back restores opener focus", async ({
   await mockLibrary(page, entries);
   await page.goto("/library");
   await page.getByRole("button", { name: "Tree", exact: true }).click();
+  await menu(page).getByRole("button", { name: "Movies", exact: true }).click();
+  await page.getByText("Genres & saved items", { exact: true }).click();
   const opener = page.getByRole("button", { name: "Open Unclassified branch" });
   await opener.click();
   const dialog = page.getByRole("dialog", { name: "Unclassified branch" });
@@ -145,7 +174,9 @@ test("a locked reward previews current requirements and navigates to the real Se
   page,
 }) => {
   await mockLibrary(page, LIBRARY);
-  await page.goto("/profile");
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Tree", exact: true }).click();
+  await menu(page).getByRole("button", { name: "Movies", exact: true }).click();
   await page.getByRole("button", { name: "Preview Silver Screen tier 4" }).click();
   const dialog = page.getByRole("dialog", { name: "Silver Screen tier 4" });
   await expect(dialog).toContainText("Requirements not met");
@@ -160,11 +191,33 @@ test("the unequipped tree is static and titles remain readable without hover", a
   await mockLibrary(page, LIBRARY);
   await page.goto("/library");
   await page.getByRole("button", { name: "Tree", exact: true }).click();
+  await menu(page).getByRole("button", { name: "Movies", exact: true }).click();
+  await page.getByText("Genres & saved items", { exact: true }).click();
   await expect(page.getByRole("link", { name: "Dune Completed" })).toBeVisible();
   await expect(page.getByText("Dune", { exact: true })).toBeVisible();
   expect(
-    await mainTree(page).evaluate(
-      (el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,
-    ),
+    await page
+      .locator(".runic-map")
+      .evaluate(
+        (el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === "running").length,
+      ),
   ).toBe(0);
+});
+
+test("media sephirot scroll targets remain outside sticky chrome", async ({ page }) => {
+  await mockLibrary(page, LIBRARY, { events: eventsAtLevel(8), seenLevel: 50, motion: false });
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Tree", exact: true }).click();
+  const target = menu(page).getByRole("button", { name: "Movies", exact: true });
+  await expect(target).toBeAttached();
+  await target.evaluate((el) => el.scrollIntoView({ block: "start", behavior: "instant" }));
+  await expect
+    .poll(() =>
+      target.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return hit === el || !!(hit && el.contains(hit));
+      }),
+    )
+    .toBe(true);
 });

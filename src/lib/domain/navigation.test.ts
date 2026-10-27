@@ -94,3 +94,16 @@ describe("collapseOnScroll", () => {
     expect(collapseOnScroll(at(200, true), -30).collapsed).toBe(false);
   });
 });
+
+it("accumulates slow directional scroll and reverses without reacting to jitter", () => {
+  let state: import("./navigation").HeaderScroll = { y: 0, collapsed: false };
+  for (let y = 2; y <= 20; y += 2) state = collapseOnScroll(state, y);
+  expect(state.collapsed).toBe(true);
+  for (let y = 18; y >= 8; y -= 2) state = collapseOnScroll(state, y);
+  expect(state.collapsed).toBe(false);
+  for (let i = 0; i < 20; i++) {
+    state = collapseOnScroll(state, 10);
+    state = collapseOnScroll(state, 8);
+  }
+  expect(state.collapsed).toBe(false);
+});

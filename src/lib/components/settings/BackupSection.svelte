@@ -25,7 +25,7 @@
 
 <section class="backup" aria-labelledby="backup-title">
   <div class="backup-text">
-    <h2 id="backup-title" class="backup-label">Backup</h2>
+    <h3 id="backup-title" class="backup-label">Backup</h3>
     <p class="backup-hint">
       Save your library, activity, posters and settings to one zip file, or bring one back. API keys
       are never included.
@@ -122,14 +122,9 @@
 
 <style lang="scss">
   .backup {
-    max-width: 48rem;
     display: flex;
     flex-direction: column;
     gap: $spacing-md;
-    padding: $spacing-md;
-    border: 1px solid var(--clr-border);
-    border-radius: $radius-md;
-    background: var(--clr-surface);
     min-width: 0;
   }
 

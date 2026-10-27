@@ -1,14 +1,14 @@
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
-import ThemeSection from "$lib/components/settings/ThemeSection.svelte";
-import TitlesSection from "$lib/components/settings/TitlesSection.svelte";
+import SettingsView from "$lib/components/settings/SettingsView.svelte";
+import { exposeSettings } from "$lib/components/settings/fixtures.test-utils";
 import RewardSheet from "./RewardSheet.svelte";
 import { entry } from "./fixtures.test-utils";
 
 describe("RewardSheet", () => {
   it("has real Settings destinations for all three preview links", () => {
-    render(ThemeSection, { currentLevel: null, currentEntries: null });
-    render(TitlesSection, { currentLevel: null });
+    const { container } = render(SettingsView, { currentLevel: null, currentEntries: null });
+    exposeSettings(container);
     expect(screen.getByRole("region", { name: "Theme" })).toHaveAttribute("id", "theme");
     expect(screen.getByRole("region", { name: "Titles" })).toHaveAttribute("id", "titles");
     expect(screen.getByRole("region", { name: "Profile artwork" })).toHaveAttribute(

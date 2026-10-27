@@ -39,7 +39,7 @@ A poster card rendered as a single `<button>`. It is used in both the grid and t
 A pill tab bar with a fixed list of categories: Movies, TV Shows, Anime, Manga, Books, Games. The parent owns the active state.
 
 - The pill background sits on a `.category-bar` wrapper; only the inner `nav` scrolls horizontally, so it never wraps or clips at 360 px.
-- `trailing` renders at the end of the bar, outside the `nav` landmark (not announced as a category). Home puts the genre `MultiSelect` there.
+- `trailing` renders at the end of the bar, outside the `nav` landmark (not announced as a category). Home instead puts the genre `MultiSelect` inside the search field through `SearchField.trailing`.
 
 ## GenreCarousel
 
@@ -120,13 +120,15 @@ The one modal for add/edit forms: a native `<dialog>` opened with `showModal()`,
 
 ## LibraryFilterBar and LibraryFilterPanel
 
-The Library's filters on one row: `[Filters ⊙n] [In progress ✕] [Movie 1] [Anime 2] …`. Props: `statuses`, `types`, `status`, `type`, `onstatus`, `ontype`, and `narrow` (tests pin it; the app follows `(max-width: 768px)`).
-- **Filters** is an icon with its accessible name ("Filters", "Filters, 2 on"); above 768 px the word shows too. The badge counts `activeFilterCount`.
-- Narrow, it opens `LibraryFilterPanel` in a bottom `Sheet` (`focus="sheet"`); wide, in a native `popover="auto"` placed by `followTrigger(trigger, panel, "start")`, so it lines up with the button's left edge. Picks apply at once and the panel stays open; Escape or a tap outside closes it.
+The Library's filter controller can render one standalone row: `[Filters ⊙n] [In progress ✕] [Movie 1] [Anime 2] …`. Props: `statuses`, `types`, `status`, `type`, `onstatus`, `ontype`, and `narrow` (tests pin it; the app follows `(max-width: 768px)`).
+- **Filters** is an icon with its accessible name ("Filters", "Filters, 2 on"); the production search composition uses the icon at all sizes; the standalone default also shows the word on desktop. The badge counts `activeFilterCount`.
+- Narrow, it opens `LibraryFilterPanel` in a bottom `Sheet` (`focus="sheet"`); wide, in a native `popover="auto"` placed by `followTrigger(trigger, panel, "end", true)`, bounded to the viewport and aligned with the button's trailing edge. Picks apply at once and the panel stays open; Escape or a tap outside closes it.
 - The panel holds Status and Type as wrapping `SegmentedControl`s with Reset (disabled while nothing is on). Type hides when the library holds one type.
 - The row has no All chip: nothing picked means all. A picked type stands alone, filled, with ✕ (`aria-pressed="true"`, "Anime 2, remove filter"); a picked status shows as a filled token ("Remove filter: In progress"). Chips with a 0 count are disabled through `withEmptyDisabled`, except the one picked.
 - The chip row scrolls sideways; a mask fades whichever edge hides more chips. Chips animate (flip + fade) only while Animations are on.
 - `LibraryFilters` and `filterEntries` are unchanged; the View row (Grid/Tree) stays its own row.
+
+Production passes `children(trigger, chips)` to compose one controller across AppHeader slots: the trigger goes in `SearchField.trailing`, chips in the collapsible row. The icon is outline when inactive, filled with `--clr-accent` for any status/type filter. The search query alone does not activate it. Native `beforetoggle` updates ARIA promptly; positioning waits for `toggle`, when the panel has measurable dimensions.
 
 ## SessionPicker
 
@@ -155,13 +157,22 @@ A manual item's page shows "Find a match" beside Edit, only while online. It cal
 ## SearchField
 
 - File: `src/lib/components/ui/SearchField.svelte`
-- Props: `label`, `value`, `onchange(value)`, `placeholder?`, `mode?: "instant" | "submit"` (default `instant`), `loading?`, `onsubmit?(query)`, `onclear?()`
+- Props: `label`, `value`, `onchange(value)`, `placeholder?`, `mode?: "instant" | "submit"` (default `instant`), `loading?`, `onsubmit?(query)`, `onclear?()`, `trailing?: Snippet`
 
 One search input for the whole app; the parent owns `value`.
 
-- `instant` (library filter): reports every keystroke; no landmark, no spinner.
+- `instant` (library filter): reports every keystroke; no landmark, no spinner. Its opaque `--clr-surface` background prevents scrolling covers/text from bleeding through the control. The surrounding header rows remain transparent.
 - `submit` (home catalog): a `<form role="search">` the height of the app bar (`$bar-height`). Enter calls `onsubmit(value.trim())`, a blank value submits nothing. The spinner shows only while `loading` (the real request), and `aria-busy` follows it.
 - In both modes the clear (×) button and Escape empty the field and call `onclear`; the clear button keeps focus in the input and is ≥ 44 px under `touch`. Home's `onclear` also drops the search results, like the "← Discover" link.
+
+- Both modes fill their available container width. `trailing` is the final action inside the field, after Clear; input padding reserves room for both. Home passes its existing `MultiSelect` with `iconOnly`, retaining accessible Genres/count and native checkboxes.
+
+## AppHeader
+
+- `sticky?: boolean` defaults to true. Library, Planner, Profile and Settings pass false: the complete header stays in normal document flow, with no scroll listener, collapsed row or stuck safe-area shield. Home retains its sticky mode.
+- Shared transparent sticky rows retain their layout footprint; only the complete `.collapsible-content` wrapper fades and translates on scroll. Delayed visibility hides it after exit; `inert` and pointer pass-through apply immediately. No height animation, backdrop blur or per-tag fade is added. Android retains its top safe-area protection.
+- `collapseOnScroll` accumulates directional movement through small scroll samples; opposite-direction jitter resets that travel instead of flipping state. Motion follows the app setting and system preference live; off means no transition.
+- Category tabs transition only color/background/shadow, not `all`: transitioning inherited visibility independently creates layered disappearance beneath the group fade.
 
 ## AppBackground
 
@@ -238,23 +249,27 @@ The shared renderer and the Settings grid for 30 original pixel crests earned by
 - `profileArt.ts` derives `PROFILE_ART` from the same completion requirements as everything else
   (six media × five tiers of 1 / 5 / 10 / 25 / 50 completed; no competing catalogue), with a
   distinct native 24 and 32 grid per media and five ornament tiers layered on a tier-1 silhouette.
-- `ProfileArtworkSection` (mounted in `ThemeSection`, on Settings) lists Default plus all 30 crests
-  grouped by media, each with its completed count and the level it needs; a locked crest previews
-  but cannot be equipped, and a saved-but-now-locked choice explains itself and falls back to Default.
+- `ProfileArtworkSection` (mounted under Profile in Settings) offers Default plus all 30 crests
+  in a compact preview dropdown, each with its completed count and the level it needs; a locked crest
+  previews but cannot be equipped, and a saved-but-now-locked choice explains itself and falls back to Default.
 
-## Runewood tree (Library and Profile)
+## Compact Settings
 
-- Files: `src/lib/components/progression/ProgressionTree.svelte`, `BranchSheet.svelte`, `RewardSheet.svelte`.
+Settings uses independent native accordions for Theme, Profile, Preferences and Backup. Theme and Profile equipment share `src/lib/components/settings/RewardPicker.svelte`: an effective-current-value trigger and a native top-layer group of static preview buttons. The existing equipment policies still own eligibility and saves; dropdown inspection never equips. Artwork and titles live under Profile. Existing `/settings#theme`, `#titles` and `#profile-artwork` links reveal their parent accordion. Accordion disclosure is local and nonpersistent; closing it preserves child form state. Preferences holds API keys, motion, reading pace and chapter pace; Backup retains export/import and Preferences retains replaying onboarding.
+
+## Journey Tree (Library only)
+
+- Files: `src/lib/components/progression/ProgressionTree.svelte`, `src/lib/components/progression/RunicTreeMap.svelte`, `src/lib/components/progression/BranchSheet.svelte`, `src/lib/components/progression/RewardSheet.svelte`; pure placement and geometry: `src/lib/domain/progressionTree.ts` (`journeyNodes`, `journeyEdges`, `treeBranches`).
 - Tree props: `entries: LibraryEntry[]` (visible entries), `allEntries: LibraryEntry[]` (successful full-library authority), `currentLevel: number | null`, `loaded?: boolean` (defaults false), `error?: string`, `onclear?: () => void`.
-- Render order is fixed: persistent main tree containing all six media types → media menu below → selected detailed subtree below the menu. Switching media preserves the main-tree DOM, global level page and full-library completion counts. Empty types remain selectable.
-- `treeBranches`, `levelWindow` and `completionAchievements` remain the domain authorities. Visible leaves are resolved against canonical keys from `allEntries`; filters never grant/remove rewards. Missing authority hides stale progress instead of fabricating empty/earned states.
-- Bounds: ten global level rows; six genre branches per page; six preview links per branch; thirty item links per BranchSheet page. Only one detailed media subtree is mounted. Branch paging clamps when entries disappear. Manual IDs use the normal encoded media routes.
-- The shared SegmentedControl now accepts optional `controls?: string` for its buttons' `aria-controls`. Runewood connects the menu to the labelled detail region and gives its buttons 44 px targets on mouse and touch.
-- RewardSheet accepts `kind`, `rewardId`, `entries`, `currentLevel`, `onclose`; it resolves the existing catalogue, previews current requirements and links to Settings. It never equips. Real destinations are `#theme`, `#titles`, `#profile-artwork`; modal navigation waits for Sheet's history entry to close.
-- Pixel bark/runes and crest tones follow the current accent; the tree has no continuous animation, DOM-scanning effect or new persistence/IPC. Media-arm crests are decorative type identities, not claims that a reward is earned.
-- Library Tree preserves the internal session value `garden` and Grid default. Its selector remains reachable with an empty library; Library passes filtered and full entries separately, while Profile always shows the shared tree outside the chart condition. Both require successful activity/library authority. No preview route ships.
-- Runic shimmer retains stored id `sway`, kind/prefs slot `garden` and minimum level 8. When equipped and motion is permitted, the crown runes reveal once for 600ms on mount, then remain still; media changes do not restart it. Reduced motion and Animations off override it. `motion?` and `shimmer?` are test overrides, still gated by current level and successful authority.
-- Old plant/scene/card/domain/sample modules are retired. Welcome now uses a read-only six-media crest example with no fake item links.
+- The main map retains THE SHARED ROOT above JOURNEY TREE and six existing media crests. Each opens one media subtree: five completion-art nodes plus four global rewards for Movies/TV or three for Anime/Manga/Books/Games. Every global reward has one home, never six copies: Movies owns Bubbles/Ember/Newcomer/Curious Mind; TV owns Embers/Runic shimmer/Regular/Enthusiast; Anime owns Aurora/Connoisseur/Devotee; Manga owns Dusk/Archivist/Curator; Books owns Sunrise/Loremaster/Chronicler; Games owns Ocean/Midnight/Aevum Eternal.
+- Nodes sort by required level from root to crown. `journeyEdges` derives the connected topology and SVG endpoints from the same seal coordinates as the buttons; an edge lights only when both endpoints currently qualify. Connections are layout, not extra prerequisites. Global rewards remain level-only; artwork still needs current level and current completed count. `seen_level` never grants eligibility.
+- Real buttons remain at least 44 px, including locked nodes. Short labels, visible required levels and Available/Locked text keep the map readable; full descriptions expose completion requirements accessibly. Reused Settings previews show motifs, themes and accents; titles use a text seal and existing artwork uses ProfileArtwork. All taps open the existing RewardSheet, never equip or save. The separate earlier/current/later level ladder and its unused paging helpers are removed.
+- The media map uses a measured 64rem height, narrower three-column rows and wider one/two-column rows, without shrinking text or targets. Layout transitions are disabled so seals and SVG endpoints remain aligned on the first rendered frame, including Animations off. Pixel channels, runes and artwork follow the equipped accent; earned edges use the live accent and locked edges stay neutral.
+- Canonical `allEntries` and successful activity/library loading own completion eligibility; filters affect only genre/item leaves. Missing authority hides stale progress rather than fabricating empty/earned states. Bounds remain six genre branches per page, six preview links per branch and thirty item links per BranchSheet page; branch paging clamps when entries disappear and manual IDs use normal encoded routes.
+- The active media derives from transient SvelteKit `page.state.runewood`, scoped to the component id. Sheet preserves parent page state: Back closes the preview, restores its opener, then returns to the main map and focuses its crest. All media clears sticky chrome. No preference or IPC writes occur during navigation.
+- RewardSheet accepts `kind`, `rewardId`, `entries`, `currentLevel`, `onclose`; existing requirements and Settings destinations `#theme`, `#titles`, `#profile-artwork` are reused. Settings is the sole equipment UI; modal navigation waits for Sheet history to close.
+- Library retains internal view id `garden`, Grid default and an empty-library Tree selector. Profile no longer mounts a tree: LevelCard, equipped artwork, stats, dashboard graphs and chart accessibility remain.
+- Runic shimmer retains stored id `sway`, kind/prefs slot `garden` and minimum level 8. When equipped and motion is permitted, crown runes reveal once for 600ms on mount; media changes do not restart it. Reduced motion and Animations off override it. Existing `motion?`/`shimmer?` test overrides remain gated by current level and successful authority. No persistence, schema, IPC or reward-definition changes.
 
 ## AppHeader
 
@@ -278,3 +293,7 @@ One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling d
   glyph; the level ring and the "Profile · Level N" name stay.
 - Fixed overlays (OfflineBanner, BackToTop, toasts) add `var(--nav-bottom)` / `var(--nav-left)`,
   set on `:root` by the layout, so they stay clear of the navigation.
+
+### Large-library hydration
+
+`LibraryStore.hydrate()` replaces its reactive map atomically with the loaded canonical entries. It does not schedule a reactive map update for each saved item. The production regression loads 5,100 items across six media at level 200, opens all six maps and pages to the last real branch member without page errors.

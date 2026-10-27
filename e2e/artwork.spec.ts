@@ -1,3 +1,4 @@
+import { openSettingsChoice, openSettingsPicker } from "./fixtures/settings";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
 import { eventsAtLevel, ipcCalls, item, mockLibrary } from "./fixtures/library";
@@ -62,7 +63,7 @@ const stored = (page: Page) =>
     ).__TAURI_INTERNALS__.invoke("prefs_load"),
   );
 
-test("artwork equips from Theme and persists in Profile and navigation without changing XP", async ({
+test("artwork equips from Profile settings and persists in Profile and navigation without changing XP", async ({
   page,
 }) => {
   await mockLibrary(page, [completed()], {
@@ -71,9 +72,14 @@ test("artwork equips from Theme and persists in Profile and navigation without c
     persistPrefs: true,
   });
   await page.goto("/settings");
-  const art = page.getByRole("button", { name: "Silver Screen tier 1", exact: true });
+  await openSettingsPicker(page, "Profile artwork");
+  const art = await openSettingsChoice(page, "Profile artwork", "Silver Screen tier 1");
   await expect(art).toBeEnabled();
-  expect(await page.locator(".artwork-section .art-choice").count()).toBe(30);
+  expect(
+    await page
+      .locator('.artwork-section .picker-option:not([aria-label="Default artwork"])')
+      .count(),
+  ).toBe(30);
   await art.hover();
   await art.focus();
   expect((await ipcCalls(page)).filter((c) => c.cmd === "prefs_update")).toEqual([]);
@@ -92,7 +98,7 @@ test("artwork equips from Theme and persists in Profile and navigation without c
   await expect(level.getByRole("img", { name: /^Level 3,/ })).toBeVisible();
   const before = await level.locator(".level-xp").innerText();
   await page.getByRole("link", { name: "Settings", exact: true }).last().click();
-  await page.getByRole("button", { name: "Default artwork", exact: true }).click();
+  await (await openSettingsChoice(page, "Profile artwork", "Default artwork")).click();
   await expect(profile(page).locator(".profile-artwork")).toHaveCount(0);
   await page.getByRole("link", { name: "Profile · Level 3", exact: true }).click();
   await expect(level.locator(".level-xp")).toHaveText(before);
@@ -146,8 +152,9 @@ test("unknown saved art has a default glyph and an explanation, never a repair w
     prefs: { profile_art: "future:99" },
   });
   await page.goto("/settings");
+  await openSettingsPicker(page, "Profile artwork");
   await expect(page.getByText(/Saved choice: future:99/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Default artwork" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Default artwork", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -164,12 +171,14 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
     prefs: { profile_art: "movie:1", theme: "dark" },
   });
   await page.goto("/settings");
+  await openSettingsPicker(page, "Profile artwork");
   const nav = profile(page).locator(".profile-artwork");
   await expect(nav).toHaveCount(1);
   const tonesBefore = await nav
     .locator("path")
     .evaluateAll((paths) => paths.map((e) => getComputedStyle(e).fill));
-  await page.getByRole("button", { name: "Ember", exact: true }).click();
+  await (await openSettingsChoice(page, "Accent", "Ember")).click();
+  await openSettingsPicker(page, "Profile artwork");
   await expect
     .poll(() => nav.locator(".accent").evaluate((e) => getComputedStyle(e).fill))
     .toBe("rgb(199, 102, 18)");
@@ -181,16 +190,17 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
   await expect
     .poll(() =>
       page
-        .getByRole("button", { name: "Silver Screen tier 1" })
+        .getByRole("button", { name: "Silver Screen tier 1", exact: true })
         .locator(".accent")
         .evaluate((e) => getComputedStyle(e).fill),
     )
     .toBe("rgb(199, 102, 18)");
   await page.evaluate(() => (document.documentElement.style.fontSize = "18.4px"));
-  for (const grid of await page.locator(".artwork-section .choices").all())
-    expect(
-      await grid.evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(" ").length),
-    ).toBeGreaterThanOrEqual(2);
+  const panel = page.locator(".artwork-section .picker-panel");
+  await expect(panel.locator(".picker-option")).toHaveCount(31);
+  expect(await panel.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(
+    1,
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -216,7 +226,10 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
 test("failed artwork save reports the error and restores Default everywhere", async ({ page }) => {
   await mockLibrary(page, [completed()], { events: eventsAtLevel(3), seenLevel: 25 });
   await page.goto("/settings");
-  await expect(page.getByRole("button", { name: "Silver Screen tier 1" })).toBeEnabled();
+  await openSettingsPicker(page, "Profile artwork");
+  await expect(
+    page.getByRole("button", { name: "Silver Screen tier 1", exact: true }),
+  ).toBeEnabled();
   await page.evaluate(() => {
     const ipc = (
       window as unknown as {
@@ -227,9 +240,9 @@ test("failed artwork save reports the error and restores Default everywhere", as
     ipc.invoke = (cmd, args) =>
       cmd === "prefs_update" ? Promise.reject("Disk full") : invoke(cmd, args);
   });
-  await page.getByRole("button", { name: "Silver Screen tier 1" }).click();
+  await page.getByRole("button", { name: "Silver Screen tier 1", exact: true }).click();
   await expect(page.getByRole("status", { name: "Artwork save" })).toHaveText(/Disk full/);
-  await expect(page.getByRole("button", { name: "Default artwork" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Default artwork", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );

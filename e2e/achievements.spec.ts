@@ -1,3 +1,4 @@
+import { openSettingsChoice, openSettingsPicker, openSettingsSection } from "./fixtures/settings";
 import { expect, test } from "@playwright/test";
 import { eventsAtLevel, item, mockLibrary } from "./fixtures/library";
 
@@ -9,16 +10,18 @@ test.describe("achievements", () => {
   test("a new user is promised the first unlock instead of being offered it", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
     await expect(page.getByText(/^Next at level 2:/)).toContainText("Bubbles");
-    await expect(page.getByRole("button", { name: /^Ember$/ })).toBeDisabled();
+    await expect(await openSettingsChoice(page, "Accent", "Ember")).toBeDisabled();
   });
 
   test("an earned accent can be equipped and shows as selected", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(3), seenLevel: 3 });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
-    const ember = page.getByRole("button", { name: /^Ember$/ });
+    const ember = await openSettingsChoice(page, "Accent", "Ember");
     await ember.click();
     await expect(ember).toHaveAttribute("aria-pressed", "true");
 
@@ -38,10 +41,11 @@ test.describe("achievements", () => {
   test("equipping the bubbles brings the background to life at once", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(2), seenLevel: 2 });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
     // The background sits in the layout, so it reacts without a navigation.
     await expect(page.locator(".circles li")).toHaveCount(0);
-    await page.getByRole("button", { name: /^Bubbles$/ }).click();
+    await (await openSettingsChoice(page, "Background", "Bubbles")).click();
     await expect(page.locator(".circles li").first()).toBeAttached();
   });
 
@@ -55,7 +59,8 @@ test.describe("achievements", () => {
     );
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(2), seenLevel: 2 });
     await page.goto("/settings");
-    await page.getByRole("button", { name: /^Bubbles$/ }).click();
+    await openSettingsSection(page, "Theme");
+    await (await openSettingsChoice(page, "Background", "Bubbles")).click();
     await expect(page.locator(".circles li").first()).toBeAttached();
 
     // getAnimations() is empty when the animation names a keyframe that does not exist — which
@@ -84,9 +89,10 @@ test.describe("achievements", () => {
     );
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(25), seenLevel: 25 });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
     const nameFor = async (label: string) => {
-      await page.getByRole("button", { name: label }).click();
+      await (await openSettingsChoice(page, "Background", label)).click();
       await expect(page.locator(".circles li").first()).toBeAttached();
       return page
         .locator(".circles li")
@@ -102,11 +108,12 @@ test.describe("achievements", () => {
   test("a locked reward is listed with the level it needs", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(1), seenLevel: 1 });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
-    const midnight = page.getByRole("button", { name: "Midnight", exact: true });
+    const midnight = await openSettingsChoice(page, "Palette", "Midnight");
     await expect(midnight).toBeDisabled();
     await expect(midnight).toHaveAccessibleDescription(/level 25/i);
-    await expect(page.getByRole("img", { name: "Midnight preview" })).toBeVisible();
+    await expect(midnight.locator(".reward-preview")).toBeVisible();
   });
 
   test("Runic shimmer reveals once and settles, never continuously", async ({ page }) => {
@@ -119,10 +126,8 @@ test.describe("achievements", () => {
       });
     });
     await page.goto("/settings");
-    await page
-      .getByRole("group", { name: "Tree effect" })
-      .getByRole("button", { name: "Runic shimmer", exact: true })
-      .click();
+    await openSettingsSection(page, "Theme");
+    await (await openSettingsChoice(page, "Tree effect", "Runic shimmer")).click();
     await page
       .getByRole("link", { name: /library/i })
       .first()
@@ -169,11 +174,14 @@ test.describe("achievements", () => {
   test("the background slot is blocked while animations are off", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(12), seenLevel: 12, motion: false });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
+    await openSettingsPicker(page, "Background");
     const group = page.getByRole("group", { name: "Background" });
     await expect(group.getByRole("button", { name: /^Bubbles$/ })).toBeDisabled();
     await expect(group.getByRole("button", { name: /^Default$/ })).toBeDisabled();
     await expect(page.getByText(/animations are off/i).first()).toBeVisible();
+    await openSettingsSection(page, "Preferences");
     await expect(page.getByRole("switch", { name: "Animations" })).toHaveAttribute(
       "aria-checked",
       "false",
@@ -183,13 +191,14 @@ test.describe("achievements", () => {
   test("the colour slots stay usable while animations are off", async ({ page }) => {
     await mockLibrary(page, [ENTRY], { events: eventsAtLevel(12), seenLevel: 12, motion: false });
     await page.goto("/settings");
+    await openSettingsSection(page, "Theme");
 
+    await openSettingsPicker(page, "Accent");
     const accents = page.getByRole("group", { name: "Accent" });
     await expect(accents.getByRole("button", { name: /^Ember$/ })).toBeEnabled();
     await accents.getByRole("button", { name: /^Ember$/ }).click();
-    await expect(accents.getByRole("button", { name: /^Ember$/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(
+      accents.getByRole("button", { name: /^Ember$/, includeHidden: true }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });

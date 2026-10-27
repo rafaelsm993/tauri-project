@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import { flip } from "svelte/animate";
   import { fade } from "svelte/transition";
   import { MediaQuery } from "svelte/reactivity";
@@ -23,6 +24,7 @@
     onstatus,
     ontype,
     narrow,
+    children,
   }: {
     statuses: FilterOption<StatusFilter>[];
     types: FilterOption<TypeFilter>[];
@@ -32,6 +34,7 @@
     ontype: (value: TypeFilter) => void;
     // Tests pin it; the app follows the 768px line where sheets become bottom sheets.
     narrow?: boolean;
+    children?: Snippet<[Snippet, Snippet]>;
   } = $props();
 
   const phone =
@@ -45,6 +48,7 @@
   let trigger = $state<HTMLButtonElement>();
   let panel = $state<HTMLDivElement>();
   let popoverOpen = $state(false);
+  let positionedOpen = $state(false);
   let sheetOpen = $state(false);
 
   const on = $derived(activeFilterCount({ status, type }));
@@ -63,8 +67,8 @@
   }
 
   $effect(() => {
-    if (!popoverOpen || !trigger || !panel) return;
-    return followTrigger(trigger, panel, "start");
+    if (!positionedOpen || !trigger || !panel) return;
+    return followTrigger(trigger, panel, "end", true);
   });
 
   // A fade on whichever edge hides more chips says the row scrolls.
@@ -86,11 +90,12 @@
   });
 </script>
 
-<div class="filter-bar">
+{#snippet filterTrigger()}
   <button
     bind:this={trigger}
     type="button"
     class="filters-btn"
+    class:inline={!!children}
     class:on={on > 0}
     aria-label={on > 0 ? `Filters, ${on} on` : "Filters"}
     aria-expanded={isNarrow ? sheetOpen : popoverOpen}
@@ -99,54 +104,62 @@
       if (isNarrow) sheetOpen = true;
     }}
   >
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v7l-4-2v-5z" /></svg>
     <span class="filters-word" aria-hidden="true">Filters</span>
     {#if on > 0}<span class="filters-badge" aria-hidden="true">{on}</span>{/if}
   </button>
+{/snippet}
+{#snippet filterChips()}
+  <div class="filter-bar">
+    {#if status !== "all"}
+      <button
+        type="button"
+        class="token"
+        aria-label="Remove filter: {statusLabel}"
+        transition:fade={{ duration: ms }}
+        onclick={() => onstatus("all")}
+      >
+        {statusLabel}<span class="token-x" aria-hidden="true">✕</span>
+      </button>
+    {/if}
 
-  {#if status !== "all"}
-    <button
-      type="button"
-      class="token"
-      aria-label="Remove filter: {statusLabel}"
-      transition:fade={{ duration: ms }}
-      onclick={() => onstatus("all")}
-    >
-      {statusLabel}<span class="token-x" aria-hidden="true">✕</span>
-    </button>
-  {/if}
-
-  {#if types.length > 2}
-    <div
-      bind:this={row}
-      class="type-row"
-      class:fade-start={fadeStart}
-      class:fade-end={fadeEnd}
-      role="group"
-      aria-label="Type"
-      onscroll={edges}
-    >
-      {#each chips as chip (chip.value)}
-        {@const picked = chip.value === type}
-        <button
-          type="button"
-          class="chip"
-          class:picked
-          aria-pressed={picked}
-          aria-label={picked ? `${chip.label} ${chip.count}, remove filter` : undefined}
-          disabled={chip.disabled}
-          animate:flip={{ duration: ms }}
-          transition:fade={{ duration: ms }}
-          onclick={() => ontype(picked ? "all" : chip.value)}
-        >
-          {chip.label}
-          <span class="chip-count">{chip.count}</span>
-          {#if picked}<span class="token-x" aria-hidden="true">✕</span>{/if}
-        </button>
-      {/each}
-    </div>
-  {/if}
-</div>
+    {#if types.length > 2}
+      <div
+        bind:this={row}
+        class="type-row"
+        class:fade-start={fadeStart}
+        class:fade-end={fadeEnd}
+        role="group"
+        aria-label="Type"
+        onscroll={edges}
+      >
+        {#each chips as chip (chip.value)}
+          {@const picked = chip.value === type}
+          <button
+            type="button"
+            class="chip"
+            class:picked
+            aria-pressed={picked}
+            aria-label={picked ? `${chip.label} ${chip.count}, remove filter` : undefined}
+            disabled={chip.disabled}
+            animate:flip={{ duration: ms }}
+            transition:fade={{ duration: ms }}
+            onclick={() => ontype(picked ? "all" : chip.value)}
+          >
+            {chip.label}
+            <span class="chip-count">{chip.count}</span>
+            {#if picked}<span class="token-x" aria-hidden="true">✕</span>{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
+  </div>
+{/snippet}
+{#if children}
+  {@render children(filterTrigger, filterChips)}
+{:else}
+  <div class="filter-bar">{@render filterTrigger()}{@render filterChips()}</div>
+{/if}
 
 {#if isNarrow && sheetOpen}
   <Sheet label="Filters" focus="sheet" onclose={() => (sheetOpen = false)}>
@@ -162,7 +175,11 @@
     popover="auto"
     role="dialog"
     aria-label="Filters"
-    ontoggle={(e) => (popoverOpen = (e as ToggleEvent).newState === "open")}
+    onbeforetoggle={(e) => (popoverOpen = e.newState === "open")}
+    ontoggle={(e) => {
+      popoverOpen = (e as ToggleEvent).newState === "open";
+      positionedOpen = popoverOpen;
+    }}
   >
     <LibraryFilterPanel {statuses} {types} {status} {type} {onstatus} {ontype} onreset={reset} />
   </div>
@@ -241,6 +258,25 @@
     }
   }
 
+  .filters-btn.on svg {
+    fill: var(--clr-accent);
+    stroke: var(--clr-accent);
+  }
+  .filters-btn.inline {
+    width: $touch-target;
+    height: $touch-target;
+    padding: 0;
+    border: 0;
+    justify-content: center;
+    .filters-word {
+      display: none;
+    }
+    .filters-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+  }
   .filters-badge {
     @include count-badge;
     background: var(--clr-primary);

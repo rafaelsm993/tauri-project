@@ -31,7 +31,7 @@
 
 <section class="keys" aria-labelledby="keys-title">
   <div class="keys-text">
-    <h2 id="keys-title" class="keys-label">API keys</h2>
+    <h3 id="keys-title" class="keys-label">API keys</h3>
     <p class="keys-hint">
       Movies, TV and games need a free key from their provider. Books, anime and manga work without
       one. Keys stay on this device and are never included in a backup.

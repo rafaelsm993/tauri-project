@@ -84,7 +84,7 @@ function optimisticEntry(item: MediaItem, user: Partial<UserData>): LibraryEntry
 // The user's collection: optimistic in front, the backend as the source of truth.
 export class LibraryStore {
   private client: LibraryClient;
-  private map = new SvelteMap<MediaKey, LibraryEntry>();
+  private map = $state.raw(new SvelteMap<MediaKey, LibraryEntry>());
   private inFlight = new SvelteSet<MediaKey>();
 
   ready = $state(false);
@@ -108,8 +108,7 @@ export class LibraryStore {
     try {
       const [saved, dir] = await Promise.all([this.client.load(), this.loadPosterDir()]);
       this.posterDir = dir;
-      this.map.clear();
-      for (const e of saved) this.map.set(e.key, e);
+      this.map = new SvelteMap(saved.map((entry) => [entry.key, entry]));
       this.ready = true;
     } catch (e) {
       this.error = errorMessage(e, "Failed to load your library.");

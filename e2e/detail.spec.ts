@@ -1,3 +1,4 @@
+import { openSettingsSection } from "./fixtures/settings";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
 import { item } from "./fixtures/library";
@@ -267,6 +268,7 @@ test("with Animations off a card opens its page with no transition", async ({ pa
       }) as typeof document.startViewTransition;
   });
   await page.goto("/settings");
+  await openSettingsSection(page, "Preferences");
   await page.getByRole("switch", { name: /Animations/ }).click();
   await expect(page.locator("html")).toHaveAttribute("data-motion", "off");
   await page.getByRole("link", { name: "Home" }).first().click();

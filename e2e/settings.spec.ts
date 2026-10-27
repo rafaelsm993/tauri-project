@@ -1,3 +1,4 @@
+import { openSettingsChoice, openSettingsPicker, openSettingsSection } from "./fixtures/settings";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures/tauri-ipc";
 import { eventsAtLevel, ipcCalls, mockLibrary } from "./fixtures/library";
@@ -13,8 +14,8 @@ const DARK_BG = "rgb(0, 0, 0)";
 test("local reward thumbnails render their own palette without equipping it", async ({ page }) => {
   await mockLibrary(page, [], { events: eventsAtLevel(3), seenLevel: 25 });
   await page.goto("/settings");
-  const ember = page.getByRole("button", { name: "Ember", exact: true });
-  const preview = page.getByRole("img", { name: "Ember preview" });
+  const ember = await openSettingsChoice(page, "Accent", "Ember");
+  const preview = ember.locator(".reward-preview");
   const root = () => page.evaluate(() => document.documentElement.style.cssText);
   await expect(page.getByRole("link", { name: "Profile · Level 3", exact: true })).toBeVisible();
   await expect.poll(root).toContain("color-scheme");
@@ -28,30 +29,36 @@ test("local reward thumbnails render their own palette without equipping it", as
   expect((await ipcCalls(page)).filter((c) => c.cmd === "prefs_update")).toEqual([]);
   await ember.press("Enter");
   await expect(ember).toHaveAttribute("aria-pressed", "true");
-  const normal = page
-    .getByRole("group", { name: "Accent", exact: true })
-    .getByRole("button", { name: "Default", exact: true });
+  const normal = await openSettingsChoice(page, "Accent", "Default");
   await expect
     .poll(() => normal.locator(".mark").evaluate((e) => getComputedStyle(e).fill))
     .toBe("rgb(229, 9, 20)");
-  const midnight = page.getByRole("img", { name: "Midnight preview" });
+  const midnight = (await openSettingsChoice(page, "Palette", "Midnight")).locator(
+    ".reward-preview",
+  );
   await expect
     .poll(() => midnight.locator(".ground").evaluate((e) => getComputedStyle(e).fill))
     .toBe("rgb(8, 10, 18)");
   expect(await preview.evaluate((e) => e.getAnimations({ subtree: true }).length)).toBe(0);
 });
 
-test("reward grids keep two columns with enlarged phone text", async ({ page }) => {
+test("reward dropdowns keep one readable column with enlarged phone text", async ({ page }) => {
   await mockLibrary(page, [], { events: eventsAtLevel(25), seenLevel: 25 });
   await page.goto("/settings");
   await page.evaluate(() => (document.documentElement.style.fontSize = "18.4px"));
-  for (const grid of [
-    page.locator(".theme-section .choices").first(),
-    page.locator(".titles-section .choices"),
-  ]) {
-    await expect
-      .poll(() => grid.evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(" ").length))
-      .toBeGreaterThanOrEqual(2);
+  for (const name of ["Accent", "Title"] as const) {
+    const panel = await openSettingsPicker(page, name);
+    const rows = await panel
+      .locator(".picker-option")
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().toJSON()));
+    expect(rows.length).toBeGreaterThan(1);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].top).toBeGreaterThanOrEqual(rows[i - 1].bottom);
+      expect(rows[i].left).toBeCloseTo(rows[0].left, 0);
+    }
+    expect(await panel.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(
+      1,
+    );
   }
   expect(
     await page.evaluate(
@@ -68,7 +75,7 @@ test("System palette suitability follows live operating-system theme changes", a
     prefs: { pack: "midnight" },
   });
   await page.goto("/settings");
-  const midnight = page.getByRole("button", { name: "Midnight", exact: true });
+  const midnight = await openSettingsChoice(page, "Palette", "Midnight");
   await expect(midnight).toBeDisabled();
   await expect(midnight).toHaveAccessibleDescription(/dark theme/i);
   await expect.poll(() => bodyColor(page)).toBe(LIGHT_BG);
@@ -84,17 +91,13 @@ test("title selection and equipment persist across reload without changing XP", 
 }) => {
   await mockLibrary(page, [], { events: eventsAtLevel(3), seenLevel: 25, persistPrefs: true });
   await page.goto("/settings");
-  await page.getByRole("button", { name: "Ember", exact: true }).click();
-  await page.getByRole("button", { name: "Newcomer", exact: true }).click();
+  await (await openSettingsChoice(page, "Accent", "Ember")).click();
+  await (await openSettingsChoice(page, "Title", "Newcomer")).click();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Ember", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.getByRole("button", { name: "Newcomer", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await openSettingsSection(page, "Theme");
+  await expect(page.getByRole("button", { name: "Accent: Ember", exact: true })).toBeVisible();
+  await openSettingsSection(page, "Profile");
+  await expect(page.getByRole("button", { name: "Title: Newcomer", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Profile · Level 3", exact: true }).click();
   const level = page.getByRole("region", { name: "Level" });
   await expect(level.getByText("Newcomer", { exact: true })).toBeVisible();
@@ -102,7 +105,7 @@ test("title selection and equipment persist across reload without changing XP", 
   await expect(page.getByRole("heading", { name: "Achievements", exact: true })).toHaveCount(0);
   await expect(page.getByRole("group", { name: "Accent", exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "Settings", exact: true }).last().click();
-  await page.getByRole("button", { name: "Automatic", exact: true }).click();
+  await (await openSettingsChoice(page, "Title", "Automatic")).click();
   await page.getByRole("link", { name: "Profile · Level 3", exact: true }).click();
   await expect(level.getByText("Curious Mind", { exact: true })).toBeVisible();
 });
@@ -112,8 +115,8 @@ test("Settings explains stale selections without writing replacement preferences
 }) => {
   await mockLibrary(page, [], { seenLevel: 25, prefs: { accent: "ocean", title: "Connoisseur" } });
   await page.goto("/settings");
-  await expect(page.getByRole("button", { name: "Ocean", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Connoisseur", exact: true })).toBeDisabled();
+  await expect(await openSettingsChoice(page, "Accent", "Ocean")).toBeDisabled();
+  await expect(await openSettingsChoice(page, "Title", "Connoisseur")).toBeDisabled();
   await expect(page.getByText(/saved choice: ocean.*using default/i)).toBeVisible();
   await expect(page.getByText(/saved choice: connoisseur.*using automatic/i)).toBeVisible();
   expect((await ipcCalls(page)).filter((c) => c.cmd === "prefs_update")).toEqual([]);
@@ -124,7 +127,7 @@ test("failed Settings saves report their error and restore the selected option",
 }) => {
   await mockLibrary(page, [], { events: eventsAtLevel(3), seenLevel: 25 });
   await page.goto("/settings");
-  await expect(page.getByRole("button", { name: "Ember", exact: true })).toBeEnabled();
+  await expect(await openSettingsChoice(page, "Accent", "Ember")).toBeEnabled();
   await page.evaluate(() => {
     const internal = (
       window as unknown as {
@@ -135,16 +138,15 @@ test("failed Settings saves report their error and restore the selected option",
     internal.invoke = (cmd, args) =>
       cmd === "prefs_update" ? Promise.reject("disk full") : invoke(cmd, args);
   });
-  await page.getByRole("button", { name: "Ember", exact: true }).click();
+  await (await openSettingsChoice(page, "Accent", "Ember")).click();
   await expect(page.getByRole("status", { name: "Theme save" })).toContainText("disk full");
-  await expect(
-    page
-      .getByRole("group", { name: "Accent", exact: true })
-      .getByRole("button", { name: "Default", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Newcomer", exact: true }).click();
+  await expect(await openSettingsChoice(page, "Accent", "Default")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await (await openSettingsChoice(page, "Title", "Newcomer")).click();
   await expect(page.getByRole("status", { name: "Title save" })).toContainText("disk full");
-  await expect(page.getByRole("button", { name: "Automatic", exact: true })).toHaveAttribute(
+  await expect(await openSettingsChoice(page, "Title", "Automatic")).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -157,14 +159,14 @@ test("reward controls fit touch targets and remain static with reduced motion", 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockLibrary(page, [], { events: eventsAtLevel(25), seenLevel: 25 });
   await page.goto("/settings");
-  const bubbles = page.getByRole("button", { name: "Bubbles", exact: true });
+  const bubbles = await openSettingsChoice(page, "Background", "Bubbles");
   await expect(bubbles).toBeDisabled();
   await expect(bubbles).toHaveAccessibleDescription(/available.*reduced/i);
-  await expect(page.getByRole("button", { name: "Ember", exact: true })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Curious Mind", exact: true })).toBeEnabled();
+  await expect(await openSettingsChoice(page, "Accent", "Ember")).toBeEnabled();
+  await expect(await openSettingsChoice(page, "Title", "Curious Mind")).toBeEnabled();
   if (isMobile) {
     for (const r of await page
-      .locator(".theme-section .reward,.titles-section .choice")
+      .locator(".picker-trigger:visible,.picker-panel:popover-open .picker-option")
       .evaluateAll((es) =>
         es.map((e) => ({
           w: e.getBoundingClientRect().width,
@@ -189,6 +191,7 @@ test("reward controls fit touch targets and remain static with reduced motion", 
 
 test("turning animations off saves it and pauses the background", async ({ page }) => {
   await page.goto("/settings");
+  await openSettingsSection(page, "Preferences");
   await expect(animations(page)).toHaveAttribute("aria-checked", "true");
   await expect(page.locator(".bg-area")).not.toHaveClass(/paused/);
   await animations(page).click();
@@ -202,6 +205,7 @@ test("turning animations off saves it and pauses the background", async ({ page 
 
 test("animations come back on from the keyboard", async ({ page }) => {
   await page.goto("/settings");
+  await openSettingsSection(page, "Preferences");
   await animations(page).click();
   await expect(animations(page)).toHaveAttribute("aria-checked", "false");
   await animations(page).press("Space");
@@ -212,6 +216,8 @@ test("animations come back on from the keyboard", async ({ page }) => {
 test("settings controls are touch-sized on coarse pointers", async ({ page, isMobile }) => {
   test.skip(!isMobile, "mouse viewports may use compact targets");
   await page.goto("/settings");
+  await openSettingsSection(page, "Preferences");
+  await openSettingsSection(page, "Theme");
   const hit = await animations(page).evaluate((el) => {
     const r = el.getBoundingClientRect();
     const before = getComputedStyle(el, "::before");
@@ -232,6 +238,7 @@ test("settings controls are touch-sized on coarse pointers", async ({ page, isMo
 test("a theme applies at once and repaints the page", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/settings");
+  await openSettingsSection(page, "Theme");
   await expect(themes(page).getByRole("button", { name: "System" })).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -269,6 +276,7 @@ test("the last theme is painted before the app starts", async ({ page }) => {
 
 test("Animations off stops every CSS animation", async ({ page }) => {
   await page.goto("/settings");
+  await openSettingsSection(page, "Preferences");
   await animations(page).click();
   await expect(page.locator("html")).toHaveAttribute("data-motion", "off");
   const iterations = await page.evaluate(() => {

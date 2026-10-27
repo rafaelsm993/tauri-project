@@ -1,3 +1,4 @@
+import { createRawSnippet } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
@@ -110,3 +111,31 @@ describe("SearchField in submit mode", () => {
     expect(screen.getByRole("search")).toHaveAttribute("aria-busy", "true");
   });
 });
+
+it.each(["instant", "submit"] as const)(
+  "keeps a trailing filter inside %s search without submitting",
+  async (mode) => {
+    const onsubmit = vi.fn();
+    const onchange = vi.fn();
+    const trailing = createRawSnippet(() => ({
+      render: () => '<button type="button" aria-label="Filters">Filters</button>',
+    }));
+    const { container } = render(SearchField, {
+      mode,
+      label: "Search",
+      value: "query",
+      onchange,
+      onsubmit,
+      trailing,
+    });
+    const button = screen.getByRole("button", { name: "Filters" });
+    expect(
+      container.querySelector(mode === "submit" ? ".search-bar" : ".search-field"),
+    ).toContainElement(button);
+    await userEvent.click(button);
+    expect(onsubmit).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(onchange).toHaveBeenCalledWith("");
+    expect(screen.getByRole("searchbox")).toHaveFocus();
+  },
+);

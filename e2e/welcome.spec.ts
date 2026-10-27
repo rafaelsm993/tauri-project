@@ -1,3 +1,4 @@
+import { openSettingsSection } from "./fixtures/settings";
 import { expect, test } from "./fixtures/tauri-ipc";
 import { item, mockLibrary } from "./fixtures/library";
 
@@ -46,6 +47,7 @@ test.describe("welcome", () => {
   test("a deep link is not hijacked by the welcome", async ({ page }) => {
     await mockLibrary(page, []);
     await page.goto("/settings");
+    await openSettingsSection(page, "Preferences");
 
     await expect(page).not.toHaveURL(/\/welcome/);
     await expect(page.getByRole("heading", { level: 1, name: /settings/i })).toBeVisible();
@@ -175,6 +177,7 @@ test.describe("welcome", () => {
   test("settings can replay the welcome", async ({ page }) => {
     await mockLibrary(page, LIBRARY);
     await page.goto("/settings");
+    await openSettingsSection(page, "Preferences");
 
     await page.getByRole("button", { name: /run the welcome again/i }).click();
     await expect(page).toHaveURL(/\/welcome/);

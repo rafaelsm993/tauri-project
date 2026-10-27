@@ -1,5 +1,7 @@
+import type { ComponentProps } from "svelte";
+import { exposeSettings } from "./fixtures.test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/svelte";
+import { render as renderComponent, waitFor, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import ThemeSection from "./ThemeSection.svelte";
 import { UNLOCKS } from "$lib/domain/unlocks";
@@ -16,13 +18,6 @@ function setup(overrides: Partial<Prefs> = {}) {
 }
 
 describe("ThemeSection", () => {
-  it("hosts artwork using the same injected preferences", async () => {
-    const { prefs, update } = setup({ profile_art: "future:99" });
-    render(ThemeSection, { prefs, currentLevel: 1, currentEntries: [] });
-    expect(screen.getByText(/Saved choice: future:99/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Default artwork" }));
-    expect(update).toHaveBeenCalledWith({ profile_art: "default" });
-  });
   it.each(UNLOCKS)(
     "enforces $id's current boundary and restores its retained selection",
     async (reward) => {
@@ -59,9 +54,9 @@ describe("ThemeSection", () => {
     const { prefs, update } = setup({ motion: false });
     render(ThemeSection, { prefs, currentLevel: 25 });
     for (const label of ["Background", "Tree effect"]) {
-      for (const button of within(screen.getByRole("group", { name: label })).getAllByRole(
-        "button",
-      )) {
+      for (const button of within(screen.getByRole("group", { name: label }))
+        .getAllByRole("button")
+        .filter((button) => button.hasAttribute("aria-pressed"))) {
         expect(button).toBeDisabled();
         await userEvent.click(button);
       }
@@ -93,7 +88,7 @@ describe("ThemeSection", () => {
     reject("disk full");
     expect(await screen.findByText(/could not save.*disk full/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ember" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Ocean" })).toBeEnabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ocean" })).toBeEnabled());
   });
   it("explains a retained unavailable choice without repairing it", async () => {
     const { prefs, update } = setup({ accent: "ember" });
@@ -150,7 +145,15 @@ describe("ThemeSection", () => {
     }
     expect(screen.getByRole("button", { name: "Ocean" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Ocean" })).toHaveAccessibleDescription(/level 20/i);
-    expect(screen.getByRole("img", { name: "Ocean preview" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ocean" }).querySelector('[aria-label="Ocean preview"]'),
+    ).toBeInTheDocument();
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+function render(component: typeof ThemeSection, props: ComponentProps<typeof ThemeSection>) {
+  const result = renderComponent(component, props);
+  exposeSettings(result.container);
+  return result;
+}

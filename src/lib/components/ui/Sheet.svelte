@@ -38,7 +38,7 @@
     fit();
     viewport?.addEventListener("resize", fit);
     dialog.showModal();
-    untrack(() => pushState("", { sheet: label }));
+    untrack(() => pushState("", { ...page.state, sheet: label }));
     addEventListener("popstate", back);
     const first = dialog.querySelector<HTMLElement>("input, textarea, select, button");
     (untrack(() => focus) === "sheet" ? dialog : first)?.focus();

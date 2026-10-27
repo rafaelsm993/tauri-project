@@ -7,6 +7,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Library, Planner, Profile and Settings headers now scroll with their pages instead of sticking over the content. Home retains its sticky search and cohesive category collapse.
+- Search headers fill the available width without an opaque surrounding rectangle. Home and Library filters sit inside the search field and fill with the equipped accent when active; tags fade and slide together on scroll, including slow scroll gestures. Library search keeps an opaque themed surface so covers and text cannot bleed through it.
+- Compact Settings into Theme, Profile, Preferences and Backup accordions with current-selection preview dropdowns; retain reward eligibility and existing preference, backup and API-key workflows.
+- Library’s tree is now **JOURNEY TREE**, under THE SHARED ROOT: six media paths with connected reward seals. Existing themes, accents, backgrounds and titles each have one subtree home; tap any locked or available seal to preview what it unlocks and its required level. Global rewards remain level-only, artwork retains its level/completion gates, and Settings still handles equipment. Unlock rules and saved-data formats are unchanged.
 - Equipment (accent, theme, title and profile artwork) is chosen in Settings now; the Profile's old Achievements section is gone. Each reward lists the level it needs, and a locked reward still shows its palette or crest without being equippable.
 - A reward's eligibility follows your **current** level and completed counts, not the highest level you have ever seen: stop meeting a requirement and its reward, title or artwork falls back to Default, then returns by itself the moment it is earned again. `seen_level` only stops a level-up toast from repeating.
 - An item's status follows its progress: 0 is Planning, partway is In progress, the last unit is Completed (lowering it un-completes; a movie is Completed when marked Watched). Adding still saves as Planning and logging sessions moves it the same way. The detail page's status chips are gone: on a phone they cut off Completed and Dropped.
@@ -43,6 +47,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Svelte 5 runes and class-based application stores
 
 ### Fixed
+- Journey Tree nodes and disclosures clear sticky headers when scrolled into view, and Back restores the originating crest or achievement focus.
+- Large libraries hydrate in one reactive update, preventing the Profile crash with thousands of saved entries.
+- Default primary buttons use white text on the unchanged fill, meeting small-text contrast in dark and light themes.
 - The Genres panel's Clear on Home is no longer hidden under Android's navigation bar: popovers end above it.
 - The session picker no longer shows "NaN" when Custom's minutes are emptied in the Plan and Log session sheets; it says the shortest session instead, and "At most 12 h." past the limit.
 - An accent's own text colour (Ember's dark text) now reaches every filled button, in the dark, light and system themes.
@@ -51,6 +58,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Taps reach cards showing through the collapsed header's gap; the header pins below the Android status bar.
 
 ### Removed
+- The separate earlier/current/later level-rewards ladder and the tree on Profile; Profile keeps its dashboard, graphs, level card and equipped artwork.
 - The Profile's Achievements section (its cosmetic rewards, titles and artwork now live in Settings).
 - The level chip in the page header (the level lives on the Profile tab) and Home's Today strip.
 - Local account system (register / login / profile switching) and its SQLite `users` table

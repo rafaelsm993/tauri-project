@@ -56,3 +56,21 @@ describe("followTrigger", () => {
     stop();
   });
 });
+
+describe("opt-in bounded placement", () => {
+  it("flips a tall panel above a near-bottom trigger", () => {
+    const p = placeBelow(rect(20, 650, 200, 44), 240, { width: 360, height: 740 }, "start", 500);
+    expect(p).toEqual({ left: 20, top: 144, maxHeight: 636 });
+    expect(p.top + Math.min(500, p.maxHeight)).toBeLessThanOrEqual(644);
+  });
+  it("uses the available space, never a fake minimum below the viewport", () => {
+    const p = placeBelow(rect(20, 100, 200, 44), 240, { width: 360, height: 260 }, "start", 500);
+    expect(p).toEqual({ left: 20, top: 150, maxHeight: 102 });
+    expect(p.top + p.maxHeight).toBe(252);
+  });
+  it("keeps a short panel immediately above rather than leaving a giant gap", () => {
+    const p = placeBelow(rect(20, 650, 200, 44), 240, { width: 360, height: 740 }, "start", 60);
+    expect(p.top).toBe(584);
+    expect(p.maxHeight).toBe(636);
+  });
+});

@@ -54,44 +54,49 @@
 </script>
 
 <main class="library">
-  <AppHeader heading="Library">
-    {#snippet action()}
-      <AddManuallyButton type={type === "all" ? undefined : type} variant="icon" />
+  <LibraryFilterBar
+    {statuses}
+    {types}
+    {status}
+    {type}
+    onstatus={(v) => (filters.status = v)}
+    ontype={(v) => (filters.type = v)}
+    narrow={narrowFilters}
+  >
+    {#snippet children(filterTrigger, filterChips)}
+      <AppHeader sticky={false} heading="Library">
+        {#snippet action()}
+          <AddManuallyButton type={type === "all" ? undefined : type} variant="icon" />
+        {/snippet}
+        {#snippet persistent()}
+          {#if store.entries.length > 0}
+            <SearchField
+              label="Search your library"
+              trailing={filterTrigger}
+              placeholder="Search by title"
+              value={filters.query}
+              onchange={(v) => (filters.query = v)}
+            />
+          {/if}
+        {/snippet}
+        {#snippet collapsible()}
+          <div class="library-filters">
+            {#if store.entries.length > 0}{@render filterChips()}
+            {/if}
+            <div class="filter-row">
+              <span class="filter-label" aria-hidden="true">View</span>
+              <SegmentedControl
+                label="View"
+                options={VIEW_OPTIONS}
+                value={filters.view}
+                onchange={(v) => (filters.view = v)}
+              />
+            </div>
+          </div>
+        {/snippet}
+      </AppHeader>
     {/snippet}
-    {#snippet persistent()}
-      {#if store.entries.length > 0}
-        <SearchField
-          label="Search your library"
-          placeholder="Search by title"
-          value={filters.query}
-          onchange={(v) => (filters.query = v)}
-        />
-      {/if}
-    {/snippet}
-    {#snippet collapsible()}
-      <div class="library-filters">
-        {#if store.entries.length > 0}<LibraryFilterBar
-            {statuses}
-            {types}
-            {status}
-            {type}
-            onstatus={(v) => (filters.status = v)}
-            ontype={(v) => (filters.type = v)}
-            narrow={narrowFilters}
-          />
-        {/if}
-        <div class="filter-row">
-          <span class="filter-label" aria-hidden="true">View</span>
-          <SegmentedControl
-            label="View"
-            options={VIEW_OPTIONS}
-            value={filters.view}
-            onchange={(v) => (filters.view = v)}
-          />
-        </div>
-      </div>
-    {/snippet}
-  </AppHeader>
+  </LibraryFilterBar>
 
   {#if store.error}
     <ErrorNote message={store.error} />

@@ -1,5 +1,7 @@
 <script lang="ts">
   import AppHeader from "$lib/components/ui/AppHeader.svelte";
+  import SettingsAccordion from "./SettingsAccordion.svelte";
+  import ProfileArtworkSection from "./ProfileArtworkSection.svelte";
   import ThemeSection from "./ThemeSection.svelte";
   import TitlesSection from "./TitlesSection.svelte";
   import { unlocksStore } from "$lib/stores/unlocks.svelte";
@@ -51,69 +53,71 @@
 </script>
 
 <main class="settings">
-  <AppHeader heading="Settings" />
+  <AppHeader heading="Settings" sticky={false} />
+  {#if store.error}<ErrorNote message={store.error} />{/if}
 
-  <section class="settings-row" aria-label="Animations">
-    <Switch
-      label="Animations"
-      hint="Covers the background, the level-up burst and planner movement. Your system's reduce-motion setting always wins."
-      checked={store.prefs.motion}
-      disabled={!store.ready}
-      onchange={(on) => store.update({ motion: on })}
-    />
-  </section>
+  <SettingsAccordion title="Theme" anchors={["theme"]}>
+    <ThemeSection prefs={store} {currentLevel} />
+  </SettingsAccordion>
 
-  <ThemeSection prefs={store} {currentLevel} {currentEntries} />
-  <TitlesSection prefs={store} {currentLevel} />
+  <SettingsAccordion title="Profile" anchors={["profile-artwork", "titles"]}>
+    <ProfileArtworkSection prefs={store} {currentLevel} entries={currentEntries} />
+    <TitlesSection prefs={store} {currentLevel} />
+  </SettingsAccordion>
 
-  <section class="settings-row" aria-labelledby="{id}-pace">
-    <div class="settings-text">
-      <h2 class="settings-label" id="{id}-pace">Reading pace</h2>
-      <p class="settings-hint">Used to plan books and manga. Left empty, planning asks for it.</p>
-    </div>
-    <div class="pace-fields">
-      {#each PACES as pace (pace.field)}
-        <div class="pace-field">
-          <label class="pace-label" for="{id}-{pace.field}">{pace.label}</label>
-          <input
-            id="{id}-{pace.field}"
-            class="pace-input"
-            type="number"
-            inputmode="numeric"
-            min={pace.min}
-            max={pace.max}
-            step="1"
-            value={store.prefs[pace.field] ?? ""}
-            disabled={!store.ready}
-            aria-invalid={!!paceError[pace.field]}
-            aria-describedby={paceError[pace.field] ? `${id}-${pace.field}-error` : undefined}
-            onchange={(event) => savePace(pace, event)}
-          />
-          {#if paceError[pace.field]}
-            <span class="pace-error" id="{id}-{pace.field}-error">{paceError[pace.field]}</span>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  </section>
+  <SettingsAccordion title="Preferences">
+    <section class="settings-row" aria-label="Animations">
+      <Switch
+        label="Animations"
+        hint="Covers the background, the level-up burst and planner movement. Your system's reduce-motion setting always wins."
+        checked={store.prefs.motion}
+        disabled={!store.ready}
+        onchange={(on) => store.update({ motion: on })}
+      />
+    </section>
+    <section class="settings-row" aria-labelledby="{id}-pace">
+      <div class="settings-text">
+        <h3 class="settings-label" id="{id}-pace">Reading pace</h3>
+        <p class="settings-hint">Used to plan books and manga. Left empty, planning asks for it.</p>
+      </div>
+      <div class="pace-fields">
+        {#each PACES as pace (pace.field)}
+          <div class="pace-field">
+            <label class="pace-label" for="{id}-{pace.field}">{pace.label}</label>
+            <input
+              id="{id}-{pace.field}"
+              class="pace-input"
+              type="number"
+              inputmode="numeric"
+              min={pace.min}
+              max={pace.max}
+              step="1"
+              value={store.prefs[pace.field] ?? ""}
+              disabled={!store.ready}
+              aria-invalid={!!paceError[pace.field]}
+              aria-describedby={paceError[pace.field] ? `${id}-${pace.field}-error` : undefined}
+              onchange={(event) => savePace(pace, event)}
+            />
+            {#if paceError[pace.field]}<span class="pace-error" id="{id}-{pace.field}-error"
+                >{paceError[pace.field]}</span
+              >{/if}
+          </div>
+        {/each}
+      </div>
+    </section>
+    <KeysSection />
+    <section class="settings-row">
+      <div class="settings-text">
+        <h3 class="settings-label">Welcome</h3>
+        <p class="settings-hint">Walk through the first-run introduction again.</p>
+      </div>
+      <button type="button" class="settings-btn" disabled={!store.ready} onclick={replayWelcome}
+        >Run the welcome again</button
+      >
+    </section>
+  </SettingsAccordion>
 
-  {#if store.error}
-    <ErrorNote message={store.error} />
-  {/if}
-
-  <section class="settings-row">
-    <div class="settings-text">
-      <h2 class="settings-label">Welcome</h2>
-      <p class="settings-hint">Walk through the first-run introduction again.</p>
-    </div>
-    <button type="button" class="settings-btn" disabled={!store.ready} onclick={replayWelcome}>
-      Run the welcome again
-    </button>
-  </section>
-
-  <KeysSection />
-
-  <BackupSection />
+  <SettingsAccordion title="Backup"><BackupSection /></SettingsAccordion>
 </main>
 
 <style lang="scss">
@@ -152,20 +156,16 @@
     @include page-shell;
     display: flex;
     flex-direction: column;
-    gap: $spacing-lg;
+    gap: $spacing-sm;
   }
 
   .settings-row {
-    max-width: 48rem;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: $spacing-md;
-    padding: $spacing-md;
-    border: 1px solid var(--clr-border);
-    border-radius: $radius-md;
-    background: var(--clr-surface);
+    padding: $spacing-sm 0;
     min-width: 0;
 
     > :global(.switch-row) {

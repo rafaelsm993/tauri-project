@@ -74,9 +74,19 @@
 <div class="page">
   <AppHeader>
     {#snippet persistent()}
+      {#snippet genreFilter()}
+        <MultiSelect
+          iconOnly
+          label="Genres"
+          options={browse.genreOptions}
+          selected={browse.selectedGenres}
+          onchange={(ids) => browse.setSelectedGenres(ids)}
+        />
+      {/snippet}
       <div class="search-slot">
         <SearchField
           mode="submit"
+          trailing={browse.carouselMode && browse.genres.length > 0 ? genreFilter : undefined}
           label="Search the catalog"
           placeholder="Search movies, TV, anime, manga, books, games…"
           value={typed}
@@ -86,14 +96,6 @@
           onclear={clearSearch}
         />
       </div>
-      {#if browse.carouselMode && browse.genres.length > 0}
-        <MultiSelect
-          label="Genres"
-          options={browse.genreOptions}
-          selected={browse.selectedGenres}
-          onchange={(ids) => browse.setSelectedGenres(ids)}
-        />
-      {/if}
     {/snippet}
     {#snippet collapsible()}
       <CategoryTabs active={browse.activeCategory} onchange={(c) => browse.switchCategory(c)} />

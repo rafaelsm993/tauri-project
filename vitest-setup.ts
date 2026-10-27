@@ -2,7 +2,20 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 
 // There is no SvelteKit router in unit tests; shallow routing keeps its state here.
-vi.mock("$app/state", () => ({ page: { state: {} } }));
+vi.mock("$app/state", async () => {
+  const { SvelteMap } = await import("svelte/reactivity");
+  const state = new SvelteMap<string, App.PageState>([["page", {}]]);
+  return {
+    page: {
+      get state() {
+        return state.get("page")!;
+      },
+      set state(value: App.PageState) {
+        state.set("page", value);
+      },
+    },
+  };
+});
 vi.mock("$app/navigation", async () => {
   const { page } = await import("$app/state");
   return {
@@ -39,3 +52,5 @@ if (typeof globalThis.ResizeObserver === "undefined") {
 
 // jsdom has no Web Animations; Svelte's animate:flip asks for the running ones.
 Element.prototype.getAnimations ??= () => [];
+Element.prototype.scrollIntoView ??= vi.fn();
+globalThis.scrollBy = vi.fn();

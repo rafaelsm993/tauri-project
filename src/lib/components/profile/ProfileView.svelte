@@ -9,7 +9,6 @@
   import ProgressionCard from "./ProgressionCard.svelte";
   import ActivityCard from "./ActivityCard.svelte";
   import StatusCard from "./StatusCard.svelte";
-  import ProgressionTree from "$lib/components/progression/ProgressionTree.svelte";
   import TasteCard from "./TasteCard.svelte";
 
   import ForecastCard from "./ForecastCard.svelte";
@@ -59,7 +58,7 @@
 <svelte:document onvisibilitychange={onReturn} />
 
 <main class="profile">
-  <AppHeader heading="Profile">
+  <AppHeader sticky={false} heading="Profile">
     {#snippet action()}
       <a class="profile-settings" href={resolve("/settings")}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -109,15 +108,6 @@
         up here.
       </p>
     {/if}
-    <div class="profile-tree">
-      <ProgressionTree
-        entries={library.entries}
-        allEntries={library.entries}
-        currentLevel={store.level.level}
-        loaded={library.ready && store.loaded}
-        error={!library.ready ? library.error : store.error}
-      />
-    </div>
   </div>
 </main>
 
@@ -168,7 +158,6 @@
     grid-template-areas:
       "level level level level stats stats stats stats stats stats stats stats"
       "progression progression progression progression progression progression progression progression activity activity activity activity"
-      "tree tree tree tree tree tree tree tree tree tree tree tree"
       "library library library library taste taste taste taste forecast forecast forecast forecast";
 
     @include respond-to(lg) {
@@ -176,7 +165,6 @@
       grid-template-areas:
         "level stats"
         "progression progression"
-        "tree tree"
         "activity library"
         "taste forecast";
     }
@@ -187,7 +175,6 @@
         "level"
         "stats"
         "progression"
-        "tree"
         "activity"
         "library"
         "taste"
@@ -196,14 +183,9 @@
 
     &.empty {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-areas: "level" "hint" "tree";
+      grid-template-areas: "level" "hint";
       max-width: 40rem;
     }
-  }
-
-  .profile-tree {
-    grid-area: tree;
-    min-width: 0;
   }
 
   // LayerChart reads these; its tooltip can be portaled outside the page, so it is global.

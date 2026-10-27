@@ -44,7 +44,7 @@
   --clr-text-3: #808080;
   --clr-text-inv: #000000;
   /* Text on a primary fill; an accent may set its own channels (Ember needs dark text). */
-  --clr-on-primary-rgb: 245 245 241;
+  --clr-on-primary-rgb: 255 255 255;
   --clr-on-primary: rgb(var(--clr-on-primary-rgb));
 
   color-scheme: dark;

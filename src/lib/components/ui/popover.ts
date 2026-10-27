@@ -10,15 +10,19 @@ export function placeBelow(
   width: number,
   viewport: { width: number; height: number },
   align: Align = "end",
+  panelHeight?: number,
 ): { left: number; top: number; maxHeight: number } {
   const wanted = align === "start" ? trigger.left : trigger.right - width;
-  const left = Math.min(Math.max(EDGE, wanted), viewport.width - width - EDGE);
-  const top = trigger.bottom + GAP;
-  return {
-    left: Math.max(EDGE, left),
-    top,
-    maxHeight: Math.max(MIN_HEIGHT, viewport.height - top - EDGE),
-  };
+  const left = Math.max(EDGE, Math.min(Math.max(EDGE, wanted), viewport.width - width - EDGE));
+  const below = Math.max(0, viewport.height - trigger.bottom - GAP - EDGE);
+  if (panelHeight === undefined) {
+    return { left, top: trigger.bottom + GAP, maxHeight: Math.max(MIN_HEIGHT, below) };
+  }
+  const above = Math.max(0, trigger.top - GAP - EDGE);
+  const flip = below < Math.min(MIN_HEIGHT, panelHeight) && above > below;
+  const maxHeight = flip ? above : below;
+  const top = flip ? trigger.top - GAP - Math.min(panelHeight, maxHeight) : trigger.bottom + GAP;
+  return { left, top: Math.max(EDGE, top), maxHeight };
 }
 
 // What the system draws over the bottom of the window (Android's navigation bar); 0 elsewhere.
@@ -33,6 +37,7 @@ export function followTrigger(
   trigger: HTMLElement,
   panel: HTMLElement,
   align: Align = "end",
+  bounded = false,
 ): () => void {
   const place = () => {
     const p = placeBelow(
@@ -40,6 +45,7 @@ export function followTrigger(
       panel.offsetWidth,
       { width: window.innerWidth, height: window.innerHeight - safeBottom() },
       align,
+      bounded ? panel.scrollHeight + panel.offsetHeight - panel.clientHeight : undefined,
     );
     panel.style.left = `${p.left}px`;
     panel.style.top = `${p.top}px`;

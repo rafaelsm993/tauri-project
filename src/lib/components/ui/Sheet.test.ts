@@ -22,6 +22,14 @@ afterEach(() => {
 });
 
 describe("Sheet", () => {
+  it("preserves the media-map history when adding its own entry", () => {
+    page.state = { runewood: { tree: "tree", media: "tv" } };
+    open();
+    expect(pushState).toHaveBeenLastCalledWith("", {
+      runewood: { tree: "tree", media: "tv" },
+      sheet: "Add Dune",
+    });
+  });
   it("is a labelled native dialog opened as a modal", () => {
     const showModal = vi.spyOn(HTMLDialogElement.prototype, "showModal");
     const { dialog } = open();

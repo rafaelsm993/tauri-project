@@ -37,7 +37,7 @@
 </script>
 
 <main class="planner">
-  <AppHeader heading="Planner">
+  <AppHeader sticky={false} heading="Planner">
     {#snippet action()}
       <AddManuallyButton after="stay" variant="icon" />
     {/snippet}

@@ -1,5 +1,7 @@
+import type { ComponentProps } from "svelte";
+import { exposeSettings } from "./fixtures.test-utils";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/svelte";
+import { render as renderComponent, screen } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import ProfileArtworkSection from "./ProfileArtworkSection.svelte";
 import { PrefsStore } from "$lib/stores/prefs.svelte";
@@ -41,11 +43,13 @@ describe("ProfileArtworkSection", () => {
   it("previews all thirty requirements and only equips a currently earned reward", async () => {
     const s = setup();
     render(ProfileArtworkSection, { prefs: s.prefs, currentLevel: 1, entries: [entry] });
-    expect(screen.getAllByRole("button")).toHaveLength(31);
+    expect(
+      screen.getAllByRole("button").filter((button) => button.hasAttribute("aria-pressed")),
+    ).toHaveLength(31);
     expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Silver Screen tier 2" })).toBeDisabled();
-    expect(screen.getByText("1 / 5 completed")).toBeInTheDocument();
-    expect(screen.getAllByText("Requires level 3")).toHaveLength(6);
+    expect(screen.getByText(/1 \/ 5 completed/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Requires level 3/)).toHaveLength(6);
     await userEvent.click(screen.getByRole("button", { name: "Silver Screen tier 1" }));
     expect(s.update).toHaveBeenCalledWith({ profile_art: "movie:1" });
     expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toHaveAttribute(
@@ -120,3 +124,12 @@ describe("ProfileArtworkSection", () => {
     expect(s.update).toHaveBeenCalledTimes(1);
   });
 });
+
+function render(
+  component: typeof ProfileArtworkSection,
+  props: ComponentProps<typeof ProfileArtworkSection>,
+) {
+  const result = renderComponent(component, props);
+  exposeSettings(result.container);
+  return result;
+}

@@ -22,7 +22,8 @@ test.describe("profile dashboard", () => {
       page.getByRole("region", { name: "Progression", exact: true }).locator("svg").first(),
     ).toBeVisible();
     await expect(page.getByText("Coming soon.")).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Runewood", exact: true })).toBeVisible();
+    await expect(page.locator(".progression-tree")).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Explore media trees" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Achievements", exact: true })).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Accent", exact: true })).toHaveCount(0);
   });

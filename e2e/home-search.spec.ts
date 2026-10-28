@@ -97,6 +97,36 @@ test("only shimmers in view are animating", async ({ page }) => {
   await expect.poll(strays).toBe(0);
 });
 
+test("browser scroll restoration is immediate rather than inheriting smooth motion", async ({
+  page,
+}) => {
+  await expect(page.getByRole("heading", { name: "Drama", exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => {
+      scrollTo({ top: 0, behavior: "instant" });
+      scrollTo(0, 500);
+      return scrollY;
+    }),
+  ).toBe(500);
+});
+
+test("late carousel layout changes cannot move a restored Home scroll position", async ({
+  page,
+}) => {
+  await expect(page.getByRole("heading", { name: "Drama", exact: true })).toBeVisible();
+  const position = await page.evaluate(async () => {
+    const heading = [...document.querySelectorAll("h2")].find((el) => el.textContent === "Drama")!;
+    scrollTo({ top: heading.getBoundingClientRect().top + scrollY - 80, behavior: "instant" });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const before = scrollY;
+    document.querySelector<HTMLElement>(".carousel-slot")!.style.paddingBottom = "120px";
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return { before, after: scrollY };
+  });
+  expect(position.before).toBeGreaterThan(300);
+  expect(position.after).toBe(position.before);
+});
+
 test("Back from a card returns to the same rail and scroll position", async ({ page }) => {
   const drama = page.locator("section.carousel").filter({
     has: page.getByRole("heading", { name: "Drama" }),

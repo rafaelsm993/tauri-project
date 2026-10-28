@@ -162,6 +162,7 @@
 <style lang="scss">
   .page {
     @include page-shell;
+    overflow-anchor: none;
     overflow-x: clip; // contain any wide carousel rail
   }
 

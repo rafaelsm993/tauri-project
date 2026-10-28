@@ -207,6 +207,7 @@ test.describe("the browse header", () => {
     await page.evaluate(() => scrollTo({ top: 1400, behavior: "instant" }));
     const header = page.locator(".app-header");
     await expect.poll(async () => Math.round((await header.boundingBox())!.y)).toBe(35);
+    await expect(header).toHaveAttribute("data-stuck", "true");
     // Whatever sits at the very top edge must be the header's own band, not scrolled content.
     const covered = await page.evaluate(() => {
       const h = document.querySelector(".app-header")!;

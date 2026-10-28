@@ -6,7 +6,7 @@ const backup = (page: import("@playwright/test").Page) =>
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/settings");
-  await openSettingsSection(page, "Backup");
+  await openSettingsSection(page, "Profile");
 });
 
 test("export says what was saved and where", async ({ page }) => {
@@ -19,7 +19,7 @@ test("a closed save dialog changes nothing", async ({ page }) => {
   // dialog can be asked before the test has said it was closed.
   await page.addInitScript(() => Object.assign(window, { __dialogClosed: true }));
   await page.goto("/settings");
-  await openSettingsSection(page, "Backup");
+  await openSettingsSection(page, "Profile");
   await backup(page).getByRole("button", { name: "Export backup" }).click();
   // Anchor on a positive first: once the button is enabled again the export has finished,
   // so an absent status means "never appeared", not "has not rendered yet".

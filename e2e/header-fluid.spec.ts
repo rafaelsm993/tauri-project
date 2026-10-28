@@ -239,6 +239,7 @@ for (const route of ["library", "planner", "profile", "settings"] as const) {
     await page.goto(`/${route}`);
     if (route === "settings")
       await page.locator("summary").filter({ hasText: "Preferences" }).click();
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
     const header = page.locator(".app-header");
     await expect(header).toBeVisible();
     const before = await header.boundingBox();

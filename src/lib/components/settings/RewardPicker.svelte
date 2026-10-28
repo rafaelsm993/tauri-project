@@ -19,6 +19,7 @@
     disabled = false,
     allowReselect = false,
     preview,
+    imageOnly = false,
   }: {
     label: string;
     value: string;
@@ -26,6 +27,7 @@
     onchange: (value: string) => Promise<boolean>;
     disabled?: boolean;
     allowReselect?: boolean;
+    imageOnly?: boolean;
     preview?: Snippet<[PickerChoice]>;
   } = $props();
   const id = $props.id();
@@ -91,7 +93,13 @@
   }
 </script>
 
-<div class="reward-picker" role="group" aria-label={label} data-picker={label}>
+<div
+  class="reward-picker"
+  class:image-only={imageOnly}
+  role="group"
+  aria-label={label}
+  data-picker={label}
+>
   <span class="field-label">{label}</span>
   <button
     bind:this={trigger}
@@ -248,6 +256,27 @@
     }
     > span {
       font-size: 0.75rem;
+    }
+  }
+  .image-only {
+    .picker-panel:popover-open {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
+      gap: $spacing-xs;
+    }
+    .picker-option {
+      justify-content: center;
+      min-width: $touch-target;
+    }
+    .picker-option + .picker-option {
+      margin-top: 0;
+    }
+    .option-copy,
+    .current {
+      @include sr-only;
+    }
+    .picker-trigger {
+      justify-content: space-between;
     }
   }
 </style>

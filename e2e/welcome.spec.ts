@@ -25,12 +25,12 @@ test.describe("welcome", () => {
     await expect(page.getByRole("heading", { level: 1, name: /grow/i })).toHaveCount(0);
   });
 
-  test("the read-only preview shows all six Runewood paths without overflow", async ({ page }) => {
+  test("the read-only Books-path preview fits without overflow", async ({ page }) => {
     await mockLibrary(page, []);
     await page.goto("/welcome");
-    const preview = page.getByRole("img", { name: /Six Runewood paths/ });
-    await expect(preview.locator("svg")).toHaveCount(6);
-    await expect(preview.locator("a,button")).toHaveCount(0);
+    const preview = page.getByRole("img", { name: "garden example — preview only" });
+    await expect(preview.locator(".runic-map")).toHaveCount(1);
+    await expect(preview.locator("[inert]")).toHaveCount(1);
     expect(await preview.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
   });
 
@@ -64,7 +64,7 @@ test.describe("welcome", () => {
     await expect(page).not.toHaveURL(/\/welcome/);
   });
 
-  test("walks all four beats and finishes", async ({ page }) => {
+  test("walks all five beats and finishes", async ({ page }) => {
     await mockLibrary(page, []);
     await page.goto("/welcome");
 
@@ -72,12 +72,12 @@ test.describe("welcome", () => {
     await expect(page.getByRole("heading", { level: 1, name: /key/i })).toBeVisible();
 
     await page.getByRole("button", { name: /continue without keys/i }).click();
-    await expect(page.getByRole("heading", { level: 1, name: /what do you/i })).toBeVisible();
-
-    await page.getByRole("button", { name: "Books" }).click();
-    await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByRole("heading", { level: 1, name: /plan/i })).toBeVisible();
 
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Pages and chapters");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("match it later");
     await page.getByRole("button", { name: "Start" }).click();
     await expect(page).not.toHaveURL(/\/welcome/);
   });
@@ -86,7 +86,7 @@ test.describe("welcome", () => {
     await mockLibrary(page, []);
     await page.goto("/welcome");
 
-    for (const step of ["Next", "Continue without keys", "Next"]) {
+    for (const step of ["Next", "Continue without keys", "Next", "Next", "Start"]) {
       const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
       const clientW = await page.evaluate(() => document.documentElement.clientWidth);
       expect(scrollW).toBeLessThanOrEqual(clientW);
@@ -106,23 +106,24 @@ test.describe("welcome", () => {
     }
   });
 
-  test("the taste pick decides which tab home opens on", async ({ page }) => {
-    await mockLibrary(page, []);
-    await page.goto("/welcome");
-
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("button", { name: /continue without keys/i }).click();
-    await page.getByRole("button", { name: "Games" }).click();
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("button", { name: "Start" }).click();
-
-    await expect(page.getByRole("button", { name: "Games", exact: true })).toHaveAttribute(
+  test("legacy welcome choices no longer select Home categories", async ({ page }) => {
+    await mockLibrary(page, [], { prefs: { welcomed: true, taste_families: ["game"] } });
+    await page.goto("/");
+    const categories = page.getByRole("navigation", { name: "Categories" });
+    await expect(categories.getByRole("button", { name: "Movies", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await categories.getByRole("button", { name: "Books", exact: true }).click();
+    await page.getByRole("link", { name: "Library", exact: true }).click();
+    await page.getByRole("link", { name: "Home", exact: true }).click();
+    await expect(categories.getByRole("button", { name: "Books", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
   });
 
-  test("the taste pick still wins when prefs load after the page mounts", async ({ page }) => {
+  test("legacy taste is ignored when prefs load after the page mounts", async ({ page }) => {
     await mockLibrary(page, []);
     // Prefs resolve only once Home has mounted, as on a cold start on a real device.
     await page.addInitScript(() => {
@@ -149,7 +150,7 @@ test.describe("welcome", () => {
     await expect(page.getByRole("navigation", { name: "Categories" })).toBeVisible();
     await page.evaluate(() => (window as unknown as { __mounted: () => void }).__mounted());
 
-    const games = page.getByRole("button", { name: "Games", exact: true });
+    const games = page.getByRole("button", { name: "Movies", exact: true });
     await expect(games).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -183,3 +184,70 @@ test.describe("welcome", () => {
     await expect(page).toHaveURL(/\/welcome/);
   });
 });
+
+for (const [tmdb, rawg, label] of [
+  [false, false, "Continue without keys"],
+  [true, false, "Continue without RAWG key"],
+  [false, true, "Continue without TMDB key"],
+  [true, true, "Continue"],
+] as const) {
+  test(`key drafts update CTA ${tmdb}/${rawg} and validate before proceeding`, async ({ page }) => {
+    await mockLibrary(page, [], { prefs: { welcome_beat: 1 } });
+    await page.addInitScript(() => {
+      const w = window as unknown as {
+        __TAURI_INTERNALS__: { invoke: (c: string, a?: { which?: string }) => Promise<unknown> };
+        __keyCalls: string[];
+      };
+      const real = w.__TAURI_INTERNALS__.invoke;
+      const presence: Record<string, boolean> = { tmdb: false, rawg: false };
+      w.__keyCalls = [];
+      w.__TAURI_INTERNALS__.invoke = async (c, a) => {
+        if (c === "keys_status") return { ...presence };
+        if (c === "keys_check") {
+          w.__keyCalls.push("check:" + a!.which);
+          return null;
+        }
+        if (c === "keys_set") {
+          w.__keyCalls.push("set:" + a!.which);
+          presence[a!.which!] = true;
+          return { ...presence };
+        }
+        return real(c, a);
+      };
+    });
+    await page.goto("/welcome");
+    if (tmdb) await page.getByLabel("TMDB key").fill("TEST_ONLY_TMDB");
+    if (rawg) await page.getByLabel("RAWG key").fill("TEST_ONLY_RAWG");
+    await expect(page.getByRole("button", { name: label, exact: true })).toBeEnabled();
+    await expect(page.getByText("Saved and working.", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: label, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "Plan it when you are ready",
+    );
+    expect(
+      await page.evaluate(() => (window as unknown as { __keyCalls: string[] }).__keyCalls),
+    ).toEqual([
+      ...(tmdb ? ["check:tmdb", "set:tmdb"] : []),
+      ...(rawg ? ["check:rawg", "set:rawg"] : []),
+    ]);
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByRole("button", { name: label, exact: true })).toBeEnabled();
+  });
+}
+for (const [index, title] of [
+  [2, "Plan it when you are ready"],
+  [3, "Plan it when you are ready"],
+  [4, "Pages and chapters need different paces"],
+  [5, "Add anything, match it later"],
+] as const) {
+  test(`saved index ${index} resumes and reloads its original beat`, async ({ page }) => {
+    await mockLibrary(page, [], {
+      prefs: { welcomed: false, welcome_beat: index },
+      persistPrefs: true,
+    });
+    await page.goto("/welcome");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+  });
+}

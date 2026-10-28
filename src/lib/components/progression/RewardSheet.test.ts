@@ -11,10 +11,7 @@ describe("RewardSheet", () => {
     exposeSettings(container);
     expect(screen.getByRole("region", { name: "Theme" })).toHaveAttribute("id", "theme");
     expect(screen.getByRole("region", { name: "Titles" })).toHaveAttribute("id", "titles");
-    expect(screen.getByRole("region", { name: "Profile artwork" })).toHaveAttribute(
-      "id",
-      "profile-artwork",
-    );
+    expect(screen.getByRole("region", { name: "Avatar" })).toHaveAttribute("id", "profile-artwork");
   });
   it("previews artwork with current count and level requirements, without equipping", async () => {
     const entries = Array.from({ length: 5 }, (_, i) => entry(i));

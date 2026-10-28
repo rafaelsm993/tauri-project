@@ -56,13 +56,18 @@
   <AppHeader heading="Settings" sticky={false} />
   {#if store.error}<ErrorNote message={store.error} />{/if}
 
-  <SettingsAccordion title="Theme" anchors={["theme"]}>
-    <ThemeSection prefs={store} {currentLevel} />
-  </SettingsAccordion>
-
-  <SettingsAccordion title="Profile" anchors={["profile-artwork", "titles"]}>
+  <SettingsAccordion
+    title="Profile"
+    anchors={["profile-artwork", "titles", "backup-title"]}
+    initiallyOpen
+  >
     <ProfileArtworkSection prefs={store} {currentLevel} entries={currentEntries} />
     <TitlesSection prefs={store} {currentLevel} />
+    <BackupSection />
+  </SettingsAccordion>
+
+  <SettingsAccordion title="Theme" anchors={["theme"]}>
+    <ThemeSection prefs={store} {currentLevel} />
   </SettingsAccordion>
 
   <SettingsAccordion title="Preferences">
@@ -116,8 +121,6 @@
       >
     </section>
   </SettingsAccordion>
-
-  <SettingsAccordion title="Backup"><BackupSection /></SettingsAccordion>
 </main>
 
 <style lang="scss">

@@ -14,21 +14,35 @@ function completed() {
   return entry;
 }
 
+const allAvatars = (["movie", "tv", "anime", "manga", "book", "game"] as const).flatMap((type, t) =>
+  Array.from({ length: 50 }, (_, i) => {
+    const e = item(810000 + t * 100 + i, type, `Avatar geometry ${type} ${i}`, {}, null);
+    e.user.status = "completed";
+    e.user.progress = 1;
+    return e;
+  }),
+);
+
 const writes = async (page: Parameters<typeof ipcCalls>[0]) =>
   (await ipcCalls(page)).filter((call) => call.cmd === "prefs_update");
 
-test("compact settings starts with four closed sections and only current values when expanded", async ({
-  page,
-}) => {
+test("settings opens Profile first with Backup inside it", async ({ page }) => {
   await mockLibrary(page, [completed()], { events: eventsAtLevel(3), seenLevel: 25 });
   await page.goto("/settings");
   await expect(page.locator("details.settings-section > summary h2")).toHaveText([
-    "Theme",
     "Profile",
+    "Theme",
     "Preferences",
-    "Backup",
   ]);
-  await expect(page.locator("details.settings-section[open]")).toHaveCount(0);
+  await expect(settingsSection(page, "Profile")).toHaveAttribute("open", "");
+  await expect(page.locator("details.settings-section[open]")).toHaveCount(1);
+  await expect(
+    settingsSection(page, "Profile").getByRole("region", { name: "Backup", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('details[data-section="Backup"]')).toHaveCount(0);
+  await expect(
+    settingsSection(page, "Profile").getByRole("button", { name: "Export backup" }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Ember", exact: true })).toHaveCount(0);
   await openSettingsSection(page, "Theme");
   await expect(page.locator(".theme-section .picker-trigger")).toHaveCount(4);
@@ -37,7 +51,7 @@ test("compact settings starts with four closed sections and only current values 
   await expect(page.locator(".theme-section #profile-artwork")).toHaveCount(0);
   await openSettingsSection(page, "Profile");
   await expect(
-    page.getByRole("button", { name: "Profile artwork: Default artwork", exact: true }),
+    page.getByRole("button", { name: "Avatar: Default avatar", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Title: Automatic", exact: true })).toBeVisible();
   await expect(settingsSection(page, "Theme")).toHaveAttribute("open", "");
@@ -161,6 +175,7 @@ test("failed dropdown save stays open and keeps the rolled-back effective select
 
 for (const [hash, owner] of [
   ["theme", "Theme"],
+  ["backup-title", "Profile"],
   ["titles", "Profile"],
   ["profile-artwork", "Profile"],
 ] as const) {
@@ -174,7 +189,7 @@ for (const [hash, owner] of [
     await page.goto("/settings");
     await page.reload();
     await expect(page.locator("main.settings")).toBeVisible();
-    await expect(page.locator("details.settings-section[open]")).toHaveCount(0);
+    await expect(settingsSection(page, "Profile")).toHaveAttribute("open", "");
     await page.evaluate((hash) => {
       const link = document.createElement("a");
       link.href = `/settings#${hash}`;
@@ -227,7 +242,7 @@ for (const theme of ["dark", "light"] as const) {
     page,
     isMobile,
   }) => {
-    await mockLibrary(page, [completed()], {
+    await mockLibrary(page, allAvatars, {
       events: eventsAtLevel(25),
       seenLevel: 25,
       prefs: { theme },
@@ -237,7 +252,7 @@ for (const theme of ["dark", "light"] as const) {
       document.documentElement.style.fontSize = "18.4px";
       document.documentElement.style.setProperty("--safe-bottom", "48px");
     });
-    const panel = await openSettingsPicker(page, "Profile artwork");
+    const panel = await openSettingsPicker(page, "Avatar");
     await expect(panel.locator(".picker-option")).toHaveCount(31);
     const bounds = await panel.boundingBox();
     expect(bounds).not.toBeNull();
@@ -282,7 +297,7 @@ test("artwork dropdown flips above a near-bottom trigger in a 360 by 560 window"
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 560 });
-  await mockLibrary(page, [completed()], {
+  await mockLibrary(page, allAvatars, {
     events: eventsAtLevel(25),
     seenLevel: 25,
     prefs: { theme: "dark" },
@@ -299,17 +314,15 @@ test("artwork dropdown flips above a near-bottom trigger in a 360 by 560 window"
     const tail = document.createElement("div");
     tail.style.height = "560px";
     document.querySelector("main.settings")!.append(tail);
-    const trigger = section.querySelector(
-      '.reward-picker[data-picker="Profile artwork"] .picker-trigger',
-    )!;
+    const trigger = section.querySelector('.reward-picker[data-picker="Avatar"] .picker-trigger')!;
     window.scrollBy({ top: trigger.getBoundingClientRect().top - 450, behavior: "instant" });
   });
-  const trigger = page.locator('.reward-picker[data-picker="Profile artwork"] .picker-trigger');
+  const trigger = page.locator('.reward-picker[data-picker="Avatar"] .picker-trigger');
   await expect.poll(async () => (await trigger.boundingBox())!.y).toBeGreaterThan(440);
   const triggerBox = (await trigger.boundingBox())!;
   expect(triggerBox.y + triggerBox.height).toBeLessThanOrEqual(512);
   await trigger.click();
-  const panel = page.locator('.reward-picker[data-picker="Profile artwork"] [popover]');
+  const panel = page.locator('.reward-picker[data-picker="Avatar"] [popover]');
   await expect(panel).toBeVisible();
   const panelBox = (await panel.boundingBox())!;
   expect(panelBox.y).toBeGreaterThanOrEqual(7);
@@ -317,5 +330,25 @@ test("artwork dropdown flips above a near-bottom trigger in a 360 by 560 window"
   const last = panel.getByRole("button", { name: "Quest Sigil tier 5", exact: true });
   await last.scrollIntoViewIfNeeded();
   await expect(last).toBeVisible();
+  expect(await writes(page)).toEqual([]);
+});
+
+test("Profile default is mount-only and independent of Theme", async ({ page }) => {
+  await page.goto("/settings");
+  await settingsSection(page, "Profile").locator(":scope > summary").click();
+  await openSettingsSection(page, "Theme");
+  await expect(settingsSection(page, "Profile")).not.toHaveAttribute("open", "");
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: "Home", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Main" })
+    .getByRole("link", { name: /^Profile/ })
+    .click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByRole("heading", { name: "Profile", exact: true, level: 1 })).toBeVisible();
+  await page.getByRole("link", { name: "Settings", exact: true }).filter({ visible: true }).click();
+  await expect(settingsSection(page, "Profile")).toHaveAttribute("open", "");
   expect(await writes(page)).toEqual([]);
 });

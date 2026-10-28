@@ -297,3 +297,23 @@ One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling d
 ### Large-library hydration
 
 `LibraryStore.hydrate()` replaces its reactive map atomically with the loaded canonical entries. It does not schedule a reactive map update for each saved item. The production regression loads 5,100 items across six media at level 200, opens all six maps and pages to the last real branch member without page errors.
+
+### Settings entry and ownership
+
+Settings renders Profile (artwork, title and Backup), Theme, then Preferences. Profile seeds native disclosure open once per mount; closing it is respected until the next visit. Hash links reveal their owner, including `#backup-title`, without preference writes or exclusive accordion behavior. The Settings header remains in normal document flow.
+
+### Mobile navigation selection
+
+The bottom navigation fills the complete selected link with `--clr-primary` and labels/icons with `--clr-on-primary`. Settings lights Profile via `within` without falsifying the current-page semantics. Local icon tokens retain readable Profile artwork and its level ring; the desktop rail retains its icon-only wash. Dusk and Ocean use dark paired foregrounds, like Ember, to meet 4.5:1 small-label contrast without changing their primary hues.
+
+### Planning weekday gestures
+
+`PlanSheet` owns the shared create/edit day picker. A primary pointer captures the group and paints each crossed row once in select/clear mode chosen at its start; cancellation/lost capture restores the pregesture draft. Pointer release never saves. Keyboard/assistive activation uses native buttons and `aria-pressed`. Touch-action is suppressed only on the picker, leaving the sheet scrollable elsewhere. Numeric weekday IDs and the existing plan-save pipeline are unchanged. Unit schedule tests use keyboard activation; actual pointer capture and touch cancellation run in the browser.
+
+### Welcome teaching and API-key drafts
+
+Welcome stores `garden`, `keys`, `planner`, `pace`, `manual` at stable indexes 0/1/3/4/5. Legacy index 2 skips to planner. Legacy taste fields remain serialized but neither welcome nor Home reads or writes them. Home starts on Movies and retains manual category navigation within the session. Four locally seeded real-component illustrations are inert, have no dialogs or remote posters, and do not save. Equipment remains in Settings. Planning copy distinguishes scheduling from logging and pages/hour from minutes/chapter, then explains manual entry and same-type catalog matching/conditional Undo. Key CTA labels use saved presence plus nonblank drafts; Continue validates and saves each pending draft through the existing keys store before advancing. Pending validation locks navigation and key inputs; failed checks/saves retain drafts, provider errors and the current beat. No new persistence fields or reward rules.
+
+### Avatar and Profile hero
+
+`ProfileAvatar` shares the Default glyph and existing artwork renderer across Settings and navigation; LevelCard centers it inside the same clockwise twelve-o’clock LevelRing used by navigation, with title then current level below. The Settings Avatar consumer filters choices by current level/completion eligibility and uses RewardPicker’s image-only variant; locked previews stay in Journey Tree. Saved unavailable/unknown equipment is retained with the normal fallback and no repair writes. Profile removes the Activity heatmap and its grid area, not event history, streaks or the library Taste chart.

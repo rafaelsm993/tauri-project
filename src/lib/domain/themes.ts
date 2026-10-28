@@ -29,6 +29,7 @@ export const ACCENTS: Record<string, Palette> = {
     tokens: {
       "--clr-primary-rgb": "139 92 246",
       "--clr-accent-rgb": "109 66 208",
+      "--clr-on-primary-rgb": "0 0 0",
     },
   },
   ocean: {
@@ -36,6 +37,7 @@ export const ACCENTS: Record<string, Palette> = {
     tokens: {
       "--clr-primary-rgb": "14 134 184",
       "--clr-accent-rgb": "10 103 142",
+      "--clr-on-primary-rgb": "0 0 0",
     },
   },
 };

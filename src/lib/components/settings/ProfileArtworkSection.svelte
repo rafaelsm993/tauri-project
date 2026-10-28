@@ -1,6 +1,6 @@
 <script lang="ts">
   import RewardPicker from "./RewardPicker.svelte";
-  import ProfileArtwork from "$lib/components/profile/ProfileArtwork.svelte";
+  import ProfileAvatar from "$lib/components/profile/ProfileAvatar.svelte";
   import { prefsStore, type PrefsStore } from "$lib/stores/prefs.svelte";
   import { UnlocksStore, unlocksStore } from "$lib/stores/unlocks.svelte";
   import { libraryStore } from "$lib/stores/library.svelte";
@@ -29,16 +29,18 @@
   const options = $derived([
     {
       value: "default",
-      label: "Default artwork",
+      label: "Default avatar",
       hint: "No completion crest",
       disabled: !prefs.loaded,
     },
-    ...equipment.artRewards.map((art) => ({
-      value: art.id,
-      label: `${art.name} tier ${art.tier}`,
-      hint: `${art.count} / ${art.required} completed · ${art.unlocked ? "Available from" : "Requires"} level ${art.level}`,
-      disabled: !equipment.canEquipArt(art.id),
-    })),
+    ...equipment.artRewards
+      .filter((art) => art.unlocked)
+      .map((art) => ({
+        value: art.id,
+        label: `${art.name} tier ${art.tier}`,
+        hint: `${art.count} / ${art.required} completed · ${art.unlocked ? "Available from" : "Requires"} level ${art.level}`,
+        disabled: !equipment.canEquipArt(art.id),
+      })),
   ]);
 
   async function choose(art: string): Promise<boolean> {
@@ -55,9 +57,10 @@
   }
 </script>
 
-<section id="profile-artwork" class="artwork-section" aria-label="Profile artwork">
+<section id="profile-artwork" class="artwork-section" aria-label="Avatar">
   <RewardPicker
-    label="Profile artwork"
+    label="Avatar"
+    imageOnly
     value={equipment.profileArt}
     {options}
     allowReselect={prefs.prefs.profile_art !== equipment.profileArt}
@@ -65,13 +68,11 @@
     onchange={choose}
   >
     {#snippet preview(option)}
-      {#if option.value === "default"}<span aria-hidden="true">—</span>
-      {:else}<ProfileArtwork art={option.value} size={32} decorative />{/if}
+      <ProfileAvatar art={option.value} size={32} decorative />
     {/snippet}
   </RewardPicker>
   <p class="hint">
-    Completion crests appear in Profile and navigation. Both the current level and completed count
-    are required.
+    Choose an unlocked avatar. Preview locked avatars and their requirements in the Journey Tree.
   </p>
   {#if prefs.loaded && prefs.prefs.profile_art !== equipment.profileArt}<p class="hint">
       Saved choice: {saved ? `${saved.name} tier ${saved.tier}` : prefs.prefs.profile_art}. Using

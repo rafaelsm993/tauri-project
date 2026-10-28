@@ -40,23 +40,23 @@ function setup(selected = "default") {
   return { prefs, update };
 }
 describe("ProfileArtworkSection", () => {
-  it("previews all thirty requirements and only equips a currently earned reward", async () => {
+  it("offers only earned avatar images and a Default glyph", async () => {
     const s = setup();
-    render(ProfileArtworkSection, { prefs: s.prefs, currentLevel: 1, entries: [entry] });
-    expect(
-      screen.getAllByRole("button").filter((button) => button.hasAttribute("aria-pressed")),
-    ).toHaveLength(31);
-    expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Silver Screen tier 2" })).toBeDisabled();
-    expect(screen.getByText(/1 \/ 5 completed/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Requires level 3/)).toHaveLength(6);
+    const { container } = render(ProfileArtworkSection, {
+      prefs: s.prefs,
+      currentLevel: 1,
+      entries: [entry],
+    });
+    const choices = screen.getAllByRole("button").filter((b) => b.hasAttribute("aria-pressed"));
+    expect(choices).toHaveLength(2);
+    expect(screen.getByRole("group", { name: "Avatar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Silver Screen tier 2" })).toBeNull();
+    expect(screen.queryByText(/1 \/ 5 completed/)).toBeNull();
+    expect(container.querySelector(".reward-picker.image-only")).not.toBeNull();
+    for (const button of choices) expect(button.querySelector("svg")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Silver Screen tier 1" }));
-    expect(s.update).toHaveBeenCalledWith({ profile_art: "movie:1" });
-    expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Default artwork" }));
+    expect(s.update).toHaveBeenLastCalledWith({ profile_art: "movie:1" });
+    await userEvent.click(screen.getByRole("button", { name: "Default avatar" }));
     expect(s.update).toHaveBeenLastCalledWith({ profile_art: "default" });
   });
   it("explains a saved unavailable choice and restores it without rewriting preferences", async () => {
@@ -69,14 +69,11 @@ describe("ProfileArtworkSection", () => {
     expect(screen.getByText(/Saved choice: Silver Screen tier 1/)).toHaveTextContent(
       "Using Default",
     );
-    expect(screen.getByRole("button", { name: "Default artwork" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Default avatar" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(screen.queryByRole("button", { name: "Silver Screen tier 1" })).toBeNull();
     await rerender({ prefs: s.prefs, currentLevel: 1, entries: [entry] });
     expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toHaveAttribute(
       "aria-pressed",
@@ -95,9 +92,9 @@ describe("ProfileArtworkSection", () => {
     for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
     s.prefs.loaded = true;
     await rerender({ prefs: s.prefs, currentLevel: null, entries: [entry] });
-    expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Silver Screen tier 1" })).toBeNull();
     await rerender({ prefs: s.prefs, currentLevel: 50, entries: null });
-    expect(screen.getByRole("button", { name: "Silver Screen tier 1" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Silver Screen tier 1" })).toBeNull();
     expect(s.update).not.toHaveBeenCalled();
   });
   it("serializes pending saves and shows failed-save rollback", async () => {
@@ -116,7 +113,7 @@ describe("ProfileArtworkSection", () => {
     expect(await screen.findByRole("status", { name: "Artwork save" })).toHaveTextContent(
       "Disk full",
     );
-    expect(screen.getByRole("button", { name: "Default artwork" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Default avatar" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

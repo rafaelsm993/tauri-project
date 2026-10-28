@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { ArcChart, Text } from "layerchart";
   import ChartCard from "./ChartCard.svelte";
-  import ProfileArtwork from "./ProfileArtwork.svelte";
-  import { XP_COLOR } from "./chartTheme";
+  import ProfileAvatar from "./ProfileAvatar.svelte";
+  import LevelRing from "$lib/components/ui/LevelRing.svelte";
   import type { LevelInfo, Title } from "$lib/domain/gamification";
-
   let {
     level,
     title,
@@ -20,10 +18,6 @@
     onburstend?: () => void;
     art?: string;
   } = $props();
-
-  const series = $derived([
-    { key: "xp", color: XP_COLOR, data: [{ key: "xp", value: level.into }] },
-  ]);
   const toNext = $derived(level.needed - level.into);
 </script>
 
@@ -36,43 +30,16 @@
       data-burst={burst || undefined}
       onanimationend={onburstend}
     >
-      <ArcChart
-        label="key"
-        value="value"
-        outerRadius={-6}
-        innerRadius={-12}
-        range={[90, -270]}
-        maxValue={level.needed}
-        cornerRadius={20}
-        {series}
-        props={{ arc: { track: { fill: "rgb(var(--clr-ink-rgb) / 0.08)" }, motion: "tween" } }}
-        tooltipContext={false}
-      >
-        {#snippet aboveMarks()}
-          <Text
-            value={String(level.level)}
-            textAnchor="middle"
-            verticalAnchor="middle"
-            class="ring-number"
-            dy={-6}
-          />
-          <Text
-            value="LEVEL"
-            textAnchor="middle"
-            verticalAnchor="middle"
-            class="ring-label"
-            dy={28}
-          />
-        {/snippet}
-      </ArcChart>
+      <LevelRing {level} />
+      <ProfileAvatar {art} size={32} scale={2} decorative />
     </div>
     <div class="level-text">
-      <ProfileArtwork {art} size={32} scale={2} />
       <p class="level-title">{title.name}</p>
+      <p class="level-current">Level {level.level}</p>
       <p class="level-xp">{xp} XP · {toNext} XP to level {level.level + 1}</p>
-      {#if title.next}
-        <p class="level-next">Next title: {title.next.name} at level {title.next.level}</p>
-      {/if}
+      {#if title.next}<p class="level-next">
+          Next title: {title.next.name} at level {title.next.level}
+        </p>{/if}
     </div>
   </div>
 </ChartCard>
@@ -80,23 +47,25 @@
 <style lang="scss">
   .level {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: $spacing-md $spacing-lg;
+    gap: $spacing-md;
     height: 100%;
+    min-width: 0;
   }
-
   .ring {
+    position: relative;
+    display: grid;
+    place-items: center;
     width: clamp(9rem, 40vw, 11rem);
+    max-width: 100%;
     aspect-ratio: 1;
     border-radius: $radius-full;
-
     &[data-burst] {
       animation: ring-burst 900ms ease-out;
     }
   }
-
   @keyframes ring-burst {
     0% {
       transform: scale(1);
@@ -110,20 +79,6 @@
       box-shadow: 0 0 0 28px rgb(var(--clr-highlight-rgb) / 0);
     }
   }
-
-  .ring :global(.ring-number) {
-    font-family: $font-display;
-    font-size: 3.4rem;
-    fill: var(--clr-text);
-  }
-
-  .ring :global(.ring-label) {
-    font-family: $font-mono;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    fill: var(--clr-text-3);
-  }
-
   .level-text {
     display: flex;
     flex-direction: column;
@@ -132,21 +87,23 @@
     min-width: 0;
     text-align: center;
   }
-
   .level-title {
     font-family: $font-display;
     font-size: clamp(1.8rem, 6vw, 2.4rem);
-    line-height: 1;
+    line-height: 1.1;
     letter-spacing: 0.03em;
     color: var(--clr-primary);
+    overflow-wrap: anywhere;
   }
-
+  .level-current {
+    font-weight: 600;
+    color: var(--clr-text);
+  }
   .level-xp {
     font-family: $font-mono;
     font-size: 0.85rem;
     color: var(--clr-text-2);
   }
-
   .level-next {
     font-size: 0.85rem;
     color: var(--clr-text-3);

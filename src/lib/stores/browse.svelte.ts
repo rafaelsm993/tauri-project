@@ -20,8 +20,6 @@ export type GenreSection = {
 // Home screen state; one instance for the session so Back returns to the same place.
 export class BrowseStore {
   activeCategory = $state<MediaType>("movie");
-  // The saved taste is adopted once a session; after that the user's own tab wins.
-  private adopted = false;
   query = $state("");
   isSearch = $state(false);
   error = $state("");
@@ -201,13 +199,6 @@ export class BrowseStore {
       this.sections = [];
       await this.loadGrid(this.query);
     }
-  }
-
-  // The welcome's taste pick decides the opening tab, once, before anything is fetched.
-  openOn(category: MediaType) {
-    if (this.adopted || this.sections.length > 0 || this.items.length > 0) return;
-    this.adopted = true;
-    this.activeCategory = category;
   }
 
   // Home mounts again on every visit; only the first visit, or one after a failure, fetches.

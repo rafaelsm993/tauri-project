@@ -195,7 +195,8 @@ describe("PlanDialog", () => {
       manga_chapter_minutes: 6,
     });
     expect(screen.getByLabelText("Minutes per chapter")).toHaveValue(6);
-    await userEvent.click(screen.getByRole("button", { name: "Mon" }));
+    screen.getByRole("button", { name: "Monday" }).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /save plan/i }));
     expect(client.update).toHaveBeenCalledWith(manga.key, {
       length: expect.objectContaining({ chapter_minutes: 6 }),

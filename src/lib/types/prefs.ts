@@ -15,6 +15,7 @@ export interface Prefs {
   // Which beat a half-finished welcome stopped on, so quitting mid-run resumes there.
   welcome_beat: number;
   // Picked during the welcome; seeds the first discover pages, empty when skipped.
+  // Legacy saved fields retained for compatibility; welcome and Home no longer read them.
   taste_families: string[];
   taste_genres: string[];
   accent: string;

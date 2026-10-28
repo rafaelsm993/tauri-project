@@ -1,11 +1,9 @@
 <script lang="ts">
-  import ProfileArtwork from "$lib/components/profile/ProfileArtwork.svelte";
-  import { COMPLETION_TYPES } from "$lib/domain/completionAchievements";
-  import { FAMILIES, FAMILY_LABELS, type Family } from "$lib/domain/dashboard";
+  import WelcomeIllustration from "./WelcomeIllustration.svelte";
   import { beatAfter, beatBefore, isLastBeat, resumeBeat, type Beat } from "$lib/domain/welcome";
   import { keysStore, KeysStore } from "$lib/stores/keys.svelte";
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
-  import { BEATS } from "$lib/domain/welcome";
+  import { beatIndex } from "$lib/domain/welcome";
   import type { Keyed } from "$lib/api/keys";
   import { untrack } from "svelte";
 
@@ -17,8 +15,21 @@
 
   // Seeded once from the saved run; the flow owns them from here on.
   let beat = $state<Beat>(untrack(() => resumeBeat(prefs.prefs.welcome_beat)));
-  let picked = $state<Family[]>(untrack(() => [...(prefs.prefs.taste_families as Family[])]));
   let drafts = $state<Record<string, string>>({ tmdb: "", rawg: "" });
+
+  let advancing = $state(false);
+  const pending = $derived(advancing || keys.busy);
+  const hasTmdb = $derived(keys.presence.tmdb || drafts.tmdb.trim().length > 0);
+  const hasRawg = $derived(keys.presence.rawg || drafts.rawg.trim().length > 0);
+  const keyContinue = $derived(
+    hasTmdb && hasRawg
+      ? "Continue"
+      : hasTmdb
+        ? "Continue without RAWG key"
+        : hasRawg
+          ? "Continue without TMDB key"
+          : "Continue without keys",
+  );
 
   const PROVIDERS: { which: Keyed; label: string; serves: string }[] = [
     { which: "tmdb", label: "TMDB key", serves: "Movies and TV shows" },
@@ -27,31 +38,38 @@
 
   async function go(next: Beat) {
     beat = next;
-    await prefs.update({ welcome_beat: BEATS.indexOf(next) });
+    await prefs.update({ welcome_beat: beatIndex(next) });
   }
 
   async function finish() {
     await prefs.update({
       welcomed: true,
       welcome_beat: 0,
-      taste_families: picked,
     });
     ondone();
   }
 
+  async function saveKey(which: Keyed): Promise<boolean> {
+    const saved = await keys.save(which, drafts[which]);
+    if (saved) drafts = { ...drafts, [which]: "" };
+    return saved;
+  }
+
   async function forward() {
-    if (beat === "taste") await prefs.update({ taste_families: picked });
-    const next = beatAfter(beat);
-    if (next === null) await finish();
-    else await go(next);
-  }
-
-  function toggle(family: Family) {
-    picked = picked.includes(family) ? picked.filter((f) => f !== family) : [...picked, family];
-  }
-
-  async function saveKey(which: Keyed) {
-    if (await keys.save(which, drafts[which])) drafts = { ...drafts, [which]: "" };
+    if (pending) return;
+    advancing = true;
+    try {
+      if (beat === "keys") {
+        for (const provider of PROVIDERS) {
+          if (drafts[provider.which].trim() && !(await saveKey(provider.which))) return;
+        }
+      }
+      const next = beatAfter(beat);
+      if (next === null) await finish();
+      else await go(next);
+    } finally {
+      advancing = false;
+    }
   }
 
   const back = $derived(beatBefore(beat));
@@ -62,26 +80,19 @@
     {#if beat === "garden"}
       <h1 class="welcome-title">Your library is a thing you grow</h1>
       <p class="welcome-text">
-        Everything you save takes root in Runewood. Complete stories across six media paths to earn
-        artwork; your current level and completions determine what you can equip. This is an example
-        &mdash; yours starts empty.
+        Your Journey Tree grows across six media paths. Preview locked rewards there, then equip
+        earned avatars, titles and themes in Settings. Current level and completions determine what
+        stays unlocked.
       </p>
-      <div
-        class="welcome-roots"
-        role="img"
-        aria-label="Six Runewood paths: movies, TV, anime, manga, books and games"
-      >
-        {#each COMPLETION_TYPES as type (type)}<ProfileArtwork
-            art={`${type}:1`}
-            size={32}
-            decorative
-          />{/each}
-      </div>
+      <p class="welcome-text">
+        This example shows the Books path. Your own tree reflects your library.
+      </p>
     {:else if beat === "keys"}
       <h1 class="welcome-title">Bring your own keys</h1>
       <p class="welcome-text">
         Movies, TV and games come from providers that ask for a free key of your own. Books, anime
-        and manga need nothing. You can add keys later in Settings.
+        and manga need nothing. You can add keys later in Settings. Keys are checked when you save
+        or continue.
       </p>
       <div class="welcome-keys">
         {#each PROVIDERS as provider (provider.which)}
@@ -98,12 +109,13 @@
                 autocomplete="off"
                 spellcheck="false"
                 placeholder={keys.presence[provider.which] ? "Saved" : "Paste your key"}
+                disabled={pending}
                 bind:value={drafts[provider.which]}
               />
               <button
                 type="button"
                 class="welcome-btn"
-                disabled={keys.busy || drafts[provider.which].trim().length === 0}
+                disabled={pending || drafts[provider.which].trim().length === 0}
                 onclick={() => saveKey(provider.which)}
               >
                 Save
@@ -118,46 +130,64 @@
           </div>
         {/each}
       </div>
-    {:else if beat === "taste"}
-      <h1 class="welcome-title">What do you want to track?</h1>
-      <p class="welcome-text">
-        Pick anything that sounds like you. It only decides what the home screen shows first, and
-        you can change it any time.
-      </p>
-      <div class="welcome-tiles">
-        {#each FAMILIES as family (family)}
-          <button
-            type="button"
-            class="welcome-tile"
-            class:picked={picked.includes(family)}
-            aria-pressed={picked.includes(family)}
-            onclick={() => toggle(family)}
-          >
-            {FAMILY_LABELS[family]}
-          </button>
-        {/each}
-      </div>
-    {:else}
+    {:else if beat === "planner"}
       <h1 class="welcome-title">Plan it when you are ready</h1>
       <p class="welcome-text">
-        The planner turns what you are watching and reading into sessions for the week ahead. It is
-        there when you want it, and quiet when you do not.
+        Save an item, then choose days and time per session in Plan. Tap days or drag to select
+        several; start on a selected day to clear.
+      </p>
+      <p class="welcome-text">
+        Planning schedules time. Log session records progress. The preview estimates your finish
+        date.
+      </p>
+    {:else if beat === "pace"}
+      <h1 class="welcome-title">Pages and chapters need different paces</h1>
+      <p class="welcome-text">
+        Books use pages per hour; manga uses minutes per chapter. A chapter is not a page.
+      </p>
+      <p class="welcome-text">
+        Set defaults in Settings → Preferences. Plan can ask for missing lengths and pace;
+        individual manga can keep their own chapter time.
+      </p>
+    {:else if beat === "manual"}
+      <h1 class="welcome-title">Add anything, match it later</h1>
+      <p class="welcome-text">
+        Use Add manually when a search has no match. Add the required length to plan and track it.
+      </p>
+      <p class="welcome-text">
+        Find a match previews a catalog item of the same media type. Catalog details replace manual
+        details; tracking data is combined. Undo works only while the merged result remains
+        unchanged. This is not backup import.
       </p>
     {/if}
+    {#if beat !== "keys"}<WelcomeIllustration {beat} />{/if}
   </div>
 
   <div class="welcome-actions">
-    <button type="button" class="welcome-skip" onclick={finish}>Skip</button>
+    <button type="button" class="welcome-skip" disabled={pending} onclick={finish}>Skip</button>
     <div class="welcome-move">
       {#if back !== null}
-        <button type="button" class="welcome-btn" onclick={() => go(back)}>Back</button>
+        <button type="button" class="welcome-btn" disabled={pending} onclick={() => go(back)}
+          >Back</button
+        >
       {/if}
       {#if beat === "keys"}
-        <button type="button" class="welcome-btn welcome-btn-go" onclick={forward}>
-          Continue without keys
+        <button
+          aria-busy={pending}
+          type="button"
+          class="welcome-btn welcome-btn-go"
+          disabled={pending}
+          onclick={forward}
+        >
+          {pending ? "Checking keys…" : keyContinue}
         </button>
       {:else}
-        <button type="button" class="welcome-btn welcome-btn-go" onclick={forward}>
+        <button
+          type="button"
+          class="welcome-btn welcome-btn-go"
+          disabled={pending}
+          onclick={forward}
+        >
           {isLastBeat(beat) ? "Start" : "Next"}
         </button>
       {/if}
@@ -193,16 +223,6 @@
     max-width: 48ch;
     font-size: 0.95rem;
     color: var(--clr-text-2);
-  }
-
-  .welcome-roots {
-    display: flex;
-    flex-wrap: wrap;
-    gap: $spacing-md;
-    padding: $spacing-md;
-    border-radius: $radius-md;
-    background: var(--clr-surface-2);
-    min-width: 0;
   }
 
   .welcome-keys {
@@ -259,38 +279,6 @@
     background: var(--clr-surface);
     color: var(--clr-text);
     font-size: 0.85rem;
-
-    @include touch {
-      min-height: $touch-target;
-    }
-  }
-
-  .welcome-tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: $spacing-sm;
-  }
-
-  .welcome-tile {
-    padding: $spacing-md;
-    border: 1px solid var(--clr-border-2);
-    border-radius: $radius-md;
-    background: var(--clr-surface-2);
-    color: var(--clr-text);
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-
-    &.picked {
-      background: var(--clr-primary);
-      border-color: transparent;
-      color: var(--clr-on-primary);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--clr-accent);
-      outline-offset: 2px;
-    }
 
     @include touch {
       min-height: $touch-target;

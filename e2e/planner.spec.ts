@@ -80,7 +80,10 @@ test("planning from the library card shows up in the planner", async ({ page }) 
   await page.goto("/library");
   await page.getByRole("button", { name: "Plan Arcane" }).click();
   const dialog = page.getByRole("dialog", { name: "Plan Arcane" });
-  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Tue" }).click();
+  await dialog
+    .getByRole("group", { name: "Days" })
+    .getByRole("button", { name: "Tuesday" })
+    .click();
   await dialog.getByRole("button", { name: "More episodes" }).click();
   await expect(dialog).toContainText(/finishes/i);
   await dialog.getByRole("button", { name: "Save plan" }).click();
@@ -102,7 +105,10 @@ test("a new plan for an episode-length item starts at one full episode", async (
     "aria-pressed",
     "true",
   );
-  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Tue" }).click();
+  await dialog
+    .getByRole("group", { name: "Days" })
+    .getByRole("button", { name: "Tuesday" })
+    .click();
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toBeHidden();
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
@@ -154,7 +160,7 @@ test("a book's reading pace can be changed in its plan", async ({ page }) => {
   const pace = dialog.getByLabel("Pages per hour");
   await expect(pace).toHaveValue("30");
   await pace.fill("60");
-  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Mon" }).click();
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Monday" }).click();
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toBeHidden();
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "prefs_update");
@@ -166,7 +172,7 @@ test("the plan sheet never talks about being behind", async ({ page }) => {
   await page.goto("/planner");
   await page.getByRole("button", { name: /^Edit Frieren/ }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "Fri" }).click();
+  await dialog.getByRole("button", { name: "Friday" }).click();
   await expect(dialog).toContainText(/than before|same finish date/i);
   await expect(dialog).not.toContainText(/behind|overdue|missed|\blate\b/i);
 });
@@ -220,7 +226,10 @@ test("a new plan takes the episode length the catalog lists", async ({ page }) =
     "aria-pressed",
     "true",
   );
-  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Tue" }).click();
+  await dialog
+    .getByRole("group", { name: "Days" })
+    .getByRole("button", { name: "Tuesday" })
+    .click();
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toHaveCount(0);
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
@@ -294,7 +303,10 @@ test("an anime plans whole episodes around Full episode, with a quiet Custom", a
   // Custom types straight into the centre.
   await expect(picker.getByLabel("Minutes per session")).toBeFocused();
   await dialog.getByLabel("Minutes per session").fill("100");
-  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Sat" }).click();
+  await dialog
+    .getByRole("group", { name: "Days" })
+    .getByRole("button", { name: "Saturday" })
+    .click();
   await dialog.getByRole("button", { name: "Save plan" }).click();
   await expect(dialog).toHaveCount(0);
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
@@ -312,7 +324,7 @@ test("a book plans by the hour and shows the pages", async ({ page }) => {
   await expect(picker).toContainText("≈ 30 pages");
   await picker.getByRole("button", { name: "30 min more" }).click();
   await expect(picker).toContainText("≈ 45 pages");
-  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Mon" }).click();
+  await dialog.getByRole("group", { name: "Days" }).getByRole("button", { name: "Monday" }).click();
   await dialog.getByRole("button", { name: "Save plan" }).click();
   const saved = (await ipcCalls(page)).filter((c) => c.cmd === "library_update");
   expect(saved.at(-1)?.args).toMatchObject({ patch: { plan: { max_session_minutes: 90 } } });

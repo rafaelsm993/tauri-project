@@ -3,56 +3,29 @@ import {
   BEATS,
   beatAfter,
   beatBefore,
-  firstBeat,
-  isLastBeat,
+  beatIndex,
   resumeBeat,
+  isLastBeat,
   shouldWelcome,
-  type Beat,
 } from "./welcome";
-
-describe("welcome beats", () => {
-  it("runs garden, keys, taste, planner in order", () => {
-    expect(BEATS).toEqual(["garden", "keys", "taste", "planner"]);
-  });
-
-  it("starts at the first beat", () => {
-    expect(firstBeat()).toBe("garden");
-  });
-
-  it("walks forward to the end and stops", () => {
-    expect(beatAfter("garden")).toBe("keys");
-    expect(beatAfter("keys")).toBe("taste");
-    expect(beatAfter("taste")).toBe("planner");
-    expect(beatAfter("planner")).toBe(null);
-  });
-
-  it("walks back and stops at the first", () => {
-    expect(beatBefore("planner")).toBe("taste");
-    expect(beatBefore("garden")).toBe(null);
-  });
-
-  it("knows the last beat", () => {
-    expect(isLastBeat("planner")).toBe(true);
-    expect(isLastBeat("taste")).toBe(false);
-  });
-});
-
-describe("resumeBeat", () => {
-  it("starts a fresh run at the first beat", () => {
-    expect(resumeBeat(0)).toBe("garden");
-  });
-
-  it("returns to where the user stopped", () => {
-    expect(resumeBeat(2)).toBe("taste");
-  });
-
-  it("clamps a stored beat past the end back to the last one", () => {
-    expect(resumeBeat(99)).toBe("planner");
-  });
-
-  it("clamps a negative stored beat to the first", () => {
-    expect(resumeBeat(-3)).toBe("garden");
-  });
+it("skips taste but preserves old stored indexes", () => {
+  expect(BEATS).toEqual(["garden", "keys", "planner", "pace", "manual"]);
+  expect(beatAfter("keys")).toBe("planner");
+  expect(beatBefore("planner")).toBe("keys");
+  expect([0, 1, 2, 3, 4, 5, 99, -1].map(resumeBeat)).toEqual([
+    "garden",
+    "keys",
+    "planner",
+    "planner",
+    "pace",
+    "manual",
+    "manual",
+    "garden",
+  ]);
+  expect(BEATS.map(beatIndex)).toEqual([0, 1, 3, 4, 5]);
+  for (const b of BEATS) expect(resumeBeat(beatIndex(b))).toBe(b);
+  expect(isLastBeat("manual")).toBe(true);
+  expect(beatAfter("manual")).toBeNull();
 });
 
 describe("shouldWelcome", () => {
@@ -76,13 +49,5 @@ describe("shouldWelcome", () => {
 
   it("still skips a library owner who was never welcomed", () => {
     expect(shouldWelcome({ ready: true, welcomed: false, entries: 1 })).toBe(false);
-  });
-});
-
-describe("beat index", () => {
-  it("maps every beat to the number stored in prefs and back", () => {
-    for (const [i, beat] of BEATS.entries()) {
-      expect(resumeBeat(i)).toBe(beat as Beat);
-    }
   });
 });

@@ -1,8 +1,7 @@
 <script lang="ts">
   import { resolve } from "$app/paths";
   import LevelRing from "./LevelRing.svelte";
-  import ProfileArtwork from "$lib/components/profile/ProfileArtwork.svelte";
-  import { PROFILE_ART } from "$lib/domain/profileArt";
+  import ProfileAvatar from "$lib/components/profile/ProfileAvatar.svelte";
   import type { Section } from "$lib/domain/navigation";
   import type { LevelInfo } from "$lib/domain/gamification";
 
@@ -16,13 +15,11 @@
     progress?: { level: LevelInfo; title: string };
     art?: string;
   } = $props();
-  const hasArt = $derived(PROFILE_ART.some((reward) => reward.id === art));
 
-  const ICONS: Record<Section, string> = {
+  const ICONS: Record<Exclude<Section, "profile">, string> = {
     home: "M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z",
     library: "M5 4h4v16H5zM10 4h4v16h-4zM15.5 5l3.8-1 2.7 15.5-3.8 1z",
     planner: "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
-    profile: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4.4 3.6-8 8-8s8 3.6 8 8",
     settings:
       "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.8-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.3 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.8 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.8H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1z",
   };
@@ -51,8 +48,8 @@
           aria-label={name(tab)}
         >
           <span class="icon">
-            {#if tab.section === "profile" && hasArt}
-              <ProfileArtwork {art} size={24} decorative />
+            {#if tab.section === "profile"}
+              <ProfileAvatar {art} size={24} decorative />
             {:else}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={ICONS[tab.section]} /></svg>
             {/if}
@@ -174,6 +171,11 @@
       stroke-linejoin: round;
     }
 
+    :global(.default-avatar) {
+      width: 22px;
+      height: 22px;
+    }
+
     :global(.level-ring) {
       inset: -3px auto auto 50%;
       width: 34px;
@@ -197,6 +199,43 @@
 
       .icon {
         background: rgb(var(--clr-primary-rgb) / 0.22);
+      }
+    }
+  }
+
+  @include respond-to(md) {
+    .tab-item {
+      padding: 2px $spacing-xs;
+    }
+    .tab {
+      height: 100%;
+      gap: 0;
+      padding: 0;
+      border-radius: $radius-lg;
+    }
+    .tab .icon {
+      height: 34px;
+      flex-shrink: 0;
+      :global(.level-ring) {
+        top: 0;
+      }
+    }
+    .tab .label {
+      line-height: 1.2;
+    }
+    .tab[aria-current="page"],
+    .tab.within {
+      background: var(--clr-primary);
+      color: var(--clr-on-primary);
+
+      .icon {
+        background: transparent;
+        --clr-primary: var(--clr-on-primary);
+        --clr-shade-rgb: var(--clr-primary-rgb);
+        --clr-ink-rgb: var(--clr-on-primary-rgb);
+      }
+      &:focus-visible {
+        outline-color: var(--clr-on-primary);
       }
     }
   }

@@ -72,26 +72,30 @@ describe("PlanSheet", () => {
     setup();
     const days = within(screen.getByRole("group", { name: /days/i })).getAllByRole("button");
     expect(days.map((d) => d.textContent?.trim())).toEqual([
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-      "Sat",
-      "Sun",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
     ]);
     expect(days.every((d) => d.getAttribute("aria-pressed") === "false")).toBe(true);
     expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     expect(day(/mon/i)).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: /^save plan/i })).toBeEnabled();
   });
 
   it("previews the sessions and the finish date as the conditions change", async () => {
     setup();
-    await userEvent.click(day(/mon/i));
-    await userEvent.click(day(/wed/i));
-    await userEvent.click(day(/fri/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
+    day(/wed/i).focus();
+    await userEvent.keyboard("[Space]");
+    day(/fri/i).focus();
+    await userEvent.keyboard("[Space]");
     expect(
       screen.getByText("10 sessions of about 45 min · finishes Fri, Oct 23"),
     ).toBeInTheDocument();
@@ -105,7 +109,8 @@ describe("PlanSheet", () => {
     const { onsave } = setup();
     expect(center()).toHaveAccessibleName("Full episode 45 min");
     expect(center()).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(45);
   });
@@ -116,7 +121,8 @@ describe("PlanSheet", () => {
     expect(full).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(screen.getByRole("button", { name: "1 h" }));
     expect(full).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(day(/sat/i));
+    day(/sat/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(60);
   });
@@ -160,7 +166,8 @@ describe("PlanSheet", () => {
     await userEvent.click(fewer());
     expect(center()).toHaveAccessibleName("Full episode 45 min");
     await userEvent.click(more());
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(90);
   });
@@ -190,7 +197,8 @@ describe("PlanSheet", () => {
     expect(customBtn()).toHaveAttribute("aria-pressed", "true");
     const input = customInput();
     expect(input).toHaveAttribute("min", "45");
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.clear(input);
     await userEvent.type(input, "30");
     expect(screen.getByText("At least one episode (45 min).")).toBeInTheDocument();
@@ -238,7 +246,8 @@ describe("PlanSheet", () => {
       expect(screen.getByText(/filled in from tmdb/i)).toBeInTheDocument();
       expect(center()).toHaveAccessibleName("Full episode 24 min");
       expect(center()).toHaveAttribute("aria-pressed", "true");
-      await userEvent.click(day(/tue/i));
+      day(/tue/i).focus();
+      await userEvent.keyboard("[Space]");
       await userEvent.click(screen.getByRole("button", { name: "Save plan" }));
       expect(onsave.mock.calls[0][0].length).toMatchObject({ episodes: 48, episode_minutes: 24 });
       expect(onsave.mock.calls[0][0].plan.max_session_minutes).toBe(24);
@@ -248,7 +257,8 @@ describe("PlanSheet", () => {
       const { onsave } = setup({ entry: entry("tv", { episodes: 10 }, null, 0), found: FOUND });
       expect(screen.queryByLabelText("Episodes")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Minutes per episode")).toHaveValue(24);
-      await userEvent.click(day(/tue/i));
+      day(/tue/i).focus();
+      await userEvent.keyboard("[Space]");
       await userEvent.click(screen.getByRole("button", { name: "Save plan" }));
       expect(onsave.mock.calls[0][0].length).toMatchObject({ episodes: 10, episode_minutes: 24 });
     });
@@ -303,7 +313,8 @@ describe("PlanSheet", () => {
 
   it("keeps the book's session readable while the pace is cleared", async () => {
     setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 30 });
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.clear(screen.getByLabelText(/pages per hour/i));
     expect(sessionGroup()).not.toHaveTextContent("NaN");
     expect(sessionGroup()).toHaveTextContent("1 h");
@@ -334,8 +345,10 @@ describe("PlanSheet", () => {
 
   it("saves the chosen days, session length and today as the start", async () => {
     const { onsave } = setup();
-    await userEvent.click(day(/sat/i));
-    await userEvent.click(day(/tue/i));
+    day(/sat/i).focus();
+    await userEvent.keyboard("[Space]");
+    day(/tue/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave).toHaveBeenCalledWith({
       plan: { days: [1, 5], max_session_minutes: 45, since: TODAY },
@@ -346,7 +359,8 @@ describe("PlanSheet", () => {
 
   it("takes a custom session length between 30 and 720 minutes", async () => {
     const { onsave } = setup({ entry: entry("game", { hours: 20 }) });
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(customBtn());
     const input = customInput();
     await userEvent.clear(input);
@@ -368,7 +382,8 @@ describe("PlanSheet", () => {
     expect(screen.queryByLabelText(/^episodes/i)).not.toBeInTheDocument();
     const minutes = screen.getByLabelText(/minutes per episode/i);
     expect(minutes).toHaveAttribute("aria-required", "true");
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();
     await userEvent.type(minutes, "30");
     expect(screen.getByText(/finishes/i)).toBeInTheDocument();
@@ -383,7 +398,8 @@ describe("PlanSheet", () => {
     expect(pace).toHaveValue(30);
     await userEvent.clear(pace);
     await userEvent.type(pace, "60");
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].pagesPerHour).toBe(60);
   });
@@ -393,7 +409,8 @@ describe("PlanSheet", () => {
     const pace = screen.getByLabelText(/pages per hour/i);
     expect(pace).toHaveValue(45);
     expect(screen.getByText("Kept for every book. Also in Settings.")).toBeInTheDocument();
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].pagesPerHour).toBeNull();
     await userEvent.clear(pace);
@@ -404,7 +421,8 @@ describe("PlanSheet", () => {
 
   it("previews with the pace being typed", async () => {
     setup({ entry: entry("book", { pages: 300 }), pagesPerHour: 30 });
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     expect(screen.getByText(/^10 sessions/)).toBeInTheDocument();
     const pace = screen.getByLabelText(/pages per hour/i);
     await userEvent.clear(pace);
@@ -420,7 +438,8 @@ describe("PlanSheet", () => {
       screen.getByText("Filled in from Settings. Change it here for just this manga."),
     ).toBeInTheDocument();
     expect(center()).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(day(/mon/i));
+    day(/mon/i).focus();
+    await userEvent.keyboard("[Space]");
     await userEvent.click(screen.getByRole("button", { name: /^save plan/i }));
     expect(onsave.mock.calls[0][0].length?.chapter_minutes).toBe(6);
   });
@@ -436,10 +455,13 @@ describe("PlanSheet", () => {
     setup({ entry: entry("tv", { episodes: 8, episode_minutes: 60 }, plan) });
     expect(day(/wed/i)).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/same finish date/i)).toBeInTheDocument();
-    await userEvent.click(day(/fri/i));
+    day(/fri/i).focus();
+    await userEvent.keyboard("[Space]");
     expect(screen.getByText(/finishes 5 days later than before/i)).toBeInTheDocument();
-    await userEvent.click(day(/sat/i));
-    await userEvent.click(day(/sun/i));
+    day(/sat/i).focus();
+    await userEvent.keyboard("[Space]");
+    day(/sun/i).focus();
+    await userEvent.keyboard("[Space]");
     expect(screen.getByText("Finishes 2 days earlier than before.")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/behind|late |overdue|missed/i);
   });
@@ -455,4 +477,14 @@ describe("PlanSheet", () => {
     setup();
     expect(screen.queryByRole("button", { name: /stop planning/i })).not.toBeInTheDocument();
   });
+});
+
+it("busy weekdays reject keyboard activation without saving", async () => {
+  const { onsave } = setup({ busy: true });
+  for (const button of within(screen.getByRole("group", { name: "Days" })).getAllByRole("button"))
+    expect(button).toBeDisabled();
+  day(/mon/i).focus();
+  await userEvent.keyboard("[Space]");
+  expect(day(/mon/i)).toHaveAttribute("aria-pressed", "false");
+  expect(onsave).not.toHaveBeenCalled();
 });

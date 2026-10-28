@@ -7,7 +7,6 @@
   import LevelCard from "./LevelCard.svelte";
   import StatTiles from "./StatTiles.svelte";
   import ProgressionCard from "./ProgressionCard.svelte";
-  import ActivityCard from "./ActivityCard.svelte";
   import StatusCard from "./StatusCard.svelte";
   import TasteCard from "./TasteCard.svelte";
 
@@ -92,7 +91,6 @@
         streak={store.streak}
       />
       <ProgressionCard weeks={store.weeks} today={store.today} />
-      <ActivityCard activity={store.activity} today={store.today} streak={store.streak} />
       <StatusCard counts={store.statuses} />
       <TasteCard families={store.families} />
       <ForecastCard
@@ -157,7 +155,7 @@
     grid-template-columns: repeat(12, minmax(0, 1fr));
     grid-template-areas:
       "level level level level stats stats stats stats stats stats stats stats"
-      "progression progression progression progression progression progression progression progression activity activity activity activity"
+      "progression progression progression progression progression progression progression progression progression progression progression progression"
       "library library library library taste taste taste taste forecast forecast forecast forecast";
 
     @include respond-to(lg) {
@@ -165,7 +163,7 @@
       grid-template-areas:
         "level stats"
         "progression progression"
-        "activity library"
+        "library library"
         "taste forecast";
     }
 
@@ -175,7 +173,6 @@
         "level"
         "stats"
         "progression"
-        "activity"
         "library"
         "taste"
         "forecast";

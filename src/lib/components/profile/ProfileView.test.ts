@@ -117,15 +117,7 @@ describe("ProfileView", () => {
   it("keeps its dashboard without mounting a journey tree", async () => {
     const { container } = render(ProfileView, { store: storeWith(LOG) });
     await screen.findByRole("region", { name: "Stats" });
-    for (const name of [
-      "Level",
-      "Stats",
-      "Progression",
-      "Activity",
-      "Library",
-      "Taste",
-      "Forecast",
-    ])
+    for (const name of ["Level", "Stats", "Progression", "Library", "Taste", "Forecast"])
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Main progression tree" })).toBeNull();
     expect(screen.queryByRole("group", { name: "Explore media trees" })).toBeNull();
@@ -147,24 +139,24 @@ describe("ProfileView", () => {
       update,
     });
     await prefs.hydrate();
-    render(ProfileView, { store, library, prefs });
-    expect(await screen.findByRole("img", { name: "Silver Screen artwork" })).toBeInTheDocument();
+    const { container } = render(ProfileView, { store, library, prefs });
+    expect(container.querySelectorAll(".ring .profile-artwork")).toHaveLength(1);
     prefs.loaded = false;
     await tick();
-    expect(screen.queryByRole("img", { name: "Silver Screen artwork" })).toBeNull();
+    expect(container.querySelectorAll(".ring .profile-artwork")).toHaveLength(0);
     prefs.loaded = true;
     await tick();
-    expect(screen.getByRole("img", { name: "Silver Screen artwork" })).toBeInTheDocument();
+    expect(container.querySelectorAll(".ring .profile-artwork")).toHaveLength(1);
     store.loaded = false;
     await tick();
-    expect(screen.queryByRole("img", { name: "Silver Screen artwork" })).toBeNull();
+    expect(container.querySelectorAll(".ring .profile-artwork")).toHaveLength(0);
     store.loaded = true;
     await tick();
-    expect(screen.getByRole("img", { name: "Silver Screen artwork" })).toBeInTheDocument();
+    expect(container.querySelectorAll(".ring .profile-artwork")).toHaveLength(1);
     collection = [];
     await library.reload();
     await tick();
-    expect(screen.queryByRole("img", { name: "Silver Screen artwork" })).toBeNull();
+    expect(container.querySelectorAll(".ring .profile-artwork")).toHaveLength(0);
     expect(prefs.prefs.profile_art).toBe("movie:1");
     expect(update).not.toHaveBeenCalled();
   });
@@ -227,16 +219,11 @@ describe("ProfileView", () => {
     expect(table).toHaveTextContent("130");
   });
 
-  it("describes the streak heatmap, with each active day readable without hover", async () => {
+  it("omits Activity while retaining streak stats and the other charts", async () => {
     render(ProfileView, { store: storeWith(LOG) });
-    const card = await screen.findByRole("region", { name: "Activity" });
-    expect(
-      within(card).getByRole("img", { name: /2 active days in the last 16 weeks/ }),
-    ).toBeInTheDocument();
-    expect(within(card).getByText(/longest 2 days/)).toBeInTheDocument();
-    const days = within(card).getByRole("table", { name: "Active days" });
-    expect(days).toHaveTextContent("2026-09-191 action");
-    expect(days).toHaveTextContent("2026-09-201 action");
+    await screen.findByRole("region", { name: "Stats" });
+    expect(screen.queryByRole("region", { name: "Activity" })).toBeNull();
+    expect(screen.getByRole("group", { name: "Streak" })).toBeInTheDocument();
   });
 
   it("describes the library by status and by family", async () => {

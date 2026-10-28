@@ -5,7 +5,6 @@
   import type { MediaItem } from "$lib/types/media";
   import { browseStore as browse } from "$lib/stores/browse.svelte";
   import { prefsStore as prefs } from "$lib/stores/prefs.svelte";
-  import { firstCategory } from "$lib/domain/taste";
   import { libraryStore } from "$lib/stores/library.svelte";
   import { continueItems } from "$lib/domain/libraryView";
   import { replannedText } from "$lib/domain/reminders";
@@ -55,12 +54,10 @@
     );
   }
 
-  // Prefs may still be loading when Home mounts, so wait for them before fetching: the saved
-  // taste decides the opening tab, and openOn only acts once, before anything is loaded.
+  // Wait for saved preferences; the browse store owns the user's current category.
   $effect(() => {
     if (!prefs.ready) return;
     untrack(() => {
-      browse.openOn(firstCategory(prefs.prefs.taste_families));
       void browse.ensureLoaded();
     });
   });

@@ -101,8 +101,9 @@ test("Profile: 5100 items retain charts without a journey map", async ({ page },
   await page.goto("/profile");
   const level = page.getByRole("region", { name: "Level", exact: true });
   await expect(level.getByRole("img", { name: /^Level 200,/ })).toBeVisible();
-  for (const name of ["Stats", "Progression", "Activity", "Library", "Taste", "Forecast"])
+  for (const name of ["Stats", "Progression", "Library", "Taste", "Forecast"])
     await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Activity", exact: true })).toHaveCount(0);
   await expect(page.locator(".progression-tree")).toHaveCount(0);
   expect(
     await page.evaluate(

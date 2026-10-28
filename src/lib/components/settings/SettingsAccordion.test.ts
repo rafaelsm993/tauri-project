@@ -28,3 +28,12 @@ it("starts collapsed with a real summary instead of a custom clickable div", () 
   expect(details.querySelector("summary")).toHaveTextContent("Theme");
   expect(screen.getByRole("heading", { name: "Theme" })).toBeInTheDocument();
 });
+
+it("opens once by request and lets the user close it", async () => {
+  const { container } = render(SettingsAccordion, { title: "Profile", initiallyOpen: true });
+  const details = container.querySelector("details")!;
+  expect(details.open).toBe(true);
+  details.open = false;
+  details.dispatchEvent(new Event("toggle"));
+  await waitFor(() => expect(details.open).toBe(false));
+});

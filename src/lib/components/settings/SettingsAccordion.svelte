@@ -1,16 +1,19 @@
 <script lang="ts">
-  import { tick, type Snippet } from "svelte";
+  import { tick, untrack, type Snippet } from "svelte";
   import { page } from "$app/state";
   let {
     title,
     anchors = [],
+    initiallyOpen = false,
     children,
   }: {
     title: string;
     anchors?: string[];
+    initiallyOpen?: boolean;
     children?: Snippet;
   } = $props();
   let details = $state<HTMLDetailsElement>();
+  let open = $state(untrack(() => initiallyOpen));
 
   $effect(() => {
     const hash = page.url?.hash.slice(1) ?? "";
@@ -21,6 +24,7 @@
 
   function toggled(event: Event) {
     const node = event.currentTarget as HTMLDetailsElement;
+    open = node.open;
     if (node.open) return;
     node.querySelectorAll<HTMLElement>("[popover]").forEach((panel) => {
       if (panel.matches(":popover-open")) panel.hidePopover();
@@ -28,7 +32,13 @@
   }
 </script>
 
-<details bind:this={details} class="settings-section" data-section={title} ontoggle={toggled}>
+<details
+  bind:open
+  bind:this={details}
+  class="settings-section"
+  data-section={title}
+  ontoggle={toggled}
+>
   <summary>
     <h2>{title}</h2>
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>

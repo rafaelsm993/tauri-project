@@ -73,6 +73,14 @@
     min-width: 0;
   }
 
+  .chart :global(.lc-legend-container) {
+    width: 100%;
+  }
+  .chart :global(.lc-legend-swatch-group) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
   .sr {
     @include sr-only;
   }

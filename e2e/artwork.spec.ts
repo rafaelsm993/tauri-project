@@ -72,14 +72,14 @@ test("artwork equips from Profile settings and persists in Profile and navigatio
     persistPrefs: true,
   });
   await page.goto("/settings");
-  await openSettingsPicker(page, "Profile artwork");
-  const art = await openSettingsChoice(page, "Profile artwork", "Silver Screen tier 1");
+  await openSettingsPicker(page, "Avatar");
+  const art = await openSettingsChoice(page, "Avatar", "Silver Screen tier 1");
   await expect(art).toBeEnabled();
   expect(
     await page
-      .locator('.artwork-section .picker-option:not([aria-label="Default artwork"])')
+      .locator('.artwork-section .picker-option:not([aria-label="Default avatar"])')
       .count(),
-  ).toBe(30);
+  ).toBe(1);
   await art.hover();
   await art.focus();
   expect((await ipcCalls(page)).filter((c) => c.cmd === "prefs_update")).toEqual([]);
@@ -91,14 +91,11 @@ test("artwork equips from Profile settings and persists in Profile and navigatio
   await expect(art).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("link", { name: "Profile · Level 3", exact: true }).click();
   const level = page.getByRole("region", { name: "Level" });
-  await expect(level.getByRole("img", { name: "Silver Screen artwork" })).toHaveAttribute(
-    "width",
-    "64",
-  );
+  await expect(level.locator(".ring .profile-artwork")).toHaveAttribute("width", "64");
   await expect(level.getByRole("img", { name: /^Level 3,/ })).toBeVisible();
   const before = await level.locator(".level-xp").innerText();
   await page.getByRole("link", { name: "Settings", exact: true }).last().click();
-  await (await openSettingsChoice(page, "Profile artwork", "Default artwork")).click();
+  await (await openSettingsChoice(page, "Avatar", "Default avatar")).click();
   await expect(profile(page).locator(".profile-artwork")).toHaveCount(0);
   await page.getByRole("link", { name: "Profile · Level 3", exact: true }).click();
   await expect(level.locator(".level-xp")).toHaveText(before);
@@ -152,9 +149,9 @@ test("unknown saved art has a default glyph and an explanation, never a repair w
     prefs: { profile_art: "future:99" },
   });
   await page.goto("/settings");
-  await openSettingsPicker(page, "Profile artwork");
+  await openSettingsPicker(page, "Avatar");
   await expect(page.getByText(/Saved choice: future:99/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Default artwork", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Default avatar", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -164,6 +161,7 @@ test("unknown saved art has a default glyph and an explanation, never a repair w
 
 test("artwork keeps native sizes and follows a live accent in nav, Profile and previews", async ({
   page,
+  viewport,
 }) => {
   await mockLibrary(page, [completed()], {
     events: eventsAtLevel(3),
@@ -171,17 +169,17 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
     prefs: { profile_art: "movie:1", theme: "dark" },
   });
   await page.goto("/settings");
-  await openSettingsPicker(page, "Profile artwork");
+  await openSettingsPicker(page, "Avatar");
   const nav = profile(page).locator(".profile-artwork");
   await expect(nav).toHaveCount(1);
   const tonesBefore = await nav
     .locator("path")
     .evaluateAll((paths) => paths.map((e) => getComputedStyle(e).fill));
   await (await openSettingsChoice(page, "Accent", "Ember")).click();
-  await openSettingsPicker(page, "Profile artwork");
+  await openSettingsPicker(page, "Avatar");
   await expect
     .poll(() => nav.locator(".accent").evaluate((e) => getComputedStyle(e).fill))
-    .toBe("rgb(199, 102, 18)");
+    .toBe(viewport!.width <= 768 ? "rgb(28, 18, 8)" : "rgb(199, 102, 18)");
   const tonesAfter = await nav
     .locator("path")
     .evaluateAll((paths) => paths.map((e) => getComputedStyle(e).fill));
@@ -197,7 +195,7 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
     .toBe("rgb(199, 102, 18)");
   await page.evaluate(() => (document.documentElement.style.fontSize = "18.4px"));
   const panel = page.locator(".artwork-section .picker-panel");
-  await expect(panel.locator(".picker-option")).toHaveCount(31);
+  await expect(panel.locator(".picker-option")).toHaveCount(2);
   expect(await panel.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(
     1,
   );
@@ -206,6 +204,8 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     ),
   ).toBe(0);
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
   await page.getByRole("link", { name: "Profile · Level 3", exact: true }).click();
   const art = page.getByRole("region", { name: "Level" }).locator(".profile-artwork");
   await expect
@@ -226,7 +226,7 @@ test("artwork keeps native sizes and follows a live accent in nav, Profile and p
 test("failed artwork save reports the error and restores Default everywhere", async ({ page }) => {
   await mockLibrary(page, [completed()], { events: eventsAtLevel(3), seenLevel: 25 });
   await page.goto("/settings");
-  await openSettingsPicker(page, "Profile artwork");
+  await openSettingsPicker(page, "Avatar");
   await expect(
     page.getByRole("button", { name: "Silver Screen tier 1", exact: true }),
   ).toBeEnabled();
@@ -242,10 +242,29 @@ test("failed artwork save reports the error and restores Default everywhere", as
   });
   await page.getByRole("button", { name: "Silver Screen tier 1", exact: true }).click();
   await expect(page.getByRole("status", { name: "Artwork save" })).toHaveText(/Disk full/);
-  await expect(page.getByRole("button", { name: "Default artwork", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Default avatar", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await expect(profile(page).locator(".profile-artwork")).toHaveCount(0);
   expect(await stored(page)).toMatchObject({ profile_art: "default" });
+});
+
+test("Avatar is an earned image grid; locked art belongs to the tree", async ({ page }) => {
+  await mockLibrary(page, [completed()], { events: eventsAtLevel(3), seenLevel: 3 });
+  await page.goto("/settings");
+  const panel = await openSettingsPicker(page, "Avatar");
+  await expect(panel.locator(".picker-option")).toHaveCount(2);
+  await expect(
+    panel.getByRole("button", { name: "Silver Screen tier 2", exact: true }),
+  ).toHaveCount(0);
+  for (const name of ["Default avatar", "Silver Screen tier 1"]) {
+    const b = panel.getByRole("button", { name, exact: true });
+    await expect(b.locator("svg")).toBeVisible();
+    const copy = b.locator(".option-copy");
+    expect((await copy.boundingBox())!.width).toBeLessThanOrEqual(1);
+  }
+  await panel.getByRole("button", { name: "Silver Screen tier 1" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".app-nav .profile .profile-artwork")).toBeVisible();
 });

@@ -228,7 +228,7 @@ test("offline: add a book with genres, open it, find its card, then plan it", as
 
   await page.getByRole("button", { name: "Plan", exact: true }).click();
   const plan = page.getByRole("dialog");
-  await plan.getByRole("group", { name: "Days" }).getByRole("button", { name: "Thu" }).click();
+  await plan.getByRole("group", { name: "Days" }).getByRole("button", { name: "Thursday" }).click();
   // A book plans by the hour: down one 30-minute step from the 1 h it opens on.
   await plan.getByRole("button", { name: "30 min less" }).click();
   await plan.getByRole("button", { name: "Save plan" }).click();

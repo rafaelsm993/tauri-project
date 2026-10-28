@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
-export type SettingsSection = "Theme" | "Profile" | "Preferences" | "Backup";
+export type SettingsSection = "Theme" | "Profile" | "Preferences";
 export type SettingsPicker =
-  "Accent" | "Palette" | "Background" | "Tree effect" | "Profile artwork" | "Title";
+  "Accent" | "Palette" | "Background" | "Tree effect" | "Avatar" | "Title";
 
 export function settingsSection(page: Page, name: SettingsSection) {
   return page.locator(`details[data-section="${name}"]`);
@@ -26,10 +26,7 @@ export async function openSettingsPicker(page: Page, name: SettingsPicker) {
     `.reward-picker:not([data-picker="${name}"]) .picker-panel:popover-open`,
   );
   if (await other.count()) await page.keyboard.press("Escape");
-  await openSettingsSection(
-    page,
-    name === "Title" || name === "Profile artwork" ? "Profile" : "Theme",
-  );
+  await openSettingsSection(page, name === "Title" || name === "Avatar" ? "Profile" : "Theme");
   const root = page.locator(`.reward-picker[data-picker="${name}"]`);
   const trigger = root.locator(".picker-trigger");
   const panel = root.locator("[popover]");

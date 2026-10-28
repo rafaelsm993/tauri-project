@@ -57,7 +57,7 @@
     oncancel: () => void;
   } = $props();
 
-  const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const PRESETS = [15, 30, 45, 60, 90, 120];
   const MIN_SESSION = 5;
 
@@ -175,6 +175,73 @@
     days = days.includes(day) ? days.filter((d) => d !== day) : [...days, day];
   }
 
+  type DayGesture = {
+    pointer: number;
+    before: number[];
+    selecting: boolean;
+    visited: Set<number>;
+    y: number;
+  };
+  let dayGesture: DayGesture | null = null;
+
+  function paintDay(day: number) {
+    const gesture = dayGesture;
+    if (!gesture || gesture.visited.has(day)) return;
+    gesture.visited.add(day);
+    days = gesture.selecting
+      ? [...new Set([...days, day])].sort((a, b) => a - b)
+      : days.filter((value) => value !== day);
+  }
+
+  function startDays(event: PointerEvent) {
+    if (busy || dayGesture || event.button !== 0 || !event.isPrimary) return;
+    const button = (event.target as Element).closest<HTMLButtonElement>("button[data-day]");
+    if (!button || button.disabled) return;
+    const day = Number(button.dataset.day);
+    dayGesture = {
+      pointer: event.pointerId,
+      before: [...days],
+      selecting: !days.includes(day),
+      visited: new Set(),
+      y: event.clientY,
+    };
+    event.preventDefault();
+    button.focus({ preventScroll: true });
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    paintDay(day);
+  }
+
+  function moveDays(event: PointerEvent) {
+    const gesture = dayGesture;
+    if (!gesture || gesture.pointer !== event.pointerId || busy) return;
+    const host = event.currentTarget as HTMLElement;
+    const bounds = host.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right) return;
+    const lo = Math.min(gesture.y, event.clientY);
+    const hi = Math.max(gesture.y, event.clientY);
+    host.querySelectorAll<HTMLButtonElement>("button[data-day]").forEach((button) => {
+      const rect = button.getBoundingClientRect();
+      if (rect.bottom >= lo && rect.top <= hi) paintDay(Number(button.dataset.day));
+    });
+    gesture.y = event.clientY;
+  }
+
+  function endDays(event: PointerEvent) {
+    if (!dayGesture || dayGesture.pointer !== event.pointerId) return;
+    moveDays(event);
+    dayGesture = null;
+  }
+
+  function cancelDays(event?: PointerEvent) {
+    if (!dayGesture || (event && event.pointerId !== dayGesture.pointer)) return;
+    days = dayGesture.before;
+    dayGesture = null;
+  }
+
+  $effect(() => {
+    if (busy) cancelDays();
+  });
+
   function pick(value: number) {
     custom = false;
     fullPicked = false;
@@ -250,18 +317,32 @@
 
   <div class="sheet-block">
     <span class="field-label" id="{id}-days">Days</span>
-    <div class="chips" role="group" aria-labelledby="{id}-days">
+    <p class="sheet-hint" id="{id}-days-hint">
+      Tap a day or drag down to select several. Start on a selected day to clear days.
+    </p>
+    <div
+      class="day-picker"
+      role="group"
+      aria-labelledby="{id}-days"
+      aria-describedby="{id}-days-hint"
+      onpointerdown={startDays}
+      onpointermove={moveDays}
+      onpointerup={endDays}
+      onpointercancel={cancelDays}
+      onlostpointercapture={cancelDays}
+    >
       {#each DAYS as name, i (name)}
         <button
           type="button"
-          class="chip"
+          class="day-row"
           class:active={days.includes(i)}
+          data-day={i}
           aria-pressed={days.includes(i)}
           disabled={busy}
-          onclick={() => toggle(i)}
+          onclick={(event) => {
+            if (event.detail === 0 && !busy) toggle(i);
+          }}>{name}</button
         >
-          {name}
-        </button>
       {/each}
     </div>
   </div>
@@ -525,6 +606,38 @@
     @include touch {
       min-height: $touch-target;
       padding-inline: $spacing-lg;
+    }
+  }
+  .day-picker {
+    display: grid;
+    gap: $spacing-xs;
+    touch-action: none;
+    user-select: none;
+    min-width: 0;
+  }
+  .day-row {
+    min-height: $touch-target;
+    width: 100%;
+    padding: $spacing-xs $spacing-md;
+    border: 1px solid var(--clr-border-2);
+    border-radius: $radius-md;
+    background: var(--clr-surface);
+    color: var(--clr-text);
+    text-align: start;
+    font: inherit;
+    cursor: pointer;
+    &.active {
+      background: var(--clr-primary);
+      color: var(--clr-on-primary);
+      border-color: transparent;
+    }
+    &:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 1px;
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
   }
 </style>

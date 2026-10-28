@@ -159,6 +159,6 @@ it("hosts artwork only in Profile with the same injected preferences", async () 
     container.querySelector('details[data-section="Profile"] #profile-artwork'),
   ).not.toBeNull();
   expect(screen.getByText(/Saved choice: future:99/)).toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "Default artwork" }));
+  await userEvent.click(screen.getByRole("button", { name: "Default avatar" }));
   expect(update).toHaveBeenCalledWith({ profile_art: "default" });
 });

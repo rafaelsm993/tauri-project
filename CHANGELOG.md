@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Settings offers only earned Avatar images; locked previews remain in Journey Tree. Profile centers the avatar in the shared navigation XP ring, stacks title/current level below it, and removes Activity.
+- Welcome uses inert app-component illustrations and more safe-top spacing. Tracking choices and taste-based Home startup are removed; legacy saved resume indexes and settings remain compatible.
+- Welcome explains the Journey Tree, planning versus logging, book/page and manga/chapter paces, and manual matching. New teaching beats append without changing existing saved indexes. Key CTAs reflect saved providers and drafts, validating pending keys before advancing and retaining failed drafts.
+- Create/edit plans share full weekday rows: tap or drag to paint selections, start on a selected day to clear, with keyboard access and rollback on touch cancellation; only Save persists.
+- Mobile navigation fills the selected icon-and-label item with the equipped accent and paired foreground, preserving Profile artwork/ring and the desktop rail; Dusk and Ocean now use dark foregrounds for small filled-label contrast.
+- Settings opens Profile first with artwork, title and Backup together, followed by Theme and Preferences; sections remain independently expandable.
 - Library, Planner, Profile and Settings headers now scroll with their pages instead of sticking over the content. Home retains its sticky search and cohesive category collapse.
 - Search headers fill the available width without an opaque surrounding rectangle. Home and Library filters sit inside the search field and fill with the equipped accent when active; tags fade and slide together on scroll, including slow scroll gestures. Library search keeps an opaque themed surface so covers and text cannot bleed through it.
 - Compact Settings into Theme, Profile, Preferences and Backup accordions with current-selection preview dropdowns; retain reward eligibility and existing preference, backup and API-key workflows.

@@ -20,6 +20,7 @@
     allowReselect = false,
     preview,
     imageOnly = false,
+    stacked = false,
   }: {
     label: string;
     value: string;
@@ -28,6 +29,7 @@
     disabled?: boolean;
     allowReselect?: boolean;
     imageOnly?: boolean;
+    stacked?: boolean;
     preview?: Snippet<[PickerChoice]>;
   } = $props();
   const id = $props.id();
@@ -96,6 +98,7 @@
 <div
   class="reward-picker"
   class:image-only={imageOnly}
+  class:stacked
   role="group"
   aria-label={label}
   data-picker={label}
@@ -258,6 +261,41 @@
       font-size: 0.75rem;
     }
   }
+  .stacked {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    .picker-trigger {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .picker-trigger .current {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .picker-trigger .preview {
+      grid-column: 1;
+      grid-row: 2;
+      justify-self: start;
+    }
+    .picker-trigger .chevron {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+    .picker-option {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .picker-option .option-copy {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .picker-option .preview {
+      grid-column: 1;
+      grid-row: 2;
+      justify-self: start;
+    }
+  }
+
   .image-only {
     .picker-panel:popover-open {
       display: grid;

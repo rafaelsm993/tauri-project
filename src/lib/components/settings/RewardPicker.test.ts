@@ -9,6 +9,21 @@ const options = [
   { value: "ocean", label: "Ocean", hint: "Requires level 20", disabled: true },
 ];
 
+it("opts into stacked layout without changing selection behavior", () => {
+  const { container } = render(RewardPicker, {
+    label: "Background",
+    value: "default",
+    options,
+    stacked: true,
+    onchange: vi.fn(),
+  });
+  expect(container.querySelector(".reward-picker")).toHaveClass("stacked");
+  expect(screen.getByRole("button", { name: "Background: Default" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+});
+
 function expose(container: HTMLElement) {
   container.querySelectorAll("[popover]").forEach((node) => node.removeAttribute("popover"));
 }

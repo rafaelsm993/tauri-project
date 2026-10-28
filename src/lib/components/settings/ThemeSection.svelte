@@ -87,6 +87,7 @@
   {#each slots as { slot, label } (slot)}
     <div class="slot">
       <RewardPicker
+        stacked
         {label}
         value={equipment[slot]}
         options={choices(slot)}

@@ -15,6 +15,8 @@
 
   import { goto } from "$app/navigation";
   import { resolve } from "$app/paths";
+  import { goBack } from "$lib/utils/history";
+  const back = () => goBack(() => goto(resolve("/profile"), { replaceState: true }));
 
   // The store prop exists for tests; the app uses the singleton.
   let {
@@ -53,7 +55,13 @@
 </script>
 
 <main class="settings">
-  <AppHeader heading="Settings" sticky={false} />
+  <AppHeader heading="Settings" sticky={false}>
+    {#snippet action()}
+      <button type="button" class="settings-back" onclick={back}>
+        <span aria-hidden="true">←</span> Back
+      </button>
+    {/snippet}
+  </AppHeader>
   {#if store.error}<ErrorNote message={store.error} />{/if}
 
   <SettingsAccordion
@@ -124,6 +132,31 @@
 </main>
 
 <style lang="scss">
+  .settings-back {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: $touch-target;
+    padding: $spacing-xs $spacing-md;
+    flex: none;
+    border: 1px solid var(--clr-border-2);
+    border-radius: $radius-full;
+    background: var(--clr-surface);
+    color: var(--clr-text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    &:focus-visible {
+      outline: 2px solid var(--clr-accent);
+      outline-offset: 2px;
+    }
+    @include hover-capable {
+      &:hover {
+        border-color: var(--clr-accent);
+      }
+    }
+  }
+
   .settings-btn {
     padding: $spacing-xs $spacing-md;
     border: 1px solid var(--clr-border-2);

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/svelte";
 import { tick } from "svelte";
 import AppBackground from "./AppBackground.svelte";
@@ -23,7 +23,30 @@ function readyPrefs(on = true) {
   return prefs;
 }
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((media: string) => ({
+      matches: false,
+      media,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+});
+
 describe("AppBackground", () => {
+  it("does not begin work in an initially hidden document", () => {
+    setHidden(true);
+    const { container } = render(AppBackground, { currentLevel: 25, prefs: readyPrefs() });
+    expect(isPaused(container)).toBe(true);
+  });
+  it("does not begin work in an initially unfocused document", () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const { container } = render(AppBackground, { currentLevel: 25, prefs: readyPrefs() });
+    expect(isPaused(container)).toBe(true);
+  });
   it("current eligibility relocks a saved high-level motif without a preference write", async () => {
     const prefs = readyPrefs();
     prefs.prefs = { ...prefs.prefs, seen_level: 25, motif: "aurora" };
@@ -50,6 +73,8 @@ describe("AppBackground", () => {
   afterEach(() => {
     setHidden(false);
     window.dispatchEvent(new Event("focus"));
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("pauses while the document is hidden and resumes when visible", async () => {

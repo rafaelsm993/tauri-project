@@ -153,20 +153,22 @@
         </p>
         <span class="level-caption">Current level {currentLevel}</span>
       </header>
-      <RunicTreeMap
-        nodes={mapNodes}
-        media={!!selected}
-        reveal={shines}
-        rootArt={selected ? `${selected}:1` : undefined}
-        onselect={(key) => {
-          if (!selected) {
-            void selectMedia(key as MediaType);
-            return;
-          }
-          const node = mapNodes.find((node) => node.id === key);
-          if (node?.kind && node.rewardId) openReward = { kind: node.kind, id: node.rewardId };
-        }}
-      />
+      {#key selected ?? "all"}
+        <RunicTreeMap
+          nodes={mapNodes}
+          media={!!selected}
+          reveal={shines}
+          rootArt={selected ? `${selected}:1` : undefined}
+          onselect={(key) => {
+            if (!selected) {
+              void selectMedia(key as MediaType);
+              return;
+            }
+            const node = mapNodes.find((node) => node.id === key);
+            if (node?.kind && node.rewardId) openReward = { kind: node.kind, id: node.rewardId };
+          }}
+        />
+      {/key}
       {#if selected}
         <details class="exploration">
           <summary>Genres &amp; saved items</summary>

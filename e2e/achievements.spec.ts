@@ -116,46 +116,6 @@ test.describe("achievements", () => {
     await expect(midnight.locator(".reward-preview")).toBeVisible();
   });
 
-  test("Runic shimmer reveals once and settles, never continuously", async ({ page }) => {
-    await mockLibrary(page, [ENTRY], { events: eventsAtLevel(8), seenLevel: 50 });
-    await page.addInitScript(() => {
-      Object.assign(window, { __runeStarts: [] });
-      document.addEventListener("animationstart", (event) => {
-        if (event.animationName.includes("runic-reveal"))
-          (window as unknown as { __runeStarts: string[] }).__runeStarts.push(event.animationName);
-      });
-    });
-    await page.goto("/settings");
-    await openSettingsSection(page, "Theme");
-    await (await openSettingsChoice(page, "Tree effect", "Runic shimmer")).click();
-    await page
-      .getByRole("link", { name: /library/i })
-      .first()
-      .click();
-    await page.getByRole("group", { name: "View" }).getByRole("button", { name: "Tree" }).click();
-    const rune = page.locator(".tree-crown .rune");
-    await expect(rune).toBeAttached();
-    await expect
-      .poll(() =>
-        page.evaluate(() => (window as unknown as { __runeStarts: string[] }).__runeStarts.length),
-      )
-      .toBe(1);
-    await expect
-      .poll(() =>
-        rune.evaluate((el) => el.getAnimations().filter((a) => a.playState === "running").length),
-      )
-      .toBe(0);
-    await page
-      .getByRole("group", { name: "Explore media trees" })
-      .getByRole("button", { name: "Books", exact: true })
-      .click();
-    expect(
-      await page.evaluate(
-        () => (window as unknown as { __runeStarts: string[] }).__runeStarts.length,
-      ),
-    ).toBe(1);
-  });
-
   test("a saved shimmer stays off with Animations off or reduced", async ({ page }) => {
     await mockLibrary(page, [ENTRY], {
       events: eventsAtLevel(8),

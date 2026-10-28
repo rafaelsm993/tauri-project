@@ -7,10 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Theme and background picker labels sit above their previews; Avatar and Title keep their existing layouts.
+- Android backgrounds use display-synchronized canvas rendering targeting 30 fps, replacing the visibly choppy 8-fps candidate; desktop retains its CSS motifs. Motion-off, reduced motion, hidden and unfocused windows suspend decoration.
 - Settings offers only earned Avatar images; locked previews remain in Journey Tree. Profile centers the avatar in the shared navigation XP ring, stacks title/current level below it, and removes Activity.
 - Welcome uses inert app-component illustrations and more safe-top spacing. Tracking choices and taste-based Home startup are removed; legacy saved resume indexes and settings remain compatible.
 - Welcome explains the Journey Tree, planning versus logging, book/page and manga/chapter paces, and manual matching. New teaching beats append without changing existing saved indexes. Key CTAs reflect saved providers and drafts, validating pending keys before advancing and retaining failed drafts.
-- Create/edit plans share full weekday rows: tap or drag to paint selections, start on a selected day to clear, with keyboard access and rollback on touch cancellation; only Save persists.
+- Create/edit plans keep all seven compact weekday pills on one row: tap or swipe across to paint selections, start on a selected day to clear, with full accessible names, keyboard access and rollback on touch cancellation; only Save persists.
 - Mobile navigation fills the selected icon-and-label item with the equipped accent and paired foreground, preserving Profile artwork/ring and the desktop rail; Dusk and Ocean now use dark foregrounds for small filled-label contrast.
 - Settings opens Profile first with artwork, title and Backup together, followed by Theme and Preferences; sections remain independently expandable.
 - Library, Planner, Profile and Settings headers now scroll with their pages instead of sticking over the content. Home retains its sticky search and cohesive category collapse.
@@ -53,6 +55,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Svelte 5 runes and class-based application stores
 
 ### Fixed
+- Settings has an in-app Back action using navigation history, with Profile as its cold-entry fallback.
+- Runic shimmer briefly reveals visible tree channels, roots and crown on each map entry, then settles; it no longer animates only hidden art or shakes continuously.
+- Returning Home restores scroll immediately, without smooth scrolling or late carousel layout shifts overriding the restored position.
 - Journey Tree nodes and disclosures clear sticky headers when scrolled into view, and Back restores the originating crest or achievement focus.
 - Large libraries hydrate in one reactive update, preventing the Profile crash with thousands of saved entries.
 - Default primary buttons use white text on the unchanged fill, meeting small-text contrast in dark and light themes.

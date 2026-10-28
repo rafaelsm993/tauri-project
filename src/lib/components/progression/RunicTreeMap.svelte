@@ -275,7 +275,9 @@
       box-shadow: inset 0 0 0 3px var(--engraving);
     }
   }
-  .reveal .rune {
+  .reveal .channels,
+  .reveal .tree-crown .rune,
+  .reveal .map-root {
     animation: runic-reveal 600ms ease-out 1;
   }
   @keyframes runic-reveal {
@@ -287,7 +289,9 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .reveal .rune {
+    .reveal .channels,
+    .reveal .tree-crown .rune,
+    .reveal .map-root {
       animation: none;
     }
   }

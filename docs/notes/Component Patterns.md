@@ -177,15 +177,16 @@ One search input for the whole app; the parent owns `value`.
 ## AppBackground
 
 - File: `src/lib/components/ui/AppBackground.svelte`
-- Props: none. Rendered once in `+layout.svelte`.
+- Props: optional `prefs: PrefsStore` (defaults to the singleton) and `currentLevel: number | null`; rendered once in `+layout.svelte`.
 
-A fixed, `aria-hidden` decorative layer with three parts:
+A fixed, `aria-hidden`, pointer-transparent decorative layer: base colour/radial glows, the equipped motif, then vignette. Existing `particlesFor` geometry and current-level equipment policy feed both renderers; the saved particle count remains authoritative.
 
-1. `.bg-area`: base colour plus radial glows.
-2. `.circles`: 20 `<li>` bubbles animated with CSS `@keyframes`.
-3. `.bg-vignette`.
+- Hover/mouse uses scoped CSS motif keyframes. Touch/coarse input uses `.mobile-motif`, a canvas whose backing dimensions are capped at 240 × 480 and half CSS resolution. Touch hides only the desktop particle list, not the selected reward.
+- Canvas uses `requestAnimationFrame` with a 30-fps drawing cadence; timestamp remainders prevent drift, elapsed time drives motion rather than frame count. Cleanup cancels the pending frame and disconnects the resize observer. The discarded 125ms timer candidate was visibly choppy at 8 fps.
+- `MotionStore`, loaded preferences, visibility and focus gate work from the initial mount onward. Off/reduced motion, hidden/blurred windows, Default and ineligible saved motifs cannot keep a canvas frame loop alive. Desktop animation names are declared only under motion-on; keyframes stay Svelte-scoped.
+- Colours come from live primary/accent channel tokens. No new preference, IPC, entitlement or schema is introduced.
 
-No JavaScript animation loop runs; the bubbles pause while the window is hidden or blurred, or when the Animations setting (`prefs.motion`) is off. Colors come from the `--clr-*-rgb` channel tokens.
+Physical Galaxy A34 dev-WebView acceptance measured 29.99–30.03 canvas redraws/s, median gaps 33.3–33.4ms and worst sampled p95 36.9ms. App plus owned renderer used 85–90% of one CPU core versus 0.3–0.5% with motion off, an explicitly accepted tradeoff, not a low-power claim. Redraw timing is not display-presentation telemetry; other devices and standalone builds require their own measurements.
 
 ---
 
@@ -249,13 +250,12 @@ The shared renderer and the Settings grid for 30 original pixel crests earned by
 - `profileArt.ts` derives `PROFILE_ART` from the same completion requirements as everything else
   (six media × five tiers of 1 / 5 / 10 / 25 / 50 completed; no competing catalogue), with a
   distinct native 24 and 32 grid per media and five ornament tiers layered on a tier-1 silhouette.
-- `ProfileArtworkSection` (mounted under Profile in Settings) offers Default plus all 30 crests
-  in a compact preview dropdown, each with its completed count and the level it needs; a locked crest
-  previews but cannot be equipped, and a saved-but-now-locked choice explains itself and falls back to Default.
+- `ProfileArtworkSection` (mounted under Profile in Settings) offers Default plus currently earned crests
+  in an earned-only image grid; locked previews remain in Journey Tree. A saved-but-now-locked choice explains itself and falls back to Default without clearing the selection.
 
 ## Compact Settings
 
-Settings uses independent native accordions for Theme, Profile, Preferences and Backup. Theme and Profile equipment share `src/lib/components/settings/RewardPicker.svelte`: an effective-current-value trigger and a native top-layer group of static preview buttons. The existing equipment policies still own eligibility and saves; dropdown inspection never equips. Artwork and titles live under Profile. Existing `/settings#theme`, `#titles` and `#profile-artwork` links reveal their parent accordion. Accordion disclosure is local and nonpersistent; closing it preserves child form state. Preferences holds API keys, motion, reading pace and chapter pace; Backup retains export/import and Preferences retains replaying onboarding.
+Settings uses independent native accordions for Profile (artwork, title and Backup), Theme and Preferences. Theme and Profile equipment share `src/lib/components/settings/RewardPicker.svelte`: an effective-current-value trigger and a native top-layer group of static preview buttons. The existing equipment policies still own eligibility and saves; dropdown inspection never equips. Artwork and titles live under Profile. Existing `/settings#theme`, `#titles` and `#profile-artwork` links reveal their parent accordion. Accordion disclosure is local and nonpersistent; closing it preserves child form state. Preferences holds API keys, motion, reading pace and chapter pace; Backup retains export/import and Preferences retains replaying onboarding.
 
 ## Journey Tree (Library only)
 
@@ -269,7 +269,7 @@ Settings uses independent native accordions for Theme, Profile, Preferences and 
 - The active media derives from transient SvelteKit `page.state.runewood`, scoped to the component id. Sheet preserves parent page state: Back closes the preview, restores its opener, then returns to the main map and focuses its crest. All media clears sticky chrome. No preference or IPC writes occur during navigation.
 - RewardSheet accepts `kind`, `rewardId`, `entries`, `currentLevel`, `onclose`; existing requirements and Settings destinations `#theme`, `#titles`, `#profile-artwork` are reused. Settings is the sole equipment UI; modal navigation waits for Sheet history to close.
 - Library retains internal view id `garden`, Grid default and an empty-library Tree selector. Profile no longer mounts a tree: LevelCard, equipped artwork, stats, dashboard graphs and chart accessibility remain.
-- Runic shimmer retains stored id `sway`, kind/prefs slot `garden` and minimum level 8. When equipped and motion is permitted, crown runes reveal once for 600ms on mount; media changes do not restart it. Reduced motion and Animations off override it. Existing `motion?`/`shimmer?` test overrides remain gated by current level and successful authority. No persistence, schema, IPC or reward-definition changes.
+- Runic shimmer retains stored id `sway`, kind/prefs slot `garden` and minimum level 8. When equipped and motion is permitted, visible channels, map roots and crown runes reveal once for 600ms per map entry, then settle. The map is keyed by selected media so navigation replays that brief reveal; filter edits do not. Reduced motion and Animations off override it. Existing `motion?`/`shimmer?` test overrides remain gated by current level and successful authority. No persistence, schema, IPC or reward-definition changes.
 
 ## AppHeader
 
@@ -300,7 +300,7 @@ One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling d
 
 ### Settings entry and ownership
 
-Settings renders Profile (artwork, title and Backup), Theme, then Preferences. Profile seeds native disclosure open once per mount; closing it is respected until the next visit. Hash links reveal their owner, including `#backup-title`, without preference writes or exclusive accordion behavior. The Settings header remains in normal document flow.
+Settings renders Profile (artwork, title and Backup), Theme, then Preferences. Profile seeds native disclosure open once per mount; closing it is respected until the next visit. Hash links reveal their owner, including `#backup-title`, without preference writes or exclusive accordion behavior. The Settings header remains in normal document flow. Its Back action reuses `goBack`, falling back to `/profile` with replacement on cold entry; navigation never writes preferences. ThemeSection opts into RewardPicker’s `stacked` label/name-above-preview layout, leaving Avatar, Title, selection behavior and top-layer popovers unchanged.
 
 ### Mobile navigation selection
 
@@ -308,7 +308,7 @@ The bottom navigation fills the complete selected link with `--clr-primary` and 
 
 ### Planning weekday gestures
 
-`PlanSheet` owns the shared create/edit day picker. A primary pointer captures the group and paints each crossed row once in select/clear mode chosen at its start; cancellation/lost capture restores the pregesture draft. Pointer release never saves. Keyboard/assistive activation uses native buttons and `aria-pressed`. Touch-action is suppressed only on the picker, leaving the sheet scrollable elsewhere. Numeric weekday IDs and the existing plan-save pipeline are unchanged. Unit schedule tests use keyboard activation; actual pointer capture and touch cancellation run in the browser.
+`PlanSheet` owns the shared create/edit day picker: seven compact pills in one horizontal grid, abbreviated visual labels with full accessible names and at least 44px touch targets at enlarged text scale. Horizontal interval hit-testing includes skipped intermediate days. A primary pointer captures the group and paints each crossed weekday once in select/clear mode chosen at its start; cancellation/lost capture restores the pregesture draft. Pointer release never saves. Keyboard/assistive activation uses native buttons and `aria-pressed`. Touch-action is suppressed only on the picker, leaving the sheet scrollable elsewhere. Numeric weekday IDs and the existing plan-save pipeline are unchanged. Unit schedule tests use keyboard activation; actual pointer capture and touch cancellation run in the browser.
 
 ### Welcome teaching and API-key drafts
 

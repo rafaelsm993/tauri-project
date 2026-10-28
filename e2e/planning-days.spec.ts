@@ -14,10 +14,9 @@ test("paint days in one movement without writing before Save", async ({ page }) 
   await group.scrollIntoViewIfNeeded();
   const a = (await monday.boundingBox())!,
     b = (await friday.boundingBox())!;
-  const x = a.x + a.width / 2;
-  await page.mouse.move(x, a.y + a.height / 2);
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
   await page.mouse.down();
-  await page.mouse.move(x, b.y + b.height / 2, { steps: 1 });
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 1 });
   await page.mouse.up();
   expect((await ipcCalls(page)).filter((c) => c.cmd === "library_update")).toEqual([]);
   for (const day of ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
@@ -169,7 +168,7 @@ for (const cancellation of ["touchCancel", "lostcapture"] as const) {
     await cdp.detach();
   });
 }
-test("real touch paints across skipped rows without a synthetic click toggle", async ({
+test("real touch paints across skipped days without a synthetic click toggle", async ({
   page,
   browserName,
 }) => {
@@ -188,16 +187,25 @@ test("real touch paints across skipped rows without a synthetic click toggle", a
   await cdp.detach();
 });
 
-test("touch outside the day picker still scrolls a short sheet", async ({ page, browserName }) => {
+test("touch outside the day picker still scrolls a long book sheet", async ({
+  page,
+  browserName,
+}) => {
   test.skip(browserName !== "chromium", "CDP native scroll");
   await page.setViewportSize({ width: 360, height: 560 });
-  const { dialog } = await openDays(page, false);
-  const body = dialog;
-  await body.evaluate((el) => (el.scrollTop = 0));
-  const before = await body.evaluate((el) => el.scrollTop),
-    r = (await body.boundingBox())!;
-  const cdp = await page.context().newCDPSession(page),
-    x = r.x + 4,
+  await mockLibrary(page, [item(740003, "book", "Scroll book", { pages: 300 }, null)]);
+  await page.goto("/library");
+  await page.getByRole("button", { name: "Plan Scroll book", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Plan Scroll book", exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  expect(await dialog.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(0);
+  const before = await dialog.evaluate((el) => el.scrollTop),
+    r = (await dialog.boundingBox())!;
+  const cdp = await page.context().newCDPSession(page);
+  const x = r.x + 4,
     y = Math.min(r.y + r.height - 50, 480);
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",
@@ -209,10 +217,9 @@ test("touch outside the day picker still scrolls a short sheet", async ({ page, 
       touchPoints: [{ x, y: y - dy, id: 1 }],
     });
   await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-  await expect.poll(() => body.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
+  await expect.poll(() => dialog.evaluate((el) => el.scrollTop)).toBeGreaterThan(before);
   await cdp.detach();
 });
-
 test("a second touch cannot compete with the primary day paint", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "CDP multi-touch");
   await openDays(page, false);
@@ -243,3 +250,32 @@ test("a second touch cannot compete with the primary day paint", async ({ page, 
   await selectedDays(page, [0, 1, 2, 3, 4]);
   await cdp.detach();
 });
+
+for (const editing of [false, true]) {
+  test(`compact weekday row fits create/edit=${editing} with enlarged text`, async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 560 });
+    const { group } = await openDays(page, editing);
+    await page.addStyleTag({ content: "html { font-size: 18.4px !important; }" });
+    const rects = await group.getByRole("button").evaluateAll((buttons) =>
+      buttons.map((b) => {
+        const r = b.getBoundingClientRect();
+        return { top: r.top, left: r.left, right: r.right, width: r.width, height: r.height };
+      }),
+    );
+    expect(rects).toHaveLength(7);
+    expect(
+      Math.max(...rects.map((r) => r.top)) - Math.min(...rects.map((r) => r.top)),
+    ).toBeLessThan(1);
+    const bounds = (await group.boundingBox())!;
+    expect(rects[0].left).toBeGreaterThanOrEqual(bounds.x);
+    expect(rects[6].right).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+    expect(await group.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+    if (await page.evaluate(() => matchMedia("(hover: none), (pointer: coarse)").matches)) {
+      for (const rect of rects) {
+        expect(rect.width).toBeGreaterThanOrEqual(44);
+        expect(rect.height).toBeGreaterThanOrEqual(44);
+      }
+    }
+    await expect(group.getByRole("button", { name: "Monday", exact: true })).toHaveText("Mon");
+  });
+}

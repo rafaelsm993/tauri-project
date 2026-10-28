@@ -180,7 +180,7 @@
     before: number[];
     selecting: boolean;
     visited: Set<number>;
-    y: number;
+    x: number;
   };
   let dayGesture: DayGesture | null = null;
 
@@ -203,7 +203,7 @@
       before: [...days],
       selecting: !days.includes(day),
       visited: new Set(),
-      y: event.clientY,
+      x: event.clientX,
     };
     event.preventDefault();
     button.focus({ preventScroll: true });
@@ -216,14 +216,14 @@
     if (!gesture || gesture.pointer !== event.pointerId || busy) return;
     const host = event.currentTarget as HTMLElement;
     const bounds = host.getBoundingClientRect();
-    if (event.clientX < bounds.left || event.clientX > bounds.right) return;
-    const lo = Math.min(gesture.y, event.clientY);
-    const hi = Math.max(gesture.y, event.clientY);
+    if (event.clientY < bounds.top || event.clientY > bounds.bottom) return;
+    const lo = Math.min(gesture.x, event.clientX),
+      hi = Math.max(gesture.x, event.clientX);
     host.querySelectorAll<HTMLButtonElement>("button[data-day]").forEach((button) => {
       const rect = button.getBoundingClientRect();
-      if (rect.bottom >= lo && rect.top <= hi) paintDay(Number(button.dataset.day));
+      if (rect.right >= lo && rect.left <= hi) paintDay(Number(button.dataset.day));
     });
-    gesture.y = event.clientY;
+    gesture.x = event.clientX;
   }
 
   function endDays(event: PointerEvent) {
@@ -318,7 +318,7 @@
   <div class="sheet-block">
     <span class="field-label" id="{id}-days">Days</span>
     <p class="sheet-hint" id="{id}-days-hint">
-      Tap a day or drag down to select several. Start on a selected day to clear days.
+      Tap a day or swipe across to select several. Start on a selected day to clear days.
     </p>
     <div
       class="day-picker"
@@ -334,14 +334,15 @@
       {#each DAYS as name, i (name)}
         <button
           type="button"
-          class="day-row"
+          class="chip day-row"
           class:active={days.includes(i)}
+          aria-label={name}
           data-day={i}
           aria-pressed={days.includes(i)}
           disabled={busy}
           onclick={(event) => {
             if (event.detail === 0 && !busy) toggle(i);
-          }}>{name}</button
+          }}>{name.slice(0, 3)}</button
         >
       {/each}
     </div>
@@ -610,34 +611,22 @@
   }
   .day-picker {
     display: grid;
-    gap: $spacing-xs;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px;
     touch-action: none;
     user-select: none;
     min-width: 0;
   }
   .day-row {
-    min-height: $touch-target;
     width: 100%;
-    padding: $spacing-xs $spacing-md;
-    border: 1px solid var(--clr-border-2);
-    border-radius: $radius-md;
-    background: var(--clr-surface);
-    color: var(--clr-text);
-    text-align: start;
-    font: inherit;
-    cursor: pointer;
-    &.active {
-      background: var(--clr-primary);
-      color: var(--clr-on-primary);
-      border-color: transparent;
-    }
-    &:focus-visible {
-      outline: 2px solid var(--clr-accent);
-      outline-offset: 1px;
-    }
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    min-width: 0;
+    min-height: $touch-target;
+    padding-inline: 0;
+    text-align: center;
+  }
+  @include touch {
+    .plan-sheet {
+      padding-inline: $spacing-md;
     }
   }
 </style>

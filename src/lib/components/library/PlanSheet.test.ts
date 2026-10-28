@@ -71,7 +71,7 @@ describe("PlanSheet", () => {
   it("offers the seven days as toggles and cannot save without one", async () => {
     setup();
     const days = within(screen.getByRole("group", { name: /days/i })).getAllByRole("button");
-    expect(days.map((d) => d.textContent?.trim())).toEqual([
+    expect(days.map((d) => d.getAttribute("aria-label"))).toEqual([
       "Monday",
       "Tuesday",
       "Wednesday",
@@ -79,6 +79,15 @@ describe("PlanSheet", () => {
       "Friday",
       "Saturday",
       "Sunday",
+    ]);
+    expect(days.map((d) => d.textContent?.trim())).toEqual([
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun",
     ]);
     expect(days.every((d) => d.getAttribute("aria-pressed") === "false")).toBe(true);
     expect(screen.getByRole("button", { name: /^save plan/i })).toBeDisabled();

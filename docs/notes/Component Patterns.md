@@ -149,10 +149,9 @@ One sheet for the whole app, mounted once in `+layout.svelte`. Any screen adds a
 
 A manual item's page shows "Find a match" beside Edit, only while online. It calls `match.open(entry)`; the one `MatchSheet` (mounted in `+layout.svelte`) opens full size and searches the item's own type for its title through `catalog.fetchPage`, showing at most 8 `MediaCard`s under a `SearchField` the user can edit. Picking a card fetches its detail (length and metadata) and asks `libraryStore.preview`, the Rust dry run, so the compare step (`MatchCompare`: yours → the catalog's: each a poster, then its label, title, length and type · year, a replaced length struck through, a "What changes" list of old → new values from the pure `mergeChanges` in `domain/reconcile.ts`, a note when progress was capped, and one "Kept as is" line) shows exactly what will be saved; a refusal shows Rust's reason instead of "Use this", and a combine says so. "Use this" merges; like the add sheet, the store waits for the sheet's history entry to go, then lands on the catalog page with `replaceState`, so one Back leaves it. A "Matched" toast offers Undo for 10 s; Undo calls `unmerge` and returns to the manual page, or says why it was refused.
 
-## BackToTop and RoutePlaceholder
+## BackToTop
 
 - `src/lib/components/ui/BackToTop.svelte`: `threshold?`, `label = "Back to top"`; appears after scrolling past the threshold.
-- `src/lib/components/ui/RoutePlaceholder.svelte`: `title`; the body of `/library`, `/profile`, `/planner` and `/welcome` until their sprints.
 
 ## SearchField
 
@@ -270,13 +269,6 @@ Settings uses independent native accordions for Profile (artwork, title and Back
 - RewardSheet accepts `kind`, `rewardId`, `entries`, `currentLevel`, `onclose`; existing requirements and Settings destinations `#theme`, `#titles`, `#profile-artwork` are reused. Settings is the sole equipment UI; modal navigation waits for Sheet history to close.
 - Library retains internal view id `garden`, Grid default and an empty-library Tree selector. Profile no longer mounts a tree: LevelCard, equipped artwork, stats, dashboard graphs and chart accessibility remain.
 - Runic shimmer retains stored id `sway`, kind/prefs slot `garden` and minimum level 8. When equipped and motion is permitted, visible channels, map roots and crown runes reveal once for 600ms per map entry, then settle. The map is keyed by selected media so navigation replays that brief reveal; filter edits do not. Reduced motion and Animations off override it. Existing `motion?`/`shimmer?` test overrides remain gated by current level and successful authority. No persistence, schema, IPC or reward-definition changes.
-
-## AppHeader
-
-- File: `src/lib/components/ui/AppHeader.svelte`
-- Props: `heading?` (the page's `<h1>`; Home has none), snippets `action?`, `persistent?`, `collapsible?`
-
-One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling down hides the `collapsible` row and scrolling up brings it back; the decision is the pure `collapseOnScroll(prev, y)` in `domain/navigation.ts`, independent of the Animations setting. A hidden row keeps its box with `visibility: hidden` (shrinking it reflows the page and flips the state back), and only the rows take taps, so cards showing through the gap stay tappable. While stuck it paints up to the screen edge, under the Android status bar.
 
 ## AppNav and LevelRing
 

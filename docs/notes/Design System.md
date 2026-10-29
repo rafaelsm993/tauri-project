@@ -4,18 +4,18 @@
 
 ## Philosophy
 
-A dark, cinematic UI modelled on Netflix: a red primary colour, glass surfaces and smooth motion. It uses no UI framework, only CSS tokens and SCSS variables.
+A dark, cinematic default palette with optional Light/System themes and equippable accent colours. It uses no UI framework, only CSS tokens and SCSS variables.
 
 - `<script lang="ts">` — TypeScript for type safety
 - `<style lang="scss">` — SCSS with auto-injected variables/mixins (never `@use`/`@import`)
 - Reactive globals via Svelte 5 runes (`$state`, `$derived`, `$effect`)
-- Animations use CSS transitions and keyframes only (no Canvas).
+- Motion respects the Animations preference and system reduced-motion setting. Desktop motifs use CSS keyframes; touch/coarse-pointer motifs use a bounded canvas renderer.
 
 ---
 
 ## Color Palette
 
-Colors are **runtime tokens**, so a theme is a set of `--clr-*-rgb` overrides on `:root` with no per-component code (S1·A4). Each palette color has a **channel token** (space-separated RGB) and a derived color:
+Colors are **runtime tokens**. The dark defaults live in `:root`; explicit Light and System-following-Light override surface and text tokens in `global.css`. Equipped accents can override primary/accent channels, while the Default selection retains its base palette. Each palette color has a **channel token** (space-separated RGB) and a derived color:
 
 | Channel token | Value | Derived | Usage |
 | --- | --- | --- | --- |
@@ -30,10 +30,12 @@ Colors are **runtime tokens**, so a theme is a set of `--clr-*-rgb` overrides on
 | `--clr-shade-rgb` | `0 0 0` | shadows | Dark overlays and shadows |
 | `--clr-scrim-rgb` | `8 11 16` | — | Hero/backdrop scrims |
 | `--clr-highlight-rgb` | `232 184 75` | — | Highlight accents |
+| `--clr-on-primary-rgb` | `255 255 255` | `--clr-on-primary` | Text and icons on filled primary surfaces; some equipped accents use dark text |
+| `--clr-glint-rgb` | `255 255 255` | — | Light mixed into equipped-accent rating/reward glints |
 
 Text: `--clr-text` (`#f5f5f1`), `--clr-text-2` (`#b3b3b3`), `--clr-text-3` (`#808080`), `--clr-text-inv` (black).
 
-Family hues (placeholders until the design task picks them): `--clr-hue-screen-rgb` (= primary, movie + TV), `--clr-hue-anime-rgb`, `--clr-hue-manga-rgb`, `--clr-hue-book-rgb`, `--clr-hue-game-rgb`. Not used by components yet.
+Family hue tokens feed `.hue-*` classes for family-coloured blocks and chips (`global.css`); the Journey Tree and its crest artwork use the equipped accent and theme channels instead.
 
 ### Using colors in components
 
@@ -113,6 +115,8 @@ border: 1px solid rgb(var(--clr-ink-rgb) / 0.1);  // white overlay
 
 ## Motion
 
+`AppBackground` renders the selected motif using CSS particles on hover-capable input and a half-resolution canvas capped at 240 × 480 backing pixels on touch/coarse input. The canvas draws on `requestAnimationFrame` at a target cadence of 30 redraws/s; it stops when Animations is off, reduced motion is requested, the window is hidden/unfocused, or the motif is unavailable. On the Galaxy A34 dev WebView, measured redraw rate was 29.99–30.03/s with app-plus-renderer CPU at 85–90% of one core versus 0.3–0.5% with motion off; this is an accepted device-specific cost, not a standalone-build guarantee. Equipped Runic shimmer briefly reveals visible Journey Tree channels, roots and crown on map entry, then stops.
+
 ### Easing Curves
 
 | SCSS Variable    | Curve                               | Character                     |
@@ -151,7 +155,7 @@ Input, not width: `@include touch` (`hover: none` or coarse pointer) and `@inclu
 
 | Layer      | Z-Index            | Element                                               |
 | ---------- | ------------------ | ----------------------------------------------------- |
-| Background | 0                  | `.bg-layer` — CSS bubbles, glows, vignette (`AppBackground`) |
+| Background | 0                  | `.bg-layer` — CSS desktop or canvas touch motifs, glows, vignette (`AppBackground`) |
 | Content    | 1                  | `.app-content` — all page content                     |
 | Film grain | 4                  | `body::before` — noise overlay (pointer-events: none) |
 | Raised     | `--z-raised: 10`   | Cards on hover                                        |

@@ -7,6 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Runic shimmer now plays as a living constellation: starlight runs along the Journey Tree's paths, seals twinkle in a wave and a starfield breathes behind them; it runs while the window is focused and pauses with the background.
 - Theme and background picker labels sit above their previews; Avatar and Title keep their existing layouts.
 - Android backgrounds use display-synchronized canvas rendering targeting 30 fps, replacing the visibly choppy 8-fps candidate; desktop retains its CSS motifs. Motion-off, reduced motion, hidden and unfocused windows suspend decoration.
 - Settings offers only earned Avatar images; locked previews remain in Journey Tree. Profile centers the avatar in the shared navigation XP ring, stacks title/current level below it, and removes Activity.

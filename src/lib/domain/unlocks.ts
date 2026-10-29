@@ -41,7 +41,7 @@ export const UNLOCKS: readonly Unlock[] = [
     kind: "garden",
     level: 8,
     label: "Runic shimmer",
-    blurb: "A brief light reveals the tree runes, then rests.",
+    blurb: "Starlight runs along the tree's paths and its seals twinkle like a constellation.",
   },
   {
     id: "dusk",

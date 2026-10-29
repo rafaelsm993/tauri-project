@@ -5,14 +5,15 @@ describe("Library view compatibility", () => {
   it("keeps Grid as default and the legacy garden token as Tree", () => {
     const filters = new LibraryFilters();
     expect(filters.view).toBe("grid");
+    expect(filters.types).toEqual([]);
     expect(VIEW_OPTIONS).toEqual([
       { value: "grid", label: "Grid" },
       { value: "garden", label: "Tree" },
     ]);
     filters.query = "kept";
-    filters.type = "book";
+    filters.types = ["book"];
     filters.status = "completed";
     filters.view = "garden";
-    expect([filters.query, filters.type, filters.status]).toEqual(["kept", "book", "completed"]);
+    expect([filters.query, filters.types, filters.status]).toEqual(["kept", ["book"], "completed"]);
   });
 });

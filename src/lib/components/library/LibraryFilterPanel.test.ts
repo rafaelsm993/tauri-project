@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import LibraryFilterPanel from "./LibraryFilterPanel.svelte";
 import type { FilterOption, StatusFilter, TypeFilter } from "$lib/domain/libraryView";
+import type { MediaType } from "$lib/types/media";
 
 const statuses: FilterOption<StatusFilter>[] = [
   { value: "all", label: "All", count: 3 },
@@ -20,9 +21,9 @@ function setup(over: Partial<Record<string, unknown>> = {}) {
     statuses,
     types,
     status: "all" as StatusFilter,
-    type: "all" as TypeFilter,
+    picked: [] as MediaType[],
     onstatus: vi.fn(),
-    ontype: vi.fn(),
+    ontypes: vi.fn(),
     onreset: vi.fn(),
     ...over,
   };
@@ -38,7 +39,23 @@ describe("LibraryFilterPanel", () => {
     await userEvent.click(group("Status").getByRole("button", { name: "Planning 3" }));
     expect(p.onstatus).toHaveBeenCalledWith("planning");
     await userEvent.click(group("Type").getByRole("button", { name: "TV Show 2" }));
-    expect(p.ontype).toHaveBeenCalledWith("tv");
+    expect(p.ontypes).toHaveBeenCalledWith(["tv"]);
+  });
+
+  it("adds a second type, and All clears every type", async () => {
+    const p = setup({ picked: ["tv"] });
+    const type = group("Type");
+    expect(type.getByRole("button", { name: "All 3" })).toHaveAttribute("aria-pressed", "false");
+    expect(type.getByRole("button", { name: "TV Show 2" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(type.getByRole("button", { name: "Movie 1" }));
+    expect(p.ontypes).toHaveBeenLastCalledWith(["movie", "tv"]);
+    await userEvent.click(type.getByRole("button", { name: "All 3" }));
+    expect(p.ontypes).toHaveBeenLastCalledWith([]);
+  });
+
+  it("offers Reset while only a type is picked", () => {
+    setup({ picked: ["tv"] });
+    expect(screen.getByRole("button", { name: "Reset" })).toBeEnabled();
   });
 
   it("greys out options with nothing in them", () => {

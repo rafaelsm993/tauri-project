@@ -1,32 +1,40 @@
 <script lang="ts">
   import SegmentedControl from "$lib/components/ui/SegmentedControl.svelte";
   import {
+    toggleType,
     withEmptyDisabled,
     type FilterOption,
     type StatusFilter,
     type TypeFilter,
   } from "$lib/domain/libraryView";
+  import type { MediaType } from "$lib/types/media";
 
   // Status and Type for the Library: a bottom sheet on a phone, a popover on desktop.
   let {
     statuses,
     types,
     status,
-    type,
+    picked,
     onstatus,
-    ontype,
+    ontypes,
     onreset,
   }: {
     statuses: FilterOption<StatusFilter>[];
     types: FilterOption<TypeFilter>[];
     status: StatusFilter;
-    type: TypeFilter;
+    picked: readonly MediaType[];
     onstatus: (value: StatusFilter) => void;
-    ontype: (value: TypeFilter) => void;
+    ontypes: (next: MediaType[]) => void;
     onreset: () => void;
   } = $props();
 
-  const active = $derived(status !== "all" || type !== "all");
+  const active = $derived(status !== "all" || picked.length > 0);
+  // All stays lit while no type is picked; tapping it clears the picks.
+  const typeValue = $derived<TypeFilter[]>(picked.length === 0 ? ["all"] : [...picked]);
+
+  function pickType(value: TypeFilter) {
+    ontypes(value === "all" ? [] : toggleType(picked, value));
+  }
 </script>
 
 <div class="filter-panel">
@@ -49,9 +57,9 @@
       <span class="panel-label" aria-hidden="true">Type</span>
       <SegmentedControl
         label="Type"
-        options={withEmptyDisabled(types, type)}
-        value={type}
-        onchange={ontype}
+        options={withEmptyDisabled(types, typeValue)}
+        value={typeValue}
+        onchange={pickType}
         wrap
       />
     </section>

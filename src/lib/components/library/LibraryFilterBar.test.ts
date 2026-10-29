@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/svelte";
 import userEvent from "@testing-library/user-event";
 import LibraryFilterBar from "./LibraryFilterBar.svelte";
 import type { FilterOption, StatusFilter, TypeFilter } from "$lib/domain/libraryView";
+import type { MediaType } from "$lib/types/media";
 
 const statuses: FilterOption<StatusFilter>[] = [
   { value: "all", label: "All", count: 4 },
@@ -22,9 +23,9 @@ function setup(over: Partial<Record<string, unknown>> = {}) {
     statuses,
     types,
     status: "all" as StatusFilter,
-    type: "all" as TypeFilter,
+    picked: [] as MediaType[],
     onstatus: vi.fn(),
-    ontype: vi.fn(),
+    ontypes: vi.fn(),
     narrow: true,
     ...over,
   };
@@ -45,17 +46,23 @@ describe("LibraryFilterBar", () => {
     expect(typeRow().getByRole("button", { name: "Book 0" })).toBeDisabled();
   });
 
-  it("picking a type keeps only that chip, and tapping it again clears it", async () => {
+  it("picks several types, keeps every chip, and a picked chip's tap removes only it", async () => {
     const { props, rerender } = setup();
     await userEvent.click(typeRow().getByRole("button", { name: "Anime 2" }));
-    expect(props.ontype).toHaveBeenCalledWith("anime");
-    await rerender({ ...props, type: "anime" });
-    const only = typeRow().getAllByRole("button");
-    expect(only).toHaveLength(1);
-    expect(only[0]).toHaveAccessibleName("Anime 2, remove filter");
-    expect(only[0]).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(only[0]);
-    expect(props.ontype).toHaveBeenLastCalledWith("all");
+    expect(props.ontypes).toHaveBeenLastCalledWith(["anime"]);
+    await rerender({ ...props, picked: ["anime"] });
+    await userEvent.click(typeRow().getByRole("button", { name: "Movie 1" }));
+    expect(props.ontypes).toHaveBeenLastCalledWith(["movie", "anime"]);
+    await rerender({ ...props, picked: ["movie", "anime"] });
+    expect(typeRow().getAllByRole("button")).toHaveLength(3);
+    const anime = typeRow().getByRole("button", { name: "Anime 2, remove filter" });
+    expect(anime).toHaveAttribute("aria-pressed", "true");
+    expect(typeRow().getByRole("button", { name: "Movie 1, remove filter" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(anime);
+    expect(props.ontypes).toHaveBeenLastCalledWith(["movie"]);
   });
 
   it("shows the status as a removable token", async () => {
@@ -70,8 +77,8 @@ describe("LibraryFilterBar", () => {
   });
 
   it("says on the Filters button how many filters are on", () => {
-    setup({ status: "planning", type: "anime" });
-    expect(screen.getByRole("button", { name: "Filters, 2 on" })).toBeInTheDocument();
+    setup({ status: "planning", picked: ["movie", "anime"] });
+    expect(screen.getByRole("button", { name: "Filters, 3 on" })).toBeInTheDocument();
   });
 
   it("opens the panel as a sheet on a phone, applying a pick at once", async () => {
@@ -87,11 +94,11 @@ describe("LibraryFilterBar", () => {
   });
 
   it("Reset in the panel clears both filters", async () => {
-    const { props } = setup({ status: "planning", type: "anime" });
+    const { props } = setup({ status: "planning", picked: ["anime"] });
     await userEvent.click(screen.getByRole("button", { name: "Filters, 2 on" }));
     await userEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(props.onstatus).toHaveBeenCalledWith("all");
-    expect(props.ontype).toHaveBeenCalledWith("all");
+    expect(props.ontypes).toHaveBeenCalledWith([]);
   });
 
   it("on desktop the button opens a popover instead of a sheet", async () => {

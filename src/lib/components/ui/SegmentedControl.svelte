@@ -11,7 +11,8 @@
   }: {
     label: string;
     options: { value: T; label: string; count?: number; disabled?: boolean }[];
-    value: T;
+    /** One value, or several pressed at once. */
+    value: T | readonly T[];
     onchange: (value: T) => void;
     disabled?: boolean;
     /** Wrap onto more rows instead of scrolling; for long option sets like a 1–10 rating. */
@@ -20,6 +21,8 @@
     fill?: boolean;
     controls?: string;
   } = $props();
+
+  const pressed = (v: T) => (typeof value === "string" ? v === value : value.includes(v));
 </script>
 
 <div class="segmented" class:wrap class:fill role="group" aria-label={label}>
@@ -27,9 +30,9 @@
     <button
       type="button"
       class="segment"
-      class:active={option.value === value}
+      class:active={pressed(option.value)}
       class:empty={option.disabled}
-      aria-pressed={option.value === value}
+      aria-pressed={pressed(option.value)}
       aria-controls={controls}
       disabled={disabled || option.disabled}
       onclick={() => onchange(option.value)}

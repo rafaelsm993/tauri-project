@@ -8,6 +8,7 @@ import {
   normalizeTitle,
   searchEntries,
   statusOptions,
+  toggleType,
   typeOptions,
   withEmptyDisabled,
 } from "./libraryView";
@@ -43,26 +44,31 @@ const LIST = [
 
 describe("filterEntries", () => {
   it("returns everything for all/all", () => {
-    expect(filterEntries(LIST, { status: "all", type: "all" })).toHaveLength(4);
+    expect(filterEntries(LIST, { status: "all", types: [] })).toHaveLength(4);
   });
 
   it("filters by status and type together", () => {
-    const out = filterEntries(LIST, { status: "in_progress", type: "tv" });
+    const out = filterEntries(LIST, { status: "in_progress", types: ["tv"] });
     expect(out.map((e) => e.key)).toEqual(["tmdb:tv:2"]);
   });
 
+  it("keeps every picked type", () => {
+    const out = filterEntries(LIST, { status: "all", types: ["movie", "game"] });
+    expect(out.map((e) => e.key)).toEqual(["tmdb:movie:1", "rawg:game:4"]);
+  });
+
   it("keeps the incoming order", () => {
-    const out = filterEntries(LIST, { status: "in_progress", type: "all" });
+    const out = filterEntries(LIST, { status: "in_progress", types: [] });
     expect(out.map((e) => e.key)).toEqual(["tmdb:tv:2", "anilist:anime:3"]);
   });
 });
 
 describe("statusOptions", () => {
   it("starts with All and counts each status within the chosen type", () => {
-    const opts = statusOptions(LIST, "all");
+    const opts = statusOptions(LIST, []);
     expect(opts[0]).toEqual({ value: "all", label: "All", count: 4 });
     expect(opts.find((o) => o.value === "in_progress")?.count).toBe(2);
-    expect(statusOptions(LIST, "tv").find((o) => o.value === "in_progress")?.count).toBe(1);
+    expect(statusOptions(LIST, ["tv"]).find((o) => o.value === "in_progress")?.count).toBe(1);
   });
 });
 
@@ -207,9 +213,29 @@ describe("filter bar helpers", () => {
     ]);
   });
 
+  it("keeps every picked option enabled when several are picked", () => {
+    expect(withEmptyDisabled(options, ["dropped", "completed"]).map((o) => o.disabled)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
   it("counts the filters that narrow the library", () => {
-    expect(activeFilterCount({ status: "all", type: "all" })).toBe(0);
-    expect(activeFilterCount({ status: "planning", type: "all" })).toBe(1);
-    expect(activeFilterCount({ status: "planning", type: "tv" })).toBe(2);
+    expect(activeFilterCount({ status: "all", types: [] })).toBe(0);
+    expect(activeFilterCount({ status: "planning", types: [] })).toBe(1);
+    expect(activeFilterCount({ status: "planning", types: ["tv"] })).toBe(2);
+    expect(activeFilterCount({ status: "all", types: ["tv", "game"] })).toBe(2);
+  });
+});
+
+describe("toggleType", () => {
+  it("adds a type, keeping the catalog order", () => {
+    expect(toggleType(["game"], "movie")).toEqual(["movie", "game"]);
+  });
+
+  it("removes a type that was picked", () => {
+    expect(toggleType(["movie", "game"], "movie")).toEqual(["game"]);
   });
 });

@@ -25,6 +25,24 @@ describe("SegmentedControl", () => {
     );
   });
 
+  it("presses every option in an array value", () => {
+    render(SegmentedControl, {
+      label: "Type",
+      options: OPTIONS,
+      value: ["planning", "dropped"],
+      onchange: vi.fn(),
+    });
+    expect(screen.getByRole("button", { name: /all 3/i })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /planning 2/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /dropped 0/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("reports the clicked value", async () => {
     const onchange = vi.fn();
     render(SegmentedControl, { label: "Status", options: OPTIONS, value: "all", onchange });

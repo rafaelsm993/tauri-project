@@ -8,30 +8,32 @@
   import { followTrigger } from "$lib/components/ui/popover";
   import {
     activeFilterCount,
+    toggleType,
     withEmptyDisabled,
     type FilterOption,
     type StatusFilter,
     type TypeFilter,
   } from "$lib/domain/libraryView";
   import { motionStore } from "$lib/stores/motion.svelte";
+  import type { MediaType } from "$lib/types/media";
 
   // One row: Filters (Status + Type in a panel), the status as a token, the types as chips.
   let {
     statuses,
     types,
     status,
-    type,
+    picked,
     onstatus,
-    ontype,
+    ontypes,
     narrow,
     children,
   }: {
     statuses: FilterOption<StatusFilter>[];
     types: FilterOption<TypeFilter>[];
     status: StatusFilter;
-    type: TypeFilter;
+    picked: readonly MediaType[];
     onstatus: (value: StatusFilter) => void;
-    ontype: (value: TypeFilter) => void;
+    ontypes: (next: MediaType[]) => void;
     // Tests pin it; the app follows the 768px line where sheets become bottom sheets.
     narrow?: boolean;
     children?: Snippet<[Snippet, Snippet]>;
@@ -51,19 +53,19 @@
   let positionedOpen = $state(false);
   let sheetOpen = $state(false);
 
-  const on = $derived(activeFilterCount({ status, type }));
+  const on = $derived(activeFilterCount({ status, types: picked }));
   const statusLabel = $derived(statuses.find((s) => s.value === status)?.label ?? "");
-  // Nothing picked means all, so there is no All chip; a picked type stands alone.
-  const chips = $derived(
-    withEmptyDisabled(types, type).filter(
-      (t) => t.value !== "all" && (type === "all" || t.value === type),
-    ),
-  );
+  // Nothing picked means all, so there is no All chip; every type stays so more can be added.
+  const chips = $derived(withEmptyDisabled(types, picked).filter((t) => t.value !== "all"));
   const ms = $derived(motionStore.on ? 160 : 0);
+  const isPicked = (value: TypeFilter) => value !== "all" && picked.includes(value);
+  const toggle = (value: TypeFilter) => {
+    if (value !== "all") ontypes(toggleType(picked, value));
+  };
 
   function reset() {
     onstatus("all");
-    ontype("all");
+    ontypes([]);
   }
 
   $effect(() => {
@@ -134,21 +136,21 @@
         onscroll={edges}
       >
         {#each chips as chip (chip.value)}
-          {@const picked = chip.value === type}
+          {@const chosen = isPicked(chip.value)}
           <button
             type="button"
             class="chip"
-            class:picked
-            aria-pressed={picked}
-            aria-label={picked ? `${chip.label} ${chip.count}, remove filter` : undefined}
+            class:picked={chosen}
+            aria-pressed={chosen}
+            aria-label={chosen ? `${chip.label} ${chip.count}, remove filter` : undefined}
             disabled={chip.disabled}
             animate:flip={{ duration: ms }}
             transition:fade={{ duration: ms }}
-            onclick={() => ontype(picked ? "all" : chip.value)}
+            onclick={() => toggle(chip.value)}
           >
             {chip.label}
             <span class="chip-count">{chip.count}</span>
-            {#if picked}<span class="token-x" aria-hidden="true">✕</span>{/if}
+            {#if chosen}<span class="token-x" aria-hidden="true">✕</span>{/if}
           </button>
         {/each}
       </div>
@@ -163,7 +165,7 @@
 
 {#if isNarrow && sheetOpen}
   <Sheet label="Filters" focus="sheet" onclose={() => (sheetOpen = false)}>
-    <LibraryFilterPanel {statuses} {types} {status} {type} {onstatus} {ontype} onreset={reset} />
+    <LibraryFilterPanel {statuses} {types} {status} {picked} {onstatus} {ontypes} onreset={reset} />
   </Sheet>
 {/if}
 
@@ -181,7 +183,7 @@
       positionedOpen = popoverOpen;
     }}
   >
-    <LibraryFilterPanel {statuses} {types} {status} {type} {onstatus} {ontype} onreset={reset} />
+    <LibraryFilterPanel {statuses} {types} {status} {picked} {onstatus} {ontypes} onreset={reset} />
   </div>
 {/if}
 

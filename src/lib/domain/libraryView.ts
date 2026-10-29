@@ -10,20 +10,26 @@ export const VIEW_OPTIONS: { value: LibraryViewMode; label: string }[] = [
 ];
 
 export type StatusFilter = LibraryStatus | "all";
+// A Type option; "all" is the panel's button that clears every picked type.
 export type TypeFilter = MediaType | "all";
 export type FilterOption<T extends string> = { value: T; label: string; count: number };
+// An empty `types` list means every type.
+export type LibraryFilter = { status: StatusFilter; types: readonly MediaType[] };
 
 export const TYPE_ORDER: MediaType[] = ["movie", "tv", "anime", "manga", "book", "game"];
 
-export function filterEntries(
-  entries: LibraryEntry[],
-  filter: { status: StatusFilter; type: TypeFilter },
-): LibraryEntry[] {
+export function filterEntries(entries: LibraryEntry[], filter: LibraryFilter): LibraryEntry[] {
   return entries.filter(
     (e) =>
       (filter.status === "all" || e.user.status === filter.status) &&
-      (filter.type === "all" || e.snapshot.media_type === filter.type),
+      (filter.types.length === 0 || filter.types.includes(e.snapshot.media_type)),
   );
+}
+
+// Adds or removes one type; the result follows TYPE_ORDER so chips and counts read the same way.
+export function toggleType(types: readonly MediaType[], type: MediaType): MediaType[] {
+  const next = types.includes(type) ? types.filter((t) => t !== type) : [...types, type];
+  return TYPE_ORDER.filter((t) => next.includes(t));
 }
 
 // Case- and accent-insensitive form used for title search.
@@ -44,9 +50,9 @@ export function searchEntries(entries: LibraryEntry[], query: string): LibraryEn
 // Counts follow the type filter so the numbers match what a click would show.
 export function statusOptions(
   entries: LibraryEntry[],
-  type: TypeFilter,
+  types: readonly MediaType[],
 ): FilterOption<StatusFilter>[] {
-  const scoped = filterEntries(entries, { status: "all", type });
+  const scoped = filterEntries(entries, { status: "all", types });
   return [
     { value: "all", label: "All", count: scoped.length },
     ...STATUSES.map((status) => ({
@@ -109,13 +115,14 @@ export function continueItems(
   return [...lead, ...rest].slice(0, Math.max(max, lead.length));
 }
 
-// Zero-item options stay visible but can't be picked; the picked one can always be switched off.
+// Zero-item options stay visible but can't be picked; a picked one can always be switched off.
 export function withEmptyDisabled<T extends string>(
   options: FilterOption<T>[],
-  value: T,
+  picked: T | readonly T[],
 ): (FilterOption<T> & { disabled: boolean })[] {
-  return options.map((o) => ({ ...o, disabled: o.count === 0 && o.value !== value }));
+  const on = (v: T) => (typeof picked === "string" ? v === picked : picked.includes(v));
+  return options.map((o) => ({ ...o, disabled: o.count === 0 && !on(o.value) }));
 }
 
-export const activeFilterCount = (f: { status: StatusFilter; type: TypeFilter }): number =>
-  Number(f.status !== "all") + Number(f.type !== "all");
+export const activeFilterCount = (f: LibraryFilter): number =>
+  Number(f.status !== "all") + f.types.length;

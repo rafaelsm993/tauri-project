@@ -41,10 +41,10 @@
   const matching = $derived(searchEntries(store.entries, filters.query));
   const types = $derived(typeOptions(matching, store.entries));
   // A kept type whose last entry was removed would otherwise hide everything.
-  const type = $derived(types.some((t) => t.value === filters.type) ? filters.type : "all");
+  const picked = $derived(filters.types.filter((t) => types.some((o) => o.value === t)));
   const status = $derived(filters.status);
-  const visible = $derived(filterEntries(matching, { status, type }));
-  const statuses = $derived(statusOptions(matching, type));
+  const visible = $derived(filterEntries(matching, { status, types: picked }));
+  const statuses = $derived(statusOptions(matching, picked));
   const emptyFilterText = $derived.by(() => {
     if (matching.length === 0) return `No titles match \u201c${filters.query.trim()}\u201d.`;
     return status === "all"
@@ -58,15 +58,15 @@
     {statuses}
     {types}
     {status}
-    {type}
+    {picked}
     onstatus={(v) => (filters.status = v)}
-    ontype={(v) => (filters.type = v)}
+    ontypes={(next) => (filters.types = next)}
     narrow={narrowFilters}
   >
     {#snippet children(filterTrigger, filterChips)}
       <AppHeader sticky={false} heading="Library">
         {#snippet action()}
-          <AddManuallyButton type={type === "all" ? undefined : type} variant="icon" />
+          <AddManuallyButton type={picked.length === 1 ? picked[0] : undefined} variant="icon" />
         {/snippet}
         {#snippet persistent()}
           {#if store.entries.length > 0}
@@ -114,7 +114,7 @@
       onclear={() => {
         filters.query = "";
         filters.status = "all";
-        filters.type = "all";
+        filters.types = [];
       }}
     />
   {:else if store.entries.length === 0}

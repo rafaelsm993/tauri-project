@@ -64,7 +64,7 @@ describe("LibraryView: add manually", () => {
     const add = screen.getByRole("button", { name: "Add manually" });
     await userEvent.click(add);
     expect(open).toHaveBeenLastCalledWith(expect.objectContaining({ type: undefined }));
-    filters.type = "book";
+    filters.types = ["book"];
     await userEvent.click(await screen.findByRole("button", { name: "Add manually" }));
     expect(open).toHaveBeenLastCalledWith(expect.objectContaining({ type: "book" }));
     open.mockRestore();
@@ -159,6 +159,21 @@ describe("LibraryView", () => {
     expect(screen.getByRole("button", { name: "Remove filter: Planning" })).toBeInTheDocument();
   });
 
+  it("shows the items of every picked type", async () => {
+    const store = await storeWith([
+      entry(1, "movie", "planning"),
+      entry(2, "tv", "planning"),
+      entry(3, "game", "planning"),
+    ]);
+    render(LibraryPage, { store, filters: new LibraryFilters(), narrowFilters: true });
+    const row = () => within(screen.getByRole("group", { name: "Type" }));
+    await userEvent.click(row().getByRole("button", { name: /^movie/i }));
+    expect(cards()).toHaveLength(1);
+    await userEvent.click(row().getByRole("button", { name: /^game/i }));
+    expect(cards()).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Filters, 2 on" })).toBeInTheDocument();
+  });
+
   it("says when a filter matches nothing", async () => {
     // An empty status can't be picked, but a kept one can end up matching nothing.
     const filters = new LibraryFilters();
@@ -211,7 +226,7 @@ describe("LibraryView", () => {
       entry(3, "game", "planning"),
     ]);
     const filters = new LibraryFilters();
-    filters.type = "anime";
+    filters.types = ["anime"];
     render(LibraryPage, { store, filters });
     expect(cards()).toHaveLength(3);
     const chips = within(screen.getByRole("group", { name: "Type" })).getAllByRole("button");
@@ -290,7 +305,7 @@ describe("LibraryView: tree view", () => {
     await userEvent.click(screen.getByText("Genres & saved items", { selector: "summary" }));
     expect(screen.getByRole("region", { name: "Books subtree" })).toHaveTextContent("T2");
     expect(filters.query).toBe("t2");
-    expect(filters.type).toBe("all");
+    expect(filters.types).toEqual([]);
     await userEvent.click(screen.getByRole("button", { name: "All media" }));
     page.state = {};
     fireEvent(window, new PopStateEvent("popstate"));

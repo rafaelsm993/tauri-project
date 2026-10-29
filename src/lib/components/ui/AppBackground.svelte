@@ -3,12 +3,14 @@
   import { prefsStore, PrefsStore } from "$lib/stores/prefs.svelte";
   import { UnlocksStore } from "$lib/stores/unlocks.svelte";
   import { MotionStore } from "$lib/stores/motion.svelte";
+  import { ambientStore, AmbientStore } from "$lib/stores/ambient.svelte";
   import { particlesFor } from "$lib/domain/motifs";
 
   let {
     prefs = prefsStore,
     currentLevel = null,
-  }: { prefs?: PrefsStore; currentLevel?: number | null } = $props();
+    ambient = ambientStore,
+  }: { prefs?: PrefsStore; currentLevel?: number | null; ambient?: AmbientStore } = $props();
   const equipment = $derived(new UnlocksStore(prefs, () => currentLevel));
   const motion = $derived(new MotionStore(prefs));
   const motif = $derived(equipment.motif);
@@ -17,26 +19,11 @@
     typeof window === "undefined"
       ? { current: false }
       : new MediaQuery("(hover: none), (pointer: coarse)");
-  let hidden = $state(false);
-  let blurred = $state(false);
   let canvas = $state<HTMLCanvasElement>();
-  const paused = $derived(hidden || blurred || !prefs.loaded || !motion.on);
+  const paused = $derived(ambient.away || !prefs.loaded || !motion.on);
 
-  $effect(() => {
-    hidden = document.hidden;
-    blurred = !document.hasFocus();
-    const visibility = () => (hidden = document.hidden);
-    const blur = () => (blurred = true);
-    const focus = () => (blurred = false);
-    document.addEventListener("visibilitychange", visibility);
-    window.addEventListener("blur", blur);
-    window.addEventListener("focus", focus);
-    return () => {
-      document.removeEventListener("visibilitychange", visibility);
-      window.removeEventListener("blur", blur);
-      window.removeEventListener("focus", focus);
-    };
-  });
+  // The background owns the listeners; everything else reads `ambient.away`.
+  $effect(() => ambient.watch());
 
   $effect(() => {
     const el = canvas,

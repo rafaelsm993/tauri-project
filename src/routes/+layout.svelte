@@ -6,6 +6,7 @@
   import "@fontsource/dm-mono/500.css";
   import "$lib/styles/global.css";
   import AppBackground from "$lib/components/ui/AppBackground.svelte";
+  import { ambientStore } from "$lib/stores/ambient.svelte";
   import OfflineBanner from "$lib/components/ui/OfflineBanner.svelte";
   import AppNav from "$lib/components/ui/AppNav.svelte";
   import LevelUpToast from "$lib/components/ui/LevelUpToast.svelte";
@@ -52,6 +53,11 @@
   // DOM side effect: CSS reads the motion answer as `<html data-motion>`.
   $effect(() => {
     document.documentElement.dataset.motion = motionStore.on ? "on" : "off";
+  });
+
+  // DOM side effect: CSS loops pause on `<html data-ambient="paused">`, in step with the background.
+  $effect(() => {
+    document.documentElement.dataset.ambient = ambientStore.away ? "paused" : "running";
   });
 
   // The poster carries over between a card and its detail page, and back again on Back.

@@ -133,3 +133,15 @@ test("unearned saved motif stays inactive despite a high seen level", async ({ p
   await expect(page.locator(".circles li")).toHaveCount(0);
   await expect(page.locator("canvas.mobile-motif")).toHaveCount(0);
 });
+
+test("the app marks itself paused while the window is unfocused", async ({ page }) => {
+  await mockLibrary(page, [], { events: eventsAtLevel(8), seenLevel: 8 });
+  await page.goto("/");
+  await page.bringToFront();
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-ambient", "running");
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expect(html).toHaveAttribute("data-ambient", "paused");
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(html).toHaveAttribute("data-ambient", "running");
+});

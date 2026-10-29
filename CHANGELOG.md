@@ -59,6 +59,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Svelte 5 runes and class-based application stores
 
 ### Fixed
+- Swiping across the plan's weekdays no longer makes the row jump under the finger when the summary below rewraps; on the Linux app the swipe also no longer stops painting after the first day.
+- On touch screens, sheets no longer show a classic scrollbar that narrowed the weekday buttons below the 44 px touch size (Linux app).
 - Settings has an in-app Back action using navigation history, with Profile as its cold-entry fallback.
 - Runic shimmer briefly reveals visible tree channels, roots and crown on each map entry, then settles; it no longer animates only hidden art or shakes continuously.
 - Returning Home restores scroll immediately, without smooth scrolling or late carousel layout shifts overriding the restored position.

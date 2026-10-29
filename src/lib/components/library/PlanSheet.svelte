@@ -183,6 +183,9 @@
     x: number;
   };
   let dayGesture: DayGesture | null = null;
+  let sheet: HTMLDivElement;
+  // Held while a day swipe runs: the bottom sheet must not reflow the row under the finger.
+  let heldHeight = $state<number | null>(null);
 
   function paintDay(day: number) {
     const gesture = dayGesture;
@@ -205,6 +208,7 @@
       visited: new Set(),
       x: event.clientX,
     };
+    heldHeight = sheet.getBoundingClientRect().height;
     event.preventDefault();
     button.focus({ preventScroll: true });
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -230,12 +234,14 @@
     if (!dayGesture || dayGesture.pointer !== event.pointerId) return;
     moveDays(event);
     dayGesture = null;
+    heldHeight = null;
   }
 
   function cancelDays(event?: PointerEvent) {
     if (!dayGesture || (event && event.pointerId !== dayGesture.pointer)) return;
     days = dayGesture.before;
     dayGesture = null;
+    heldHeight = null;
   }
 
   $effect(() => {
@@ -264,7 +270,11 @@
   }
 </script>
 
-<div class="plan-sheet">
+<div
+  class="plan-sheet"
+  bind:this={sheet}
+  style:height={heldHeight === null ? undefined : `${heldHeight}px`}
+>
   <h2 class="sheet-title">Plan {entry.snapshot.title}</h2>
 
   {#if askedFields.length > 0}

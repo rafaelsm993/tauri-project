@@ -102,6 +102,24 @@ test("existing-day paint clears once, outside release stops, Cancel discards", a
   await group.getByRole("button", { name: "Tuesday", exact: true }).click();
   await selectedDays(page, [0, 1, 2, 4]);
 });
+test("the day row stays under the finger while a swipe reflows the plan summary", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const { group } = await openDays(page);
+  const top = async () => (await group.boundingBox())!.y;
+  const before = await top();
+  const a = await point(page, 0),
+    b = await point(page, 4);
+  await page.mouse.move(a.x, a.y);
+  await page.mouse.down();
+  await page.mouse.move(b.x, b.y);
+  await selectedDays(page, []);
+  expect(Math.abs((await top()) - before)).toBeLessThan(0.5);
+  await page.mouse.move(a.x, a.y);
+  expect(Math.abs((await top()) - before)).toBeLessThan(0.5);
+  await page.mouse.up();
+});
 test("right button is ignored and keyboard selection saves sorted numeric days", async ({
   page,
 }) => {
@@ -254,8 +272,12 @@ test("a second touch cannot compete with the primary day paint", async ({ page, 
 for (const editing of [false, true]) {
   test(`compact weekday row fits create/edit=${editing} with enlarged text`, async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 560 });
-    const { group } = await openDays(page, editing);
+    const { dialog, group } = await openDays(page, editing);
     await page.addStyleTag({ content: "html { font-size: 18.4px !important; }" });
+    const touch = await page.evaluate(() => matchMedia("(hover: none), (pointer: coarse)").matches);
+    if (touch) {
+      expect(await dialog.evaluate((el) => el.offsetWidth - el.clientWidth)).toBe(0);
+    }
     const rects = await group.getByRole("button").evaluateAll((buttons) =>
       buttons.map((b) => {
         const r = b.getBoundingClientRect();
@@ -270,7 +292,7 @@ for (const editing of [false, true]) {
     expect(rects[0].left).toBeGreaterThanOrEqual(bounds.x);
     expect(rects[6].right).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
     expect(await group.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
-    if (await page.evaluate(() => matchMedia("(hover: none), (pointer: coarse)").matches)) {
+    if (touch) {
       for (const rect of rects) {
         expect(rect.width).toBeGreaterThanOrEqual(44);
         expect(rect.height).toBeGreaterThanOrEqual(44);

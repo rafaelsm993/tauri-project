@@ -120,6 +120,15 @@
     border: none;
     color: inherit;
 
+    // Touch scrolls by finger and phones overlay their scrollbars; a classic one (WebKitGTK) would narrow 44px targets.
+    @include touch {
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
     // Focused only as a starting point for keyboard and screen reader users, never to show.
     &:focus {
       outline: none;

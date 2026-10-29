@@ -25,8 +25,8 @@ const running = (page: Page) =>
   page.locator(".runic-map").evaluate((el) =>
     el
       .getAnimations({ subtree: true })
-      .filter((a) => a.playState === "running")
-      .map((a) => (a as CSSAnimation).animationName.replace(/^(svelte|s)-[A-Za-z0-9]+-/, "")),
+      .filter((a): a is CSSAnimation => a.playState === "running" && a instanceof CSSAnimation)
+      .map((a) => a.animationName.replace(/^(svelte|s)-[A-Za-z0-9]+-/, "")),
   );
 
 test("starlight keeps moving on the tree while the window is in use", async ({ page }) => {

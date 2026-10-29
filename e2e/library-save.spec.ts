@@ -204,7 +204,11 @@ test("the stars and their word fit on screen", async ({ page }) => {
 
   await expect(page.getByRole("slider", { name: "Rating" })).toBeInViewport({ ratio: 1 });
   await expect(page.getByText("Not rated")).toBeInViewport({ ratio: 1 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    ),
+  ).toBe(0);
 });
 
 test("on a phone the add sheet sits at the bottom and Back closes it, not the page", async ({

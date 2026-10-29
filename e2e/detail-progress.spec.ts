@@ -57,7 +57,11 @@ test("on a phone the four actions fit one row with nothing off-screen", async ({
     tops.add(Math.round((await button.boundingBox())!.y));
   }
   expect(tops.size).toBe(1);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    ),
+  ).toBe(0);
 });
 
 test("the bar's fill is the equipped accent, as wide as the progress", async ({ page }) => {

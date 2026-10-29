@@ -81,6 +81,9 @@
     background: var(--clr-surface);
     border: 1px solid rgb(var(--clr-ink-rgb) / 0.06);
     border-radius: $radius-full;
+    // Desktop: the pill hugs its tabs and sits centred under the search.
+    width: fit-content;
+    margin-inline: auto;
     max-width: 100%;
     min-width: 0;
   }
@@ -142,6 +145,12 @@
   // Six fixed categories, so show all six: a scrolling rail hid four of them. Keyed on width,
   // not on touch, because the desktop window minimum is 360px and reaches this layout too.
   @include respond-to(md) {
+    // Phone: the pill spans the bar so the six tabs can share it.
+    .category-bar {
+      width: auto;
+      margin-inline: 0;
+    }
+
     .category-tabs {
       overflow-x: visible;
       gap: 0;

@@ -150,20 +150,22 @@ test.describe("the library filters", () => {
     await expect(panel).toBeHidden();
   });
 
-  test("picking a type leaves only its chip, and its cross brings the rest back", async ({
-    page,
-  }) => {
+  test("picking types keeps every chip, and each cross takes one type off", async ({ page }) => {
     await mockLibrary(page, four());
     await page.goto("/library");
     await page.waitForLoadState("networkidle");
     const row = page.getByRole("group", { name: "Type" });
+    const cards = page.getByRole("main").getByRole("list").getByRole("link");
     await row.getByRole("button", { name: /^Anime 1$/ }).click();
-    await expect(row.getByRole("button")).toHaveCount(1);
-    const picked = row.getByRole("button", { name: "Anime 1, remove filter" });
-    await expect(picked).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByRole("main").getByRole("list").getByRole("link")).toHaveCount(1);
-    await picked.click();
+    await row.getByRole("button", { name: /^Game 1$/ }).click();
     await expect(row.getByRole("button")).toHaveCount(4);
+    await expect(cards).toHaveCount(2);
+    const anime = row.getByRole("button", { name: "Anime 1, remove filter" });
+    await expect(anime).toHaveAttribute("aria-pressed", "true");
+    await anime.click();
+    await expect(cards).toHaveCount(1);
+    await row.getByRole("button", { name: "Game 1, remove filter" }).click();
+    await expect(cards).toHaveCount(4);
   });
 
   test("keep the Library header short on a phone", async ({ page }) => {
@@ -528,6 +530,39 @@ test.describe("touch devices", () => {
     await expect(card.locator(".card__overview, .card__overlay-title")).toHaveCount(0);
     await expect(card.locator(".card__score")).toHaveText("★ 7.4");
     await expect(card.locator(".card__no-poster .placeholder__caption")).toBeVisible();
+  });
+});
+
+test.describe("home category pill", () => {
+  const measure = (page: Page) =>
+    page.locator(".category-bar").evaluate((bar) => {
+      const box = bar.getBoundingClientRect();
+      const host = bar.parentElement!.getBoundingClientRect();
+      const tabs = [...bar.querySelectorAll(".category-tab")].map((t) => t.getBoundingClientRect());
+      return {
+        width: box.width,
+        hostWidth: host.width,
+        slack: box.width - (tabs.at(-1)!.right - tabs[0].left),
+        offset: box.left + box.width / 2 - (host.left + host.width / 2),
+      };
+    });
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+  });
+
+  test("on desktop it hugs its tabs and sits centred in the header", async ({ page }) => {
+    test.skip(page.viewportSize()!.width <= 768, "desktop layout only");
+    const m = await measure(page);
+    expect(m.slack, "the pill is wider than its tabs").toBeLessThanOrEqual(10);
+    expect(Math.abs(m.offset), "the pill is off-centre").toBeLessThanOrEqual(1);
+  });
+
+  test("on a phone it still spans the header", async ({ page }) => {
+    test.skip(page.viewportSize()!.width > 768, "phone layout only");
+    const m = await measure(page);
+    expect(Math.abs(m.width - m.hostWidth)).toBeLessThanOrEqual(1);
   });
 });
 

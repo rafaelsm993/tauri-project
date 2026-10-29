@@ -51,7 +51,7 @@
 <style lang="scss">
   .settings-section {
     width: 100%;
-    max-width: 48rem;
+    max-width: $settings-max-width;
     min-width: 0;
     border: 1px solid var(--clr-border);
     border-radius: $radius-md;

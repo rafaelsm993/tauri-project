@@ -37,3 +37,22 @@ for (const theme of ["dark", "light"]) {
     await expect(page.locator('[data-picker="Avatar"]')).not.toHaveClass(/stacked/);
   });
 }
+
+test("desktop Settings is one column centred beside the rail", async ({ page }) => {
+  test.skip(page.viewportSize()!.width <= 768, "desktop layout only");
+  await mockLibrary(page, []);
+  await page.goto("/settings");
+  const heading = (await page.getByRole("heading", { name: "Settings", level: 1 }).boundingBox())!;
+  const section = (await page.locator("details.settings-section").first().boundingBox())!;
+  const rail = (await page.getByRole("navigation", { name: "Main" }).boundingBox())!;
+  const right = await page.evaluate(() => document.documentElement.clientWidth);
+  const roomCentre = (rail.x + rail.width + right) / 2;
+  expect(
+    Math.abs(section.x + section.width / 2 - roomCentre),
+    "sections are off-centre",
+  ).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(heading.x - section.x),
+    "heading and sections do not line up",
+  ).toBeLessThanOrEqual(1);
+});

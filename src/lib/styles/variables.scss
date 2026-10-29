@@ -95,6 +95,8 @@ $touch-target: 44px;
 // Height of the home search bar; the level chip matches it.
 $bar-height: 52px;
 $page-max-width: 1440px;
+// Settings reads as one column; wider rows only push switches away from their labels.
+$settings-max-width: 48rem;
 
 // The persistent navigation: a side rail on desktop, a bottom tab bar on phone.
 $nav-rail-width: 80px;

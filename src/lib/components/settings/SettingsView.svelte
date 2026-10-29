@@ -133,7 +133,7 @@
 
 <style lang="scss">
   .settings-back {
-    display: inline-flex;
+    display: none;
     align-items: center;
     gap: $spacing-xs;
     min-height: $touch-target;
@@ -154,6 +154,10 @@
       &:hover {
         border-color: var(--clr-accent);
       }
+    }
+    // Desktop leaves through the rail's Settings tab; Back is the phone's way out.
+    @include respond-to(md) {
+      display: inline-flex;
     }
   }
 
@@ -190,6 +194,8 @@
 
   .settings {
     @include page-shell;
+    // The header and the sections share one centred column.
+    max-width: calc(#{$settings-max-width} + 2 * #{$spacing-xl});
     display: flex;
     flex-direction: column;
     gap: $spacing-sm;

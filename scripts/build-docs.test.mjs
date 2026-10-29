@@ -65,6 +65,20 @@ test("the workflow asks for a phone check on UI changes", () => {
   assert.match(read("AGENTS.md"), /physical Android phone/);
 });
 
+test("without a phone, the check runs on the Windows app at phone size with touch", () => {
+  assert.ok(read("AGENTS.md").includes("BUILD_AND_RUN.md#phone-size-check-on-the-windows-app"));
+  const doc = read("docs/BUILD_AND_RUN.md");
+  for (const s of [
+    "## Phone-size check on the Windows app",
+    "--remote-debugging-port=9222",
+    "Emulation.setTouchEmulationEnabled",
+    "(pointer: coarse)",
+    "networkingMode=nat",
+  ]) {
+    assert.ok(doc.includes(s), `docs/BUILD_AND_RUN.md lacks "${s}"`);
+  }
+});
+
 // Backup files go through tauri-plugin-fs from Rust only; the WebView must not get fs access.
 test("no capability grants the WebView file-system access", () => {
   const dir = join(root, "src-tauri/capabilities");

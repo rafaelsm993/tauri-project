@@ -78,6 +78,39 @@ Vitest and svelte-check run through `wdev.sh gate`, not from WSL. Playwright nee
 (`PS> npx playwright install chromium`). Its web server is Vite on port 1420, the same one `tauri dev`
 uses, so close the app before the full gate (each `svelte-kit sync` reloads it anyway).
 
+Run `verify` through `wdev.sh gate`, not a bare `cmd /c npm run verify`: the gate loads the MSVC
+environment, and without it the toolchain guard fails on `where link.exe`.
+
+## Phone-size check on the Windows app
+
+No phone connected? The Windows dev app stands in for one. WebView2 can emulate a 360 px touch
+screen, which makes `(pointer: coarse)` and `(hover: none)` match, so `@include touch` rules (44 px
+targets, nothing hover-only) apply as they do on the phone. Check every changed screen at 360×740
+like this, next to the desktop size. It does not cover what only Android does (the system WebView,
+the on-screen keyboard, safe areas, speed): note "physical phone check pending" in the handoff.
+
+By hand: run `./scripts/wdev.sh`, right-click → Inspect (devtools are on in dev builds), press
+`Ctrl+Shift+M`, pick a 360×740 phone with touch.
+
+Scripted (agents), over the Chrome DevTools Protocol:
+
+```bash
+WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 \
+  WSLENV="${WSLENV:+$WSLENV:}WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS" ./scripts/wdev.sh
+```
+
+Then, on the page target from `http://127.0.0.1:9222/json/list`:
+
+1. `Emulation.setDeviceMetricsOverride` `{ width: 360, height: 740, deviceScaleFactor: 2.625, mobile: true }`
+2. `Emulation.setTouchEmulationEnabled` `{ enabled: true, maxTouchPoints: 5 }`
+3. Confirm `matchMedia("(pointer: coarse)").matches` is `true`, navigate with the app's own links
+   (not `history.pushState`), and take `Page.captureScreenshot` shots.
+4. Undo both with `Emulation.clearDeviceMetricsOverride` and `setTouchEmulationEnabled { enabled: false }`.
+
+With WSL `networkingMode=nat`, port 9222 listens only on Windows localhost, so run the CDP client
+with Windows `node` (22 has a global `WebSocket`) rather than from WSL. With `networkingMode=mirrored`,
+WSL reaches `localhost:9222` directly.
+
 ## Performance notes
 
 - `src-tauri/Cargo.toml` sets `[profile.dev.package."*"] opt-level = 3`. Dependencies are optimised while

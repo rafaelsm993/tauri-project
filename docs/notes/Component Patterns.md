@@ -39,6 +39,7 @@ A poster card rendered as a single `<button>`. It is used in both the grid and t
 A pill tab bar with a fixed list of categories: Movies, TV Shows, Anime, Manga, Books, Games. The parent owns the active state.
 
 - The pill background sits on a `.category-bar` wrapper; only the inner `nav` scrolls horizontally, so it never wraps or clips at 360 px.
+- Above 768 px the pill is `width: fit-content` and centred (`margin-inline: auto`); at `respond-to(md)` it spans the bar again.
 - `trailing` renders at the end of the bar, outside the `nav` landmark (not announced as a category). Home instead puts the genre `MultiSelect` inside the search field through `SearchField.trailing`.
 
 ## GenreCarousel
@@ -120,13 +121,13 @@ The one modal for add/edit forms: a native `<dialog>` opened with `showModal()`,
 
 ## LibraryFilterBar and LibraryFilterPanel
 
-The Library's filter controller can render one standalone row: `[Filters ⊙n] [In progress ✕] [Movie 1] [Anime 2] …`. Props: `statuses`, `types`, `status`, `type`, `onstatus`, `ontype`, and `narrow` (tests pin it; the app follows `(max-width: 768px)`).
-- **Filters** is an icon with its accessible name ("Filters", "Filters, 2 on"); the production search composition uses the icon at all sizes; the standalone default also shows the word on desktop. The badge counts `activeFilterCount`.
+The Library's filter controller can render one standalone row: `[Filters ⊙n] [In progress ✕] [Movie 1] [Anime 2] …`. Props: `statuses`, `types`, `status`, `picked: MediaType[]` (empty = all), `onstatus`, `ontypes(next)`, and `narrow` (tests pin it; the app follows `(max-width: 768px)`).
+- **Filters** is an icon with its accessible name ("Filters", "Filters, 2 on"); the production search composition uses the icon at all sizes; the standalone default also shows the word on desktop. The badge counts `activeFilterCount`: the status plus one per picked type.
 - Narrow, it opens `LibraryFilterPanel` in a bottom `Sheet` (`focus="sheet"`); wide, in a native `popover="auto"` placed by `followTrigger(trigger, panel, "end", true)`, bounded to the viewport and aligned with the button's trailing edge. Picks apply at once and the panel stays open; Escape or a tap outside closes it.
-- The panel holds Status and Type as wrapping `SegmentedControl`s with Reset (disabled while nothing is on). Type hides when the library holds one type.
-- The row has no All chip: nothing picked means all. A picked type stands alone, filled, with ✕ (`aria-pressed="true"`, "Anime 2, remove filter"); a picked status shows as a filled token ("Remove filter: In progress"). Chips with a 0 count are disabled through `withEmptyDisabled`, except the one picked.
+- The panel holds Status and Type as wrapping `SegmentedControl`s with Reset (disabled while nothing is on). Type's `SegmentedControl` takes an array `value`, so every picked type is pressed; All is pressed when nothing is picked and clears every type. Type hides when the library holds one type.
+- The row has no All chip: nothing picked means all. Several types can be picked; every chip stays visible and each picked one is filled with its own ✕ (`aria-pressed="true"`, "Anime 2, remove filter"), kept in `TYPE_ORDER` by the pure `toggleType`; a picked status shows as a filled token ("Remove filter: In progress"). Chips with a 0 count are disabled through `withEmptyDisabled`, except the one picked.
 - The chip row scrolls sideways; a mask fades whichever edge hides more chips. Chips animate (flip + fade) only while Animations are on.
-- `LibraryFilters` and `filterEntries` are unchanged; the View row (Grid/Tree) stays its own row.
+- `LibraryFilter` is `{ status, types }` and `filterEntries` keeps an entry whose type is any picked one; the View row (Grid/Tree) stays its own row.
 
 Production passes `children(trigger, chips)` to compose one controller across AppHeader slots: the trigger goes in `SearchField.trailing`, chips in the collapsible row. The icon is outline when inactive, filled with `--clr-accent` for any status/type filter. The search query alone does not activate it. Native `beforetoggle` updates ARIA promptly; positioning waits for `toggle`, when the panel has measurable dimensions.
 
@@ -177,7 +178,7 @@ One search input for the whole app; the parent owns `value`.
 ## AppBackground
 
 - File: `src/lib/components/ui/AppBackground.svelte`
-- Props: optional `prefs: PrefsStore` (defaults to the singleton) and `currentLevel: number | null`; rendered once in `+layout.svelte`.
+- Props: optional `prefs: PrefsStore` (defaults to the singleton), `currentLevel: number | null` and `ambient: AmbientStore` (defaults to `ambientStore`); rendered once in `+layout.svelte`. It owns the hidden/blur/focus listeners through `ambient.watch()`; the layout mirrors `ambient.away` to `<html data-ambient="paused|running">` so CSS loops elsewhere (the Starlight tree) pause in the same frame.
 
 A fixed, `aria-hidden`, pointer-transparent decorative layer: base colour/radial glows, the equipped motif, then vignette. Existing `particlesFor` geometry and current-level equipment policy feed both renderers; the saved particle count remains authoritative.
 
@@ -300,7 +301,7 @@ One sticky header per page (search, filters, Home's `CategoryTabs`). Scrolling d
 
 ### Settings entry and ownership
 
-Settings renders Profile (artwork, title and Backup), Theme, then Preferences. Profile seeds native disclosure open once per mount; closing it is respected until the next visit. Hash links reveal their owner, including `#backup-title`, without preference writes or exclusive accordion behavior. The Settings header remains in normal document flow. Its Back action reuses `goBack`, falling back to `/profile` with replacement on cold entry; navigation never writes preferences. ThemeSection opts into RewardPicker’s `stacked` label/name-above-preview layout, leaving Avatar, Title, selection behavior and top-layer popovers unchanged.
+Settings renders Profile (artwork, title and Backup), Theme, then Preferences. Profile seeds native disclosure open once per mount; closing it is respected until the next visit. Hash links reveal their owner, including `#backup-title`, without preference writes or exclusive accordion behavior. The Settings header remains in normal document flow. Its Back action (phones and tablets only, `respond-to(md)`; desktop leaves through the rail's Settings tab) reuses `goBack`, falling back to `/profile` with replacement on cold entry; navigation never writes preferences. On desktop the page is one centred column of `$settings-max-width` (48rem). ThemeSection opts into RewardPicker’s `stacked` label/name-above-preview layout, leaving Avatar, Title, selection behavior and top-layer popovers unchanged.
 
 ### Mobile navigation selection
 

@@ -105,8 +105,9 @@ MediaCard click → goto(`/media/${type}/${encodeURIComponent(id)}`)
 | Store | File | What it holds |
 | --- | --- | --- |
 | `BrowseStore` | `src/lib/stores/browse.svelte.ts` | Home: category, query, grid items/paging, genre sections, selected genres. Takes a `Catalog` in its constructor so tests inject a fake. |
-| `libraryFilters` | `src/lib/stores/libraryFilters.svelte.ts` | Library status, type and search filters, kept for the session so they survive opening a card. |
+| `libraryFilters` | `src/lib/stores/libraryFilters.svelte.ts` | Library status, picked types (`types: MediaType[]`, empty = all) and search filters, kept for the session so they survive opening a card. |
 | `motionStore` | `src/lib/stores/motion.svelte.ts` | `on`: may decorative motion run (the saved `motion` setting, overruled by the system's reduce-motion). `reduced`: the system asked for less motion. Every animating component reads this; none checks `matchMedia` itself. |
+| `ambientStore` | `src/lib/stores/ambient.svelte.ts` | `away`: the document is hidden or the window unfocused. `AppBackground` owns the listeners (`watch()`); `+layout` writes `<html data-ambient>`; every ambient loop pauses on it. |
 
 ### Merged items (`library.json` v2)
 

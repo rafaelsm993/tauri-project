@@ -1,7 +1,43 @@
 // Guards the release setup: pinned bundles, one version, and Android signing that never breaks dev builds.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+test("release builds erase compiled provider keys even with a dotenv file and inherited keys", () => {
+  const dir = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "sesh-keyless-"));
+  try {
+    mkdirSync(join(dir, "src-tauri"));
+    writeFileSync(
+      join(dir, ".env"),
+      "TMDB_API_KEY=dotenv-sentinel\nRAWG_API_KEY=dotenv-sentinel\n",
+    );
+    const source = readFileSync("src-tauri/build.rs", "utf8").replace("tauri_build::build()", "()");
+    writeFileSync(join(dir, "probe.rs"), source);
+    const binary = join(dir, process.platform === "win32" ? "probe.exe" : "probe");
+    execFileSync("rustc", ["--edition=2021", join(dir, "probe.rs"), "-o", binary]);
+    const env = {
+      ...process.env,
+      PROFILE: "release",
+      TMDB_API_KEY: "env-sentinel",
+      RAWG_API_KEY: "env-sentinel",
+    };
+    const out = execFileSync(binary, { cwd: join(dir, "src-tauri"), env, encoding: "utf8" });
+    assert.doesNotMatch(out, /dotenv-sentinel|env-sentinel/);
+    assert.match(out, /^cargo:rustc-env=TMDB_API_KEY=$/m);
+    assert.match(out, /^cargo:rustc-env=RAWG_API_KEY=$/m);
+    const debug = execFileSync(binary, {
+      cwd: join(dir, "src-tauri"),
+      env: { ...env, PROFILE: "debug" },
+      encoding: "utf8",
+    });
+    assert.match(debug, /cargo:rustc-env=TMDB_API_KEY=dotenv-sentinel/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 const read = (p) => readFileSync(p, "utf8");
 const conf = JSON.parse(read("src-tauri/tauri.conf.json"));

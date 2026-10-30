@@ -43,7 +43,9 @@ if ($Mode -eq "release") {
     Sort-Object FullName | Select-Object -Last 1
   & $apksigner.FullName verify --print-certs $apk
   if ($LASTEXITCODE -ne 0) { throw "apksigner could not verify $apk" }
-  Write-Host "APK: $apk"
+  $namedApk = Join-Path (Split-Path $apk) "SESH.apk"
+  Copy-Item -LiteralPath $apk -Destination $namedApk -Force
+  Write-Host "APK: $namedApk"
   exit 0
 }
 

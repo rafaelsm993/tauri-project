@@ -45,24 +45,33 @@ for (const theme of ["light", "dark"] as const) {
           return bg === `rgb(${primary})`;
         })
         .toBe(true);
-      const paint = await selected.evaluate((el) => {
-        const probe = document.createElement("span");
-        document.body.append(probe);
-        probe.style.backgroundColor = "var(--clr-primary)";
-        const expectedBg = getComputedStyle(probe).backgroundColor;
-        probe.style.color = "var(--clr-on-primary)";
-        const expectedFg = getComputedStyle(probe).color;
-        probe.remove();
-        return {
-          bg: getComputedStyle(el).backgroundColor,
-          fg: getComputedStyle(el.querySelector(".label")!).color,
-          icon: getComputedStyle(el.querySelector(".icon svg")!).stroke,
-          expectedBg,
-          expectedFg,
-          width: el.getBoundingClientRect().width,
-          height: el.getBoundingClientRect().height,
-        };
-      });
+      // Colour transitions too, so wait for the settled text and icon paint, not just the background.
+      const sample = () =>
+        selected.evaluate((el) => {
+          const probe = document.createElement("span");
+          document.body.append(probe);
+          probe.style.backgroundColor = "var(--clr-primary)";
+          const expectedBg = getComputedStyle(probe).backgroundColor;
+          probe.style.color = "var(--clr-on-primary)";
+          const expectedFg = getComputedStyle(probe).color;
+          probe.remove();
+          return {
+            bg: getComputedStyle(el).backgroundColor,
+            fg: getComputedStyle(el.querySelector(".label")!).color,
+            icon: getComputedStyle(el.querySelector(".icon svg")!).stroke,
+            expectedBg,
+            expectedFg,
+            width: el.getBoundingClientRect().width,
+            height: el.getBoundingClientRect().height,
+          };
+        });
+      await expect
+        .poll(async () => {
+          const p = await sample();
+          return p.fg === p.expectedFg && p.icon === p.expectedFg;
+        })
+        .toBe(true);
+      const paint = await sample();
       expect(paint.bg).toBe(paint.expectedBg);
       expect(paint.fg).toBe(paint.expectedFg);
       expect(paint.icon).toBe(paint.expectedFg);

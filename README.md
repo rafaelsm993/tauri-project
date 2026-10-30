@@ -28,7 +28,7 @@ Architecture, API, component and design-system notes: see [Design notes](docs/no
 git clone https://github.com/rafaelsm993/tauri-project
 cd tauri-project
 npm ci
-cp .env.example .env   # fill in TMDB_API_KEY and RAWG_API_KEY
+cp .env.example .env   # development only: fill in TMDB_API_KEY and RAWG_API_KEY
 npm run tauri dev      # Arch desktop; on the Windows laptop use ./scripts/wdev.sh from WSL
 ```
 
@@ -36,13 +36,14 @@ npm run tauri dev      # Arch desktop; on the Windows laptop use ./scripts/wdev.
 
 ```bash
 npm run tauri build -- --no-bundle   # Arch: binary at src-tauri/target/release/sesh
+bash scripts/flatpak.sh               # Linux x86_64: dist/SESH_0.1.0_x86_64.flatpak
 ./scripts/wdev.sh build              # Windows laptop (from WSL): MSI + NSIS in src-tauri/target/release/bundle/
 npm run tauri android build -- --debug --apk --target aarch64   # Android debug APK in src-tauri/gen/android/app/build/outputs/apk/
 ```
 
 Android (phone dev loop with hot reload, APKs): see [Android runbook](docs/BUILD_AND_RUN_ANDROID.md).
 
-Release builds (Windows installers, signed Android APK): see [Release runbook](docs/RELEASE.md).
+Release builds (Linux Flatpak, Windows installers, signed Android APK): see [Release runbook](docs/RELEASE.md).
 
 ## Development workflow
 
@@ -67,13 +68,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full workflow.
 
 | Variable       | Required | Description                  |
 | -------------- | -------- | ---------------------------- |
-| `TMDB_API_KEY` | Yes      | Must be defined at Rust compile time; valid key needed for movies/TV |
-| `RAWG_API_KEY` | Yes      | Must be defined at Rust compile time; valid key needed for games |
+| `TMDB_API_KEY` | No       | Development key for movies/TV; release users can save it in Settings → Keys |
+| `RAWG_API_KEY` | No       | Development key for games; release users can save it in Settings → Keys |
 | `TAURI_APP_LOG` | No      | Log level: `trace`, `debug`, `info`, `warn`, `error`, `off`. Default: `debug` in dev builds, `info` in release |
 
 Logs go to the terminal, to `<app-log-dir>/sesh.log` (Linux: `~/.local/share/com.rafaelsm993.sesh/logs/`), and to logcat on Android. Frontend `console.*` calls show in the devtools console and are also forwarded to the terminal and log file; Rust logs are not mirrored into devtools. Provider errors never include request URLs, so API keys are never logged or shown in the UI.
 
-Copy `.env.example` to `.env` at the project root and fill these in before starting development or building. Rust keys are embedded at compile time and can be overridden by runtime environment variables. AniList and iTunes require no API key.
+For development, copy `.env.example` to `.env` at the project root and fill in keys. Debug builds
+may embed them: do not share debug binaries. Release builds always blank compiled provider keys,
+even with `.env` or inherited keys; users enter keys in Settings → Keys. At runtime environment
+variables override saved keys. AniList and iTunes require no API key.
 
 ## License
 

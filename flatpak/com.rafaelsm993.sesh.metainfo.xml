@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.rafaelsm993.sesh</id>
+  <name>SESH</name>
+  <summary>Track movies, TV, anime, manga, books and games</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <url type="homepage">https://github.com/rafaelsm993/tauri-project</url>
+  <launchable type="desktop-id">com.rafaelsm993.sesh.desktop</launchable>
+  <description>
+    <p>SESH is a local media tracker for catalog discovery, a personal library, planning sessions and progression rewards.</p>
+  </description>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+    <category>Game</category>
+  </categories>
+  <content_rating type="oars-1.1" />
+</component>

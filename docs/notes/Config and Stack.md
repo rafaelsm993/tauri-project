@@ -63,12 +63,13 @@
   - dev URL `http://localhost:1420`; `frontendDist: "../build"`
   - one 800×600 window, minimum 360×560 (so phone layouts are reachable on desktop), devtools on
   - `identifier: com.rafaelsm993.sesh`, `productName: SESH` (renamed 2026-10-29, see `CHANGELOG.md`; the Android project under `gen/android` was renamed in place)
-  - `csp: null`
+  - production `csp` and development `devCsp` restrict script, IPC, image, font and frame origins
   - bundles all targets
 - `src-tauri/capabilities/default.json` grants `core:default`, `opener:default` and `log:default` to the `main` window.
 - `src-tauri/build.rs`:
-  - reads `../.env` and emits every `KEY=value` line as `cargo:rustc-env`
-  - reruns when `.env` changes, then calls `tauri_build::build()`
+  - in debug, reads `../.env` and emits its key/value lines as `cargo:rustc-env`
+  - in release, emits empty `TMDB_API_KEY` and `RAWG_API_KEY` even if environment keys are inherited
+  - reruns when `.env` or relevant environment values change, then calls `tauri_build::build()`
 
 ## 5. Svelte 5 runes
 
@@ -116,7 +117,10 @@ TMDB_API_KEY=...
 RAWG_API_KEY=...
 ```
 
-Both keys must be present at compile time, because `env!()` fails the build otherwise (CI uses dummy values). A runtime environment variable with the same name overrides the embedded value. Optional: `TAURI_APP_LOG` (log level) and, in dev, `TAURI_APP_DEVTOOLS=1` (open the inspector).
+Providers read optional compiled keys with `option_env!`; no key is required to compile. Debug
+builds may embed `.env` keys; release builds emit blanks. A runtime environment variable overrides
+a locally saved key, which overrides a debug compiled key. Optional: `TAURI_APP_LOG` (log level)
+and, in dev, `TAURI_APP_DEVTOOLS=1` (open the inspector).
 
 ## 8. System requirements
 

@@ -29,10 +29,19 @@ it("skips taste but preserves old stored indexes", () => {
 });
 
 describe("shouldWelcome", () => {
-  const fresh = { ready: true, welcomed: false, entries: 0 };
+  const fresh = { ready: true, welcomed: false, entries: 0, path: "/" };
 
   it("greets a fresh install", () => {
     expect(shouldWelcome(fresh)).toBe(true);
+  });
+
+  it("greets a fresh Linux Flatpak at tauri://localhost without a slash", () => {
+    expect(shouldWelcome({ ...fresh, path: "" })).toBe(true);
+  });
+
+  it("does not interrupt a deep link", () => {
+    expect(shouldWelcome({ ...fresh, path: "/settings" })).toBe(false);
+    expect(shouldWelcome({ ...fresh, path: "/welcome" })).toBe(false);
   });
 
   it("waits until prefs are loaded, so it never flashes", () => {
@@ -48,6 +57,6 @@ describe("shouldWelcome", () => {
   });
 
   it("still skips a library owner who was never welcomed", () => {
-    expect(shouldWelcome({ ready: true, welcomed: false, entries: 1 })).toBe(false);
+    expect(shouldWelcome({ ...fresh, entries: 1 })).toBe(false);
   });
 });

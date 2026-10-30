@@ -1,0 +1,39 @@
+id: com.rafaelsm993.sesh
+runtime: org.gnome.Platform
+runtime-version: "49"
+sdk: org.gnome.Sdk
+command: sesh
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  - --socket=pulseaudio
+  - --share=network
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  build-args:
+    - --share=network
+modules:
+  - name: sesh
+    buildsystem: simple
+    build-options:
+      env:
+        CARGO_HOME: /run/build/sesh/.cargo-home
+    sources:
+      - type: dir
+        path: source
+      - type: file
+        path: com.rafaelsm993.sesh.desktop
+      - type: file
+        path: com.rafaelsm993.sesh.metainfo.xml
+    build-commands:
+      - cd src-tauri && cargo build --release --locked --features tauri/custom-protocol
+      - install -Dm755 src-tauri/target/release/sesh /app/bin/sesh
+      - install -Dm644 com.rafaelsm993.sesh.desktop /app/share/applications/com.rafaelsm993.sesh.desktop
+      - install -Dm644 com.rafaelsm993.sesh.metainfo.xml /app/share/metainfo/com.rafaelsm993.sesh.metainfo.xml
+      - install -Dm644 src-tauri/icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.rafaelsm993.sesh.png
+      - install -Dm644 src-tauri/icons/32x32.png /app/share/icons/hicolor/32x32/apps/com.rafaelsm993.sesh.png
+      - install -Dm644 src-tauri/icons/128x128@2x.png /app/share/icons/hicolor/256x256/apps/com.rafaelsm993.sesh.png

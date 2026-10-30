@@ -2,7 +2,7 @@
 
 | Machine | Run (hot reload) | Release | Toolchain check |
 | --- | --- | --- | --- |
-| Arch desktop (native Linux) | `npm run tauri dev` | `npm run tauri build -- --no-bundle` | `node --test scripts/verify-toolchain.test.mjs` |
+| Arch desktop (native Linux) | `npm run tauri dev` | `bash scripts/flatpak.sh` (or `npm run tauri build -- --no-bundle`) | `node --test scripts/verify-toolchain.test.mjs` |
 | Windows 11 laptop (edit in WSL) | `./scripts/wdev.sh` | `./scripts/wdev.sh build` (see [RELEASE.md](RELEASE.md)) | `PS> powershell -ExecutionPolicy Bypass -File scripts\verify.ps1` |
 | Android (phone, from Arch) | see [BUILD_AND_RUN_ANDROID.md](BUILD_AND_RUN_ANDROID.md) | `npm run tauri android build -- --debug --apk --target aarch64 --target armv7` | `npm run tauri info` |
 
@@ -15,12 +15,14 @@ One-time setup:
 ```
 sudo pacman -S --needed rustup webkit2gtk-4.1 libsoup3 base-devel openssl librsvg
 rustup default stable
-cp .env.example .env        # then fill in TMDB_API_KEY and RAWG_API_KEY
+cp .env.example .env        # development only: fill in TMDB_API_KEY and RAWG_API_KEY
 npm ci                      # not `npm install`: keeps the shared lockfile unchanged
 node --test scripts/verify-toolchain.test.mjs   # expect: # pass 8, # skipped 3
 ```
 
 - `npm run tauri build -- --no-bundle` → `src-tauri/target/release/sesh`. No .deb/AppImage; run the binary directly.
+- `bash scripts/flatpak.sh` → `dist/SESH_0.1.0_x86_64.flatpak` (keyless, built inside the GNOME SDK;
+  prerequisites and installation in [RELEASE.md](RELEASE.md)).
 - Web Inspector: right-click → Inspect Element, or auto-open it with `env TAURI_APP_DEVTOOLS=1 npm run tauri dev`.
 - Wayland: only if the window is blank/white, or a *detached* inspector is solid black, add
   `WEBKIT_DISABLE_DMABUF_RENDERER=1` (e.g. `env WEBKIT_DISABLE_DMABUF_RENDERER=1 TAURI_APP_DEVTOOLS=1 npm run tauri dev`).
@@ -52,8 +54,8 @@ the stutter this setup avoids. The Windows toolchain already produced a working 
 - Rust via rustup, host triple `x86_64-pc-windows-msvc` (cargo/rustc 1.93.1).
 - Node.js (`C:\Program Files\nodejs`, currently v22.15.1).
 - Microsoft Edge WebView2 Runtime (already present, 153.x).
-- A repo-root `.env` containing `TMDB_API_KEY` and `RAWG_API_KEY`.
-  `src-tauri/build.rs` reads `../.env` and re-exports each key via `cargo:rustc-env`.
+- For development only, a repo-root `.env` with `TMDB_API_KEY` and `RAWG_API_KEY`.
+  `src-tauri/build.rs` reads `../.env` for debug builds; release builds blank both compiled keys.
 
 Verify all of it at once:
 
@@ -167,8 +169,8 @@ verifying Linux-specific behaviour, never for day-to-day development on this mac
 | Black app window                             | WSLg software rendering      | build on Windows instead                         |
 | `Port 1420 is already in use`                | stale Vite process           | kill the owning PID (see above)                  |
 | `Cannot find module @rollup/rollup-win32-x64-msvc` | cross-platform npm prune | reinstall from Windows                       |
-| Blank media grid, 401s                       | `.env` keys missing at compile time | confirm `.env`, then rebuild (`build.rs` bakes them in) |
+| Blank media grid, 401s                       | development keys missing or release keys not saved | for debug, check `.env` and rebuild; for release, save provider keys in Settings → Keys |
 | `bad interpreter: /usr/bin/env: 'bash\r'`    | script checked out with CRLF | `.gitattributes` forces LF; re-checkout: `git checkout -- scripts/wdev.sh` |
 | Blank/white window on Arch (Wayland)         | WebKitGTK DMA-BUF renderer   | `env WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri dev` |
 | Dev window laggy / posters missing (Arch)    | software compositing forced or inspector docked | drop `WEBKIT_DISABLE_DMABUF_RENDERER`; close the inspector; don't run `npm run verify`/`check` while `tauri dev` is open (each `svelte-kit sync` reloads the app) |
-| `TMDB_API_KEY not defined at compile time`   | no `.env` on this machine    | `cp .env.example .env`, fill in keys, rebuild    |
+| Provider key missing at runtime              | no saved/environment key    | enter the provider key in Settings → Keys; `.env` is for development only |

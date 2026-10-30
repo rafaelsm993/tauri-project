@@ -7,6 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Release builds (including personal Windows, Android and Linux Flatpak builds) omit compiled TMDB/RAWG keys even when `.env` or build-environment values are set. Enter keys locally in Settings → Keys; debug builds can still embed keys and must not be shared. The signed Android release is copied to `SESH.apk`; Linux has a local x86_64 Flatpak build.
 - **Renamed to SESH** (was Aevum). The app id is now `com.rafaelsm993.sesh`, so data lives in a new folder: on Windows copy `%APPDATA%\com.rafaelsm993.aevum` to `%APPDATA%\com.rafaelsm993.sesh` before the first launch; on Linux copy `~/.local/share/com.rafaelsm993.aevum` to `~/.local/share/com.rafaelsm993.sesh`; on Android, export a backup in Aevum and import it in SESH (it installs as a separate app). The level-50 title is now "SESH Eternal"; a saved "Aevum Eternal" carries over.
 - Runic shimmer now plays as a living constellation: starlight runs along the Journey Tree's paths, seals twinkle in a wave and a starfield breathes behind them; it runs while the window is focused and pauses with the background.
 - Library's Type filter picks several media types at once; every chip stays visible and each picked type has its own ✕.
@@ -95,8 +96,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - MIT `LICENSE` file; docs and agent instructions updated to the new architecture
 
 ### Known issues
-- CSP is `null` and devtools are enabled in every build (decision owned by S3·C6)
-- API keys are compiled into the binary (runtime keys come with S2·B5)
+- The Linux Flatpak has passed a first-launch Welcome smoke on a desktop; full Linux offline, backup and small-window checks, Windows installer runtime, and Android release light-theme system bars still need checks.
 - iTunes book ratings stay on Apple's 0–5 scale; other providers are normalised to 0–10
 
 ## [0.1.0] - unreleased

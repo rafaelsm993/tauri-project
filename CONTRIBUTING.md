@@ -22,17 +22,10 @@ and commits traceable to the same unit of work.
 
 ### Flow
 
-```
-feat/my-feature  ──PR──▶  main  ──PR──▶  release/1.2
-                                              │
-                                          tag v1.2.0
-```
-
-1. All day-to-day work branches off **`main`**
-2. When a release is ready, open a PR from `main` → `release/x.y`
-3. Only bug fixes go into `release/x.y` after branching
-4. When the release branch is stable, tag it `vX.Y.Z`
-5. Tag push triggers the GitHub Actions release workflow (builds installers)
+Release 0.1.0 is being prepared on `build/release-0.1.0`. The final merge/tag route and automated
+publication are not settled; a tag push does not currently publish installers. See the
+[release runbook](docs/RELEASE.md) for local builds. Do not merge, tag or publish without the
+release owner's decision.
 
 ## Commit Messages
 

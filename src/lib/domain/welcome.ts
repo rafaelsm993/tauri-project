@@ -20,6 +20,11 @@ export function resumeBeat(stored: number): Beat {
   if (n === 2) return "planner";
   return [...BEATS].reverse().find((b) => STORED[b] <= n) ?? firstBeat();
 }
-export function shouldWelcome(s: { ready: boolean; welcomed: boolean; entries: number }): boolean {
-  return s.ready && !s.welcomed && s.entries === 0;
+export function shouldWelcome(s: {
+  ready: boolean;
+  welcomed: boolean;
+  entries: number;
+  path: string;
+}): boolean {
+  return (s.path === "/" || s.path === "") && s.ready && !s.welcomed && s.entries === 0;
 }

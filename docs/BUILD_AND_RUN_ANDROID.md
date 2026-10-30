@@ -88,7 +88,8 @@ npm run tauri android build -- --debug --apk --target aarch64 --target armv7
 
 Output: `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk` (debug-signed, minSdk 24). Install it with `adb install -r <apk>` or copy it to the phone. It embeds the API keys from your `.env` at compile time, so never share a local build. CI builds an arm64 debug APK with dummy keys and uploads it as the `app-debug-apk` artifact.
 
-Signed release APK: `./scripts/wdev.sh android release`, see [RELEASE.md](RELEASE.md).
+Signed keyless release APK: `./scripts/wdev.sh android release` creates the shareable `SESH.apk`;
+see [RELEASE.md](RELEASE.md). Unlike the debug APK, it does not embed your `.env` keys.
 
 ## Emulator
 

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SESH
+Comment=Track movies, TV, anime, manga, books and games
+Exec=sesh
+Icon=com.rafaelsm993.sesh
+Terminal=false
+Categories=AudioVideo;Video;Game;
+StartupWMClass=sesh

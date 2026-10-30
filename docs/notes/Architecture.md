@@ -1,13 +1,13 @@
 # SESH — Architecture
 
-> Tauri 2 app: a SvelteKit SPA that calls a typed Rust facade, which fetches from four public media APIs and returns shared DTOs.
+> Tauri 2 app: a SvelteKit SPA calls a typed Rust facade for four media catalogs and local JSON storage.
 
 ## Overview
 
 **Name.** *SESH*, renamed on 2026-10-29, with the identifier
 `com.rafaelsm993.sesh`. Data saved under the old identifier moves once (see `CHANGELOG.md`).
 
-SESH lets you browse movies, TV series, anime, manga, books and games. Today it has two real screens, **Home** (discovery and search) and **Detail**, plus placeholder routes for the library, profile, planner and welcome flow. There are no accounts and no cloud. There is no persistence yet: S2 adds local JSON storage in the app data dir.
+SESH lets you browse movies, TV series, anime, manga, books and games. Home, Detail, Library, Profile, Planner, Settings and Welcome are implemented. The library, events, preferences and keys persist locally in the app data directory; there are no accounts or cloud sync.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -32,7 +32,7 @@ SESH lets you browse movies, TV series, anime, manga, books and games. Today it 
 
 - SvelteKit with `adapter-static`: no SSR and no server. TypeScript strict, Svelte 5 runes.
 - SCSS variables and mixins are auto-injected; every color is a runtime `--clr-*` token from `global.css` (see [Design System](Design%20System.md)).
-- Data comes only from `src/lib/api/catalog.ts` (three typed `invoke()`s). The app never calls `fetch()` and does no provider mapping.
+- Catalog data goes through `src/lib/api/catalog.ts` (three typed `invoke()`s); local storage and settings use sibling `src/lib/api/*` clients. The UI does no provider mapping.
 - UI is English only; `npm run lint:en` enforces it.
 
 ### Backend — Rust / Tauri 2
@@ -41,8 +41,8 @@ SESH lets you browse movies, TV series, anime, manga, books and games. Today it 
 - `reqwest` 0.12 with `rustls-tls` (no OpenSSL) on Tokio, through one shared client (`src-tauri/src/api/http.rs`).
 - Three commands in `src-tauri/src/api/catalog.rs` dispatch to a common `Provider` trait (`genres · page · detail`) implemented per provider. Each provider parses into private `Raw*` structs and maps them with pure `map_*` functions into the DTOs in `src-tauri/src/api/types.rs`. See [API Reference](API%20Reference.md).
 - A Rust test writes `src/lib/types/contract.fixture.json`; `media.contract.test.ts` keeps `media.ts` in sync with the Rust DTOs.
-- No managed state yet.
-- API keys: `TMDB_API_KEY` and `RAWG_API_KEY` are read from `.env` at compile time by `build.rs`; a runtime env var overrides them. (S2·B5 moves keys to runtime settings.)
+- Local JSON stores manage the library, events, preferences and user-saved API keys.
+- API keys: debug builds can compile `TMDB_API_KEY` and `RAWG_API_KEY` from `.env`; release builds blank them even if the environment sets them. At runtime the environment overrides a key saved in Settings → Keys, which overrides a debug compiled key.
 
 ### Identity
 
@@ -65,7 +65,7 @@ Tauri has no Node server, so the frontend is a static bundle loaded from disk.
 ```
 /                    → Home (discover / search across 6 categories)
 /media/[type]/[id]   → Detail (type = movie|tv|anime|manga|book|game)
-/library /profile /planner /welcome → placeholders (RoutePlaceholder), filled from S3 on
+/library /profile /planner /settings /welcome → local library, dashboard, planner, preferences and onboarding
 ```
 
 Navigation happens on the client via `goto()` from `$app/navigation`.
@@ -129,6 +129,6 @@ MediaCard click → goto(`/media/${type}/${encodeURIComponent(id)}`)
 
 ## Security notes
 
-- CSP is `null` in `tauri.conf.json` for every build. It needs a decision before release (owned by S3·C6).
+- `src-tauri/tauri.conf.json` defines production and development CSP directives, including provider image and IPC origins.
 - Capabilities: `core:default`, `opener:default`, `log:default` (`src-tauri/capabilities/default.json`).
-- API keys stay out of source (`.env` is gitignored), but they are embedded in the compiled binary. Anyone who inspects the binary can recover them, so treat them as public until S2·B5.
+- `.env` is gitignored; debug binaries can embed keys and must not be shared. Release binaries explicitly blank both compiled provider keys. Users save their keys locally in `keys.json`; backups omit them.

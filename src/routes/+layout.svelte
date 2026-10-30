@@ -97,11 +97,12 @@
 
   // A fresh install is greeted when it opens the app; a deep link or a library owner is not.
   $effect(() => {
-    if (!libraryStore.ready || page.url.pathname !== resolve("/")) return;
+    if (!libraryStore.ready) return;
     const greet = shouldWelcome({
       ready: prefsStore.ready,
       welcomed: prefsStore.prefs.welcomed,
       entries: libraryStore.entries.length,
+      path: page.url.pathname,
     });
     if (greet) void goto(resolve("/welcome"));
   });

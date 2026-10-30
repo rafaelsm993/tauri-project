@@ -23,7 +23,7 @@ const REPORT: ImportReport = {
 function make(over: Partial<BackupClient> = {}) {
   const client: BackupClient = {
     exportBackup: vi.fn(async () => ({
-      path: "/h/aevum-backup.zip",
+      path: "/h/sesh-backup.zip",
       entries: 8,
       posters: 1,
       bytes: 9000,
@@ -61,7 +61,7 @@ describe("BackupStore", () => {
   it("export reports where the file went", async () => {
     const { store } = make();
     await store.exportNow();
-    expect(store.message).toBe("Saved 8 items and 1 poster to /h/aevum-backup.zip.");
+    expect(store.message).toBe("Saved 8 items and 1 poster to /h/sesh-backup.zip.");
   });
 
   it("a cancelled export says nothing", async () => {
@@ -85,7 +85,7 @@ describe("BackupStore", () => {
   it("a rejected backup shows why and offers no choice", async () => {
     const { store } = make({
       pickImport: vi.fn(async () =>
-        Promise.reject("This backup was made by a newer version of Aevum."),
+        Promise.reject("This backup was made by a newer version of SESH."),
       ),
     });
     await store.pickImport();

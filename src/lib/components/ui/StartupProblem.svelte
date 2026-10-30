@@ -16,12 +16,12 @@
 
   {#if problem.kind === "newer"}
     <p>
-      {problem.file} was saved by a newer version of Aevum than this one. To keep your data safe, this
-      version will not open or change it. Please update Aevum and open it again.
+      {problem.file} was saved by a newer version of SESH than this one. To keep your data safe, this
+      version will not open or change it. Please update SESH and open it again.
     </p>
   {:else}
     <p>
-      {problem.file} could not be read by this version of Aevum. Nothing was changed or deleted. If you
+      {problem.file} could not be read by this version of SESH. Nothing was changed or deleted. If you
       have a backup, move this folder somewhere else to start fresh, then import the backup from Settings.
     </p>
   {/if}

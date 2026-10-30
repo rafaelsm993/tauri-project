@@ -1,11 +1,7 @@
-# Aevum
+# SESH
 
-> **Aevum** (Latin, *an age; a lifetime*) is the scholastic term for the kind of
-> time that sits between mortal hours and eternity — the duration angels were
-> said to live in. The app is about the hours you spend on stories and games:
-> it keeps them, plans them, and grows something from them. Chosen 2026-09-24
-> over Chronicle, Hourkeep and Tempus (all common or taken); see
-> `GOALS-QA.md` §6.15 K5.1 in the vault.
+> **SESH** (renamed on 2026-10-29; see `CHANGELOG.md`) is about the hours you spend on
+> stories and games: it keeps them, plans them, and grows something from them.
 
 A cross-platform media tracker built with **Tauri 2**, **SvelteKit**, and **Rust**.
 
@@ -39,7 +35,7 @@ npm run tauri dev      # Arch desktop; on the Windows laptop use ./scripts/wdev.
 ## Building
 
 ```bash
-npm run tauri build -- --no-bundle   # Arch: binary at src-tauri/target/release/aevum
+npm run tauri build -- --no-bundle   # Arch: binary at src-tauri/target/release/sesh
 ./scripts/wdev.sh build              # Windows laptop (from WSL): MSI + NSIS in src-tauri/target/release/bundle/
 npm run tauri android build -- --debug --apk --target aarch64   # Android debug APK in src-tauri/gen/android/app/build/outputs/apk/
 ```
@@ -73,7 +69,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full workflow.
 | `RAWG_API_KEY` | Yes      | Must be defined at Rust compile time; valid key needed for games |
 | `TAURI_APP_LOG` | No      | Log level: `trace`, `debug`, `info`, `warn`, `error`, `off`. Default: `debug` in dev builds, `info` in release |
 
-Logs go to the terminal, to `<app-log-dir>/aevum.log` (Linux: `~/.local/share/com.rafaelsm993.aevum/logs/`), and to logcat on Android. Frontend `console.*` calls show in the devtools console and are also forwarded to the terminal and log file; Rust logs are not mirrored into devtools. Provider errors never include request URLs, so API keys are never logged or shown in the UI.
+Logs go to the terminal, to `<app-log-dir>/sesh.log` (Linux: `~/.local/share/com.rafaelsm993.sesh/logs/`), and to logcat on Android. Frontend `console.*` calls show in the devtools console and are also forwarded to the terminal and log file; Rust logs are not mirrored into devtools. Provider errors never include request URLs, so API keys are never logged or shown in the UI.
 
 Copy `.env.example` to `.env` at the project root and fill these in before starting development or building. Rust keys are embedded at compile time and can be overridden by runtime environment variables. AniList and iTunes require no API key.
 

@@ -66,15 +66,15 @@ test("Back on a detail page opened directly goes Home", async ({ page }) => {
 
 test("the window title names the item", async ({ page }) => {
   await page.goto("/media/movie/1");
-  await expect(page).toHaveTitle(/^Test movie 1 .* · Aevum$/);
+  await expect(page).toHaveTitle(/^Test movie 1 .* · SESH$/);
 });
 
 test("Back from a detail page puts the app's own title back", async ({ page }) => {
   await page.goto("/");
   await page.locator(".carousel-slot .card").first().click();
-  await expect(page).toHaveTitle(/ · Aevum$/);
+  await expect(page).toHaveTitle(/ · SESH$/);
   await page.goBack();
-  await expect(page).toHaveTitle("Aevum");
+  await expect(page).toHaveTitle("SESH");
 });
 
 test("offline, a saved item opens from your library copy", async ({ page }) => {
@@ -85,7 +85,7 @@ test("offline, a saved item opens from your library copy", async ({ page }) => {
   await expect(page.getByText(/Showing your saved copy/)).toBeVisible();
   await expect(page.getByRole("button", { name: /retry|try again/i })).toHaveCount(0);
   await expect(page.getByRole("toolbar", { name: "Item actions" })).toBeVisible();
-  await expect(page).toHaveTitle("Saved movie · Aevum");
+  await expect(page).toHaveTitle("Saved movie · SESH");
 });
 
 test("on a phone the status bar sits on the tab bar even when the page is short", async ({

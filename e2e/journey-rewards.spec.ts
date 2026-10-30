@@ -7,7 +7,7 @@ const homes = [
   ["Anime", ["Aurora"], ["Connoisseur", "Devotee"]],
   ["Manga", ["Dusk"], ["Archivist", "Curator"]],
   ["Books", ["Sunrise"], ["Loremaster", "Chronicler"]],
-  ["Games", ["Ocean", "Midnight"], ["Aevum Eternal"]],
+  ["Games", ["Ocean", "Midnight"], ["SESH Eternal"]],
 ] as const;
 
 for (const level of [1, 200]) {

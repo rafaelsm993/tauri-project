@@ -26,7 +26,7 @@ const REPORT: ImportReport = {
 function setup(over: Partial<BackupClient> = {}) {
   const client: BackupClient = {
     exportBackup: vi.fn(async () => ({
-      path: "C:\\Users\\me\\Documents\\aevum-backup-2026-09-26.zip",
+      path: "C:\\Users\\me\\Documents\\sesh-backup-2026-09-26.zip",
       entries: 8,
       posters: 1,
       bytes: 9000,
@@ -52,7 +52,7 @@ describe("BackupSection", () => {
     await user.click(button("Export backup"));
     expect(client.exportBackup).toHaveBeenCalledOnce();
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "Saved 8 items and 1 poster to C:\\Users\\me\\Documents\\aevum-backup-2026-09-26.zip.",
+      "Saved 8 items and 1 poster to C:\\Users\\me\\Documents\\sesh-backup-2026-09-26.zip.",
     );
   });
 
@@ -125,10 +125,10 @@ describe("BackupSection", () => {
 
   it("shows errors as alerts", async () => {
     const { user } = setup({
-      pickImport: vi.fn(async () => Promise.reject("not an Aevum backup")),
+      pickImport: vi.fn(async () => Promise.reject("not a SESH backup")),
     });
     await user.click(button("Import backup"));
-    expect(await screen.findByRole("alert")).toHaveTextContent("not an Aevum backup");
+    expect(await screen.findByRole("alert")).toHaveTextContent("not a SESH backup");
   });
 
   it("disables the buttons while a task runs", async () => {

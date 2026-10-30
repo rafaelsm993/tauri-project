@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayedTitle, earnedTitles } from "./titles";
+import { displayedTitle, earnedTitles, renamedTitle } from "./titles";
 
 describe("earnedTitles", () => {
   it("lists only the existing titles earned at the current level", () => {
@@ -26,7 +26,7 @@ describe("displayedTitle", () => {
     });
   });
 
-  it.each(["unknown", "curious mind", "", "Aevum Eternal"])(
+  it.each(["unknown", "curious mind", "", "SESH Eternal"])(
     "falls back safely for %j at level eight",
     (selected) => {
       expect(displayedTitle(8, selected)).toEqual({
@@ -44,7 +44,7 @@ describe("displayedTitle", () => {
   });
 
   it("does not invent another title after the last catalogue tier", () => {
-    expect(displayedTitle(200, "automatic")).toEqual({ name: "Aevum Eternal", next: null });
+    expect(displayedTitle(200, "automatic")).toEqual({ name: "SESH Eternal", next: null });
     expect(displayedTitle(200, "Newcomer")).toEqual({ name: "Newcomer", next: null });
   });
 
@@ -53,5 +53,15 @@ describe("displayedTitle", () => {
       name: "Newcomer",
       next: { name: "Curious Mind", level: 3 },
     });
+  });
+});
+
+describe("renamedTitle", () => {
+  it("maps the title that carried the old app name", () => {
+    expect(renamedTitle("Aevum Eternal")).toBe("SESH Eternal");
+  });
+
+  it.each(["automatic", "Curious Mind", "SESH Eternal", ""])("keeps %j", (title) => {
+    expect(renamedTitle(title)).toBe(title);
   });
 });

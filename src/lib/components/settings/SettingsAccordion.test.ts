@@ -6,7 +6,7 @@ const route = vi.hoisted(() => ({ hash: "" }));
 vi.mock("$app/state", () => ({
   page: {
     get url() {
-      return new URL(route.hash, "https://aevum.test/settings");
+      return new URL(route.hash, "https://sesh.test/settings");
     },
   },
 }));

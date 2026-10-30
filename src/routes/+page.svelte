@@ -66,7 +66,7 @@
   onReconnect(() => browse.retryFailed());
 </script>
 
-<svelte:head><title>Aevum</title></svelte:head>
+<svelte:head><title>SESH</title></svelte:head>
 
 <div class="page">
   <AppHeader>

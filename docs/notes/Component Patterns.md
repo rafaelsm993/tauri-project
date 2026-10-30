@@ -1,4 +1,4 @@
-# Aevum — Component Patterns
+# SESH — Component Patterns
 
 > Conventions for the reusable UI components, with a reference entry for each.
 
@@ -232,7 +232,7 @@ paints it before the app loads. `global.css` holds the dark palette on `:root` a
 under `[data-theme="light"]` and, for `system`, under `prefers-color-scheme: light`.
 `scripts/contrast.test.mjs` (in `lint:guards`) checks every text/surface pair in both palettes (4.5:1 for text,
 3:1 for hints and accents). Text on a filled (primary) background uses `--clr-on-primary`, derived from `--clr-on-primary-rgb`; an accent that needs dark text (Ember) overrides the channel, and every theme block sets the channel, never a literal. On Android, `applyTheme` also calls the
-`AevumSystemBars` bridge from `MainActivity.kt` so the status and navigation bar icons turn dark on
+`SeshSystemBars` bridge from `MainActivity.kt` so the status and navigation bar icons turn dark on
 the light theme.
 
 ## Profile artwork (completion crests)
@@ -262,7 +262,7 @@ Settings uses independent native accordions for Profile (artwork, title and Back
 
 - Files: `src/lib/components/progression/ProgressionTree.svelte`, `src/lib/components/progression/RunicTreeMap.svelte`, `src/lib/components/progression/BranchSheet.svelte`, `src/lib/components/progression/RewardSheet.svelte`; pure placement and geometry: `src/lib/domain/progressionTree.ts` (`journeyNodes`, `journeyEdges`, `treeBranches`).
 - Tree props: `entries: LibraryEntry[]` (visible entries), `allEntries: LibraryEntry[]` (successful full-library authority), `currentLevel: number | null`, `loaded?: boolean` (defaults false), `error?: string`, `onclear?: () => void`.
-- The main map retains THE SHARED ROOT above JOURNEY TREE and six existing media crests. Each opens one media subtree: five completion-art nodes plus four global rewards for Movies/TV or three for Anime/Manga/Books/Games. Every global reward has one home, never six copies: Movies owns Bubbles/Ember/Newcomer/Curious Mind; TV owns Embers/Runic shimmer/Regular/Enthusiast; Anime owns Aurora/Connoisseur/Devotee; Manga owns Dusk/Archivist/Curator; Books owns Sunrise/Loremaster/Chronicler; Games owns Ocean/Midnight/Aevum Eternal.
+- The main map retains THE SHARED ROOT above JOURNEY TREE and six existing media crests. Each opens one media subtree: five completion-art nodes plus four global rewards for Movies/TV or three for Anime/Manga/Books/Games. Every global reward has one home, never six copies: Movies owns Bubbles/Ember/Newcomer/Curious Mind; TV owns Embers/Runic shimmer/Regular/Enthusiast; Anime owns Aurora/Connoisseur/Devotee; Manga owns Dusk/Archivist/Curator; Books owns Sunrise/Loremaster/Chronicler; Games owns Ocean/Midnight/SESH Eternal.
 - Nodes sort by required level from root to crown. `journeyEdges` derives the connected topology and SVG endpoints from the same seal coordinates as the buttons; an edge lights only when both endpoints currently qualify. Connections are layout, not extra prerequisites. Global rewards remain level-only; artwork still needs current level and current completed count. `seen_level` never grants eligibility.
 - Real buttons remain at least 44 px, including locked nodes. Short labels, visible required levels and Available/Locked text keep the map readable; full descriptions expose completion requirements accessibly. Reused Settings previews show motifs, themes and accents; titles use a text seal and existing artwork uses ProfileArtwork. All taps open the existing RewardSheet, never equip or save. The separate earlier/current/later level ladder and its unused paging helpers are removed.
 - The media map uses a measured 64rem height, narrower three-column rows and wider one/two-column rows, without shrinking text or targets. Layout transitions are disabled so seals and SVG endpoints remain aligned on the first rendered frame, including Animations off. Pixel channels, runes and artwork follow the equipped accent; earned edges use the live accent and locked edges stay neutral.

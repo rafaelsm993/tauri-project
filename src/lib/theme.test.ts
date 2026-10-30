@@ -25,7 +25,7 @@ function fakeSystem(prefersLight: boolean) {
 
 function fakeBars() {
   const setLightBars = vi.fn();
-  vi.stubGlobal("AevumSystemBars", { setLightBars });
+  vi.stubGlobal("SeshSystemBars", { setLightBars });
   return setLightBars;
 }
 

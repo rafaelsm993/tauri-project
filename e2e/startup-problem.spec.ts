@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures/tauri-ipc";
 const PROBLEM = {
   kind: "newer",
   file: "library.json",
-  dir: "C:\\Users\\someone-with-a-long-name\\AppData\\Roaming\\com.rafaelsm993.aevum",
+  dir: "C:\\Users\\someone-with-a-long-name\\AppData\\Roaming\\com.rafaelsm993.sesh",
   detail: "library.json was written by a newer version of the app (schema v9); update the app",
 };
 

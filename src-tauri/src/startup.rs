@@ -121,7 +121,7 @@ mod tests {
             "problem": StartupProblem {
                 kind: ProblemKind::Newer,
                 file: "library.json".into(),
-                dir: "/data/aevum".into(),
+                dir: "/data/sesh".into(),
                 detail: "update the app".into(),
             },
             "kinds": [ProblemKind::Newer, ProblemKind::Unreadable],

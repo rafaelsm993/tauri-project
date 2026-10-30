@@ -1,6 +1,7 @@
 import { prefs as defaultClient, type PrefsClient } from "$lib/api/prefs";
 import { DEFAULT_PREFS, THEMES, type Prefs, type PrefsPatch, type Theme } from "$lib/types/prefs";
 import { MAX_PARTICLES } from "$lib/domain/motifs";
+import { renamedTitle } from "$lib/domain/titles";
 import { errorMessage } from "$lib/utils/errors";
 
 // Keeps only known fields with the right type; e2e fakes answer unknown commands with junk.
@@ -38,7 +39,7 @@ function normalize(raw: unknown): Prefs {
     accent: name(r.accent, DEFAULT_PREFS.accent),
     pack: name(r.pack, DEFAULT_PREFS.pack),
     motif: name(r.motif, DEFAULT_PREFS.motif),
-    title: selection(r.title, DEFAULT_PREFS.title),
+    title: renamedTitle(selection(r.title, DEFAULT_PREFS.title)),
     profile_art: selection(r.profile_art, DEFAULT_PREFS.profile_art),
   };
 }

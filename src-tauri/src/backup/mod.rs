@@ -45,9 +45,7 @@ pub fn default_name(at: &str) -> String {
     let date = at
         .get(..10)
         .filter(|d| d.as_bytes()[4] == b'-' && d.as_bytes()[7] == b'-');
-    date.map_or("aevum-backup.zip".into(), |d| {
-        format!("aevum-backup-{d}.zip")
-    })
+    date.map_or("sesh-backup.zip".into(), |d| format!("sesh-backup-{d}.zip"))
 }
 
 pub fn with_zip_ext(path: PathBuf) -> PathBuf {
@@ -133,7 +131,7 @@ pub fn load_bundle(path: &Path, limits: &Limits) -> Result<Bundle, String> {
         .len();
     if size > limits.total_bytes {
         return Err(format!(
-            "the file is too large to be an Aevum backup ({size} bytes)"
+            "the file is too large to be a SESH backup ({size} bytes)"
         ));
     }
     let bytes = std::fs::read(path).map_err(|e| format!("read {}: {e}", path.display()))?;
@@ -190,10 +188,10 @@ mod tests {
     fn the_default_name_carries_the_date() {
         assert_eq!(
             default_name("2026-09-26T03:00:00.000Z"),
-            "aevum-backup-2026-09-26.zip"
+            "sesh-backup-2026-09-26.zip"
         );
-        assert_eq!(default_name("garbage"), "aevum-backup.zip");
-        assert_eq!(default_name("x"), "aevum-backup.zip");
+        assert_eq!(default_name("garbage"), "sesh-backup.zip");
+        assert_eq!(default_name("x"), "sesh-backup.zip");
     }
 
     #[test]
@@ -251,7 +249,7 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
-    const DOC: &str = "content://x/document/primary%3ADownload%2Faevum-backup.zip";
+    const DOC: &str = "content://x/document/primary%3ADownload%2Fsesh-backup.zip";
 
     async fn fixture(name: &str) -> (PathBuf, LibraryState, crate::prefs::ipc::PrefsState) {
         let dir = scratch(name);
@@ -275,7 +273,7 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(report.path, "Download/aevum-backup.zip");
+        assert_eq!(report.path, "Download/sesh-backup.zip");
         let copied = std::fs::read(files.doc()).unwrap();
         assert_eq!(copied.len(), report.bytes);
         read(&copied, &Limits::DEFAULT).unwrap();
@@ -300,7 +298,7 @@ mod tests {
         .await
         .unwrap_err();
         assert!(
-            err.contains("could not be written to Download/aevum-backup.zip"),
+            err.contains("could not be written to Download/sesh-backup.zip"),
             "{err}"
         );
         assert!(!staging.exists(), "staging file left behind");
@@ -383,7 +381,7 @@ mod tests {
     #[test]
     fn backup_contract_fixture_matches_the_rust_types() {
         let expected = json!({
-            "export_report": ExportReport { path: "/h/aevum-backup.zip".into(), entries: 2, posters: 1, bytes: 2048 },
+            "export_report": ExportReport { path: "/h/sesh-backup.zip".into(), entries: 2, posters: 1, bytes: 2048 },
             "import_preview": ImportPreview {
                 created_at: "2026-09-26T00:00:00.000Z".into(),
                 app_version: "0.1.0".into(),
@@ -408,11 +406,11 @@ mod tests {
         );
     }
 
-    // Run: AEVUM_BACKUP_SRC=/path/to/a/COPY/of/the/data/dir cargo test live_backup -- --ignored --nocapture
+    // Run: SESH_BACKUP_SRC=/path/to/a/COPY/of/the/data/dir cargo test live_backup -- --ignored --nocapture
     #[tokio::test]
     #[ignore]
     async fn live_backup_round_trips_a_copy_of_real_data() {
-        let src = PathBuf::from(std::env::var("AEVUM_BACKUP_SRC").expect("set AEVUM_BACKUP_SRC"));
+        let src = PathBuf::from(std::env::var("SESH_BACKUP_SRC").expect("set SESH_BACKUP_SRC"));
         let file = crate::store::load::<LibraryFile>(
             &src.join("library.json"),
             crate::library::commands::MIGRATIONS,

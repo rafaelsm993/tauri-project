@@ -2,7 +2,7 @@
   "export_report": {
     "bytes": 2048,
     "entries": 2,
-    "path": "/h/aevum-backup.zip",
+    "path": "/h/sesh-backup.zip",
     "posters": 1
   },
   "import_modes": ["replace", "merge"],

@@ -1,4 +1,4 @@
-# Contributing to Aevum
+# Contributing to SESH
 
 ## Branch Strategy
 

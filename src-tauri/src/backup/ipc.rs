@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_fs::FsExt;
 
-const FILTER_NAME: &str = "Aevum backup";
+const FILTER_NAME: &str = "SESH backup";
 const FILTER_EXT: &[&str] = &["zip"];
 const DIALOG_GONE: &str = "the file dialog closed unexpectedly";
 

@@ -37,7 +37,7 @@ pub fn display(target: &FilePath) -> String {
     }
 }
 
-// `…/document/primary%3ADownload%2Faevum-backup.zip` → `Download/aevum-backup.zip`.
+// `…/document/primary%3ADownload%2Fsesh-backup.zip` → `Download/sesh-backup.zip`.
 fn readable_name(u: &tauri::Url) -> Option<String> {
     let last = u.path_segments()?.next_back()?;
     let decoded = percent_encoding::percent_decode_str(last)
@@ -91,7 +91,7 @@ pub fn read_capped(reader: impl Read, limit: u64) -> Result<Vec<u8>, String> {
         .map_err(|e| format!("Could not read the backup: {e}"))?;
     if bytes.len() as u64 > limit {
         return Err(format!(
-            "the file is too large to be an Aevum backup (more than {limit} bytes)"
+            "the file is too large to be a SESH backup (more than {limit} bytes)"
         ));
     }
     Ok(bytes)
@@ -201,14 +201,14 @@ pub mod tests {
 
     #[test]
     fn a_path_shows_as_the_path() {
-        let p = PathBuf::from("/home/me/aevum-backup.zip");
+        let p = PathBuf::from("/home/me/sesh-backup.zip");
         assert_eq!(display(&FilePath::Path(p.clone())), p.display().to_string());
     }
 
     #[test]
     fn a_document_shows_its_readable_name() {
-        let u = uri("content://com.android.externalstorage.documents/document/primary%3ADownload%2Faevum-backup-2026-09-27.zip");
-        assert_eq!(display(&u), "Download/aevum-backup-2026-09-27.zip");
+        let u = uri("content://com.android.externalstorage.documents/document/primary%3ADownload%2Fsesh-backup-2026-09-27.zip");
+        assert_eq!(display(&u), "Download/sesh-backup-2026-09-27.zip");
     }
 
     #[test]
@@ -233,8 +233,8 @@ pub mod tests {
     fn a_shared_storage_link_shows_its_place() {
         for (link, shown) in [
             (
-                "/storage/emulated/0/Download/aevum-backup-2026-10-01.zip",
-                "Download/aevum-backup-2026-10-01.zip",
+                "/storage/emulated/0/Download/sesh-backup-2026-10-01.zip",
+                "Download/sesh-backup-2026-10-01.zip",
             ),
             ("/data/media/0/Download/a.zip", "Download/a.zip"),
             ("/storage/1234-ABCD/Backups/a.zip", "Backups/a.zip"),
@@ -256,7 +256,7 @@ pub mod tests {
             "/storage/emulated/0/Download/a.zip (deleted)",
             "/storage/emulated/0/Download/noext",
             "/storage/emulated/0",
-            "/home/me/aevum-backup.zip",
+            "/home/me/sesh-backup.zip",
         ] {
             assert_eq!(name_from_link(Path::new(link)), None, "{link}");
         }

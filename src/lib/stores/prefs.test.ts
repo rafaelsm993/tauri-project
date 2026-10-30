@@ -32,6 +32,14 @@ describe("PrefsStore", () => {
     expect(store.prefs.profile_art).toBe("future:crest");
   });
 
+  it("carries a title saved under the old app name over to its new name", async () => {
+    const store = new PrefsStore(
+      fakeClient({ load: vi.fn(async () => ({ title: "Aevum Eternal" }) as never) }),
+    );
+    await store.hydrate();
+    expect(store.prefs.title).toBe("SESH Eternal");
+  });
+
   it.each([null, 7, "", " \t", "x".repeat(81), "\u{1f31f}".repeat(81)])(
     "falls back for invalid selection shape %j",
     async (invalid) => {

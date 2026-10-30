@@ -118,7 +118,7 @@
   });
 </script>
 
-<svelte:head><title>{title ? `${title} · Aevum` : "Aevum"}</title></svelte:head>
+<svelte:head><title>{title ? `${title} · SESH` : "SESH"}</title></svelte:head>
 
 {#snippet controls(entry: LibraryEntry)}
   <ProgressEditor

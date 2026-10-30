@@ -1,4 +1,4 @@
-# Building and running Aevum on Android
+# Building and running SESH on Android
 
 Android runs from the Arch desktop and from the Windows laptop (driven from WSL, see [Windows laptop](#windows-laptop)). Develop on a **physical phone over Wireless debugging**: frontend edits hot-reload on the phone in about a second, Rust edits rebuild and reinstall on their own. The emulator does not work on this host (see [Emulator](#emulator)).
 
@@ -11,7 +11,7 @@ Android runs from the Arch desktop and from the Windows laptop (driven from WSL,
 
 ## Project
 
-The Android Studio project is generated in `src-tauri/gen/android` (committed; build output is ignored by its own `.gitignore`). Regenerate it only with `npm run tauri android init`, never by hand. The package is `com.rafaelsm993.aevum`: Tauri turns the `-` in the placeholder identifier into `_`. It changes, with a one-time re-init, when the app gets its final name.
+The Android Studio project is generated in `src-tauri/gen/android` (committed; build output is ignored by its own `.gitignore`). Regenerate it only with `npm run tauri android init`, never by hand. The package is `com.rafaelsm993.sesh`: Tauri turns the `-` in the placeholder identifier into `_`. It changes, with a one-time re-init, when the app gets its final name.
 
 ## One-time setup (Arch)
 
@@ -103,7 +103,7 @@ Not usable on this host. The emulator's own qemu process (`qemu-system-x86_64`, 
 | Phone never appears in `lsusb` / kernel `error -71` | charge-only or faulty cable/socket | use Wireless debugging |
 | Edit saved but nothing changes on the phone | the edited value is overridden by the caller (e.g. a prop default) | check the Vite log for `hmr update <file>`, then edit the value actually rendered |
 | `adb` commands hang | the device went away | wrap scripted calls in `timeout 10 adb …`; reconnect |
-| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` when the other machine installed the app | each machine signs debug builds with its own `~/.android/debug.keystore` | export your data first (Settings → Backup), `adb uninstall com.rafaelsm993.aevum`, run again, import the backup. To avoid it, copy one `debug.keystore` to `~/.android/` on every dev machine |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE` when the other machine installed the app | each machine signs debug builds with its own `~/.android/debug.keystore` | export your data first (Settings → Backup), `adb uninstall com.rafaelsm993.sesh`, run again, import the backup. To avoid it, copy one `debug.keystore` to `~/.android/` on every dev machine |
 | Desktop dev window loses its styles (no navigation, no background) | Vite answered a component's CSS request with the raw `.svelte` file after a `tauri dev` restart | fixed by the `svelteCssBeforeJs` plugin in `vite.config.js`; restart `tauri dev` if it appears |
 | Desktop and phone dev apps load the wrong code, or `/profile` crashes | `tauri dev` and `tauri android dev` both bind port 1420 and share `node_modules/.vite` | run one dev server at a time |
 

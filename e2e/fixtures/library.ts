@@ -102,7 +102,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
         snapshot?: { title: string; provider: string };
       }[];
       // Established user by default; welcome.spec sets __freshInstall to be greeted instead.
-      const persisted = persistPrefs ? sessionStorage.getItem("aevum.e2e.prefs") : null;
+      const persisted = persistPrefs ? sessionStorage.getItem("sesh.e2e.prefs") : null;
       const prefs = {
         motion,
         seen_level: seenLevel,
@@ -264,7 +264,7 @@ export async function mockLibrary(page: Page, entries: object[], fake: LibraryFa
           const unknown = Object.keys(patch).filter((k) => !(k in prefs));
           if (unknown.length > 0) throw `unknown field \`${unknown[0]}\``;
           Object.assign(prefs, patch);
-          if (persistPrefs) sessionStorage.setItem("aevum.e2e.prefs", JSON.stringify(prefs));
+          if (persistPrefs) sessionStorage.setItem("sesh.e2e.prefs", JSON.stringify(prefs));
           return { ...prefs };
         }
         if (cmd === "library_merge_preview") {

@@ -32,7 +32,7 @@ export const TITLES = [
   { level: 25, name: "Curator" },
   { level: 30, name: "Loremaster" },
   { level: 40, name: "Chronicler" },
-  { level: 50, name: "Aevum Eternal" },
+  { level: 50, name: "SESH Eternal" },
 ] as const;
 
 export type AwardReason = "add" | "rating" | "completion";

@@ -19,9 +19,9 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 // Bumped only when the zip layout changes, not the files inside it.
 pub const BUNDLE_FORMAT: u32 = 1;
-pub const NOT_A_BACKUP: &str = "This file is not an Aevum backup";
+pub const NOT_A_BACKUP: &str = "This file is not a SESH backup";
 pub const NEWER: &str =
-    "This backup was made by a newer version of Aevum. Update Aevum, then import it again.";
+    "This backup was made by a newer version of SESH. Update SESH, then import it again.";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Manifest {

@@ -297,8 +297,8 @@ describe("titles", () => {
 
   it("names the next title and when it comes", () => {
     expect(titleFor(4).next).toEqual({ name: "Regular", level: 5 });
-    expect(titleFor(50)).toEqual({ name: "Aevum Eternal", next: null });
-    expect(titleFor(99).name).toBe("Aevum Eternal");
+    expect(titleFor(50)).toEqual({ name: "SESH Eternal", next: null });
+    expect(titleFor(99).name).toBe("SESH Eternal");
   });
 
   it("has a ladder that starts at level 1 and only goes up", () => {

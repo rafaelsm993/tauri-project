@@ -98,7 +98,7 @@ const TITLE_HOME: Record<(typeof TITLES)[number]["name"], MediaType> = {
   Curator: "manga",
   Loremaster: "book",
   Chronicler: "book",
-  "Aevum Eternal": "game",
+  "SESH Eternal": "game",
 };
 const JOURNEY_POSITIONS = [
   [50, 80],

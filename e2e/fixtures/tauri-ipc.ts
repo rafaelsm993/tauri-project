@@ -77,7 +77,7 @@ const FIXTURES: Record<string, unknown> = {
   ],
   // A long Windows path on purpose: the status line must wrap at 360 px.
   backup_export: {
-    path: "C:\\Users\\someone-with-a-long-name\\Documents\\Backups\\aevum-backup-2026-09-26.zip",
+    path: "C:\\Users\\someone-with-a-long-name\\Documents\\Backups\\sesh-backup-2026-09-26.zip",
     entries: 2,
     posters: 1,
     bytes: 4096,
@@ -185,7 +185,7 @@ export const test = base.extend({
             return {
               ...(fixtures[cmd] as object),
               prefs_restored: true,
-              safety_copy: "C:\\Users\\someone\\AppData\\Roaming\\aevum\\pre-import-backup.zip",
+              safety_copy: "C:\\Users\\someone\\AppData\\Roaming\\sesh\\pre-import-backup.zip",
             };
           }
           if (cmd in fixtures && fixtures[cmd] === null) return null;

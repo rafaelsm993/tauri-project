@@ -263,7 +263,7 @@ test("following the system tracks the device's light or dark setting", async ({ 
 test("the last theme is painted before the app starts", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.addInitScript(() => {
-    localStorage.setItem("aevum.theme", "light");
+    localStorage.setItem("sesh.theme", "light");
     document.addEventListener("DOMContentLoaded", () => {
       (window as unknown as { __boot: string | undefined }).__boot =
         document.documentElement.dataset.theme;

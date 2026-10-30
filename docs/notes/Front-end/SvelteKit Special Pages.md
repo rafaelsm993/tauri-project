@@ -1,4 +1,4 @@
-# Aevum — SvelteKit Special Pages
+# SESH — SvelteKit Special Pages
 
 > SvelteKit file conventions and the routes in the app.
 

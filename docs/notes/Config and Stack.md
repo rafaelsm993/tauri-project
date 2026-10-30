@@ -1,4 +1,4 @@
-# Aevum — Config and Stack
+# SESH — Config and Stack
 
 > Manifests, config files, dependencies and system requirements.
 
@@ -62,7 +62,7 @@
 - `src-tauri/tauri.conf.json`:
   - dev URL `http://localhost:1420`; `frontendDist: "../build"`
   - one 800×600 window, minimum 360×560 (so phone layouts are reachable on desktop), devtools on
-  - `identifier: com.rafaelsm993.aevum`, `productName: Aevum` (locked 2026-09-24; changing it again forces an Android re-init)
+  - `identifier: com.rafaelsm993.sesh`, `productName: SESH` (renamed 2026-10-29, see `CHANGELOG.md`; the Android project under `gen/android` was renamed in place)
   - `csp: null`
   - bundles all targets
 - `src-tauri/capabilities/default.json` grants `core:default`, `opener:default` and `log:default` to the `main` window.

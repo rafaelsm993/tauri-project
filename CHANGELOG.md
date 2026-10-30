@@ -1,12 +1,13 @@
 # Changelog
 
-All notable changes to Aevum are documented here.
+All notable changes to SESH (formerly Aevum) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
 ### Changed
+- **Renamed to SESH** (was Aevum). The app id is now `com.rafaelsm993.sesh`, so data lives in a new folder: on Windows copy `%APPDATA%\com.rafaelsm993.aevum` to `%APPDATA%\com.rafaelsm993.sesh` before the first launch; on Linux copy `~/.local/share/com.rafaelsm993.aevum` to `~/.local/share/com.rafaelsm993.sesh`; on Android, export a backup in Aevum and import it in SESH (it installs as a separate app). The level-50 title is now "SESH Eternal"; a saved "Aevum Eternal" carries over.
 - Runic shimmer now plays as a living constellation: starlight runs along the Journey Tree's paths, seals twinkle in a wave and a starfield breathes behind them; it runs while the window is focused and pauses with the background.
 - Library's Type filter picks several media types at once; every chip stays visible and each picked type has its own ✕.
 - On desktop, Home's category pill is centred and sized to its tabs.

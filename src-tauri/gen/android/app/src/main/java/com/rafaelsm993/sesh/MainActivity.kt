@@ -1,4 +1,4 @@
-package com.rafaelsm993.aevum
+package com.rafaelsm993.sesh
 
 import android.os.Bundle
 import android.webkit.JavascriptInterface
@@ -13,7 +13,7 @@ class MainActivity : TauriActivity() {
   }
 
   override fun onWebViewCreate(webView: WebView) {
-    webView.addJavascriptInterface(SystemBars(), "AevumSystemBars")
+    webView.addJavascriptInterface(SystemBars(), "SeshSystemBars")
   }
 
   // Called by src/lib/theme.ts; true draws dark status and navigation bar icons for the light theme.

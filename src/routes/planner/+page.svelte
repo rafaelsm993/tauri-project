@@ -3,6 +3,6 @@
   import { localDay } from "$lib/domain/calendar";
 </script>
 
-<svelte:head><title>Planner · Aevum</title></svelte:head>
+<svelte:head><title>Planner · SESH</title></svelte:head>
 
 <PlannerView today={localDay()} />

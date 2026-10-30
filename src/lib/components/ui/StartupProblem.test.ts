@@ -7,7 +7,7 @@ import type { StartupProblem as Problem } from "$lib/types/startup";
 const NEWER: Problem = {
   kind: "newer",
   file: "library.json",
-  dir: "C:\\Users\\me\\AppData\\Roaming\\com.rafaelsm993.aevum",
+  dir: "C:\\Users\\me\\AppData\\Roaming\\com.rafaelsm993.sesh",
   detail: "library.json was written by a newer version of the app (schema v9); update the app",
 };
 
@@ -17,8 +17,8 @@ describe("StartupProblem", () => {
     expect(
       screen.getByRole("heading", { name: "Your library could not be opened" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/saved by a newer version of Aevum/)).toBeInTheDocument();
-    expect(screen.getByText(/update Aevum/)).toBeInTheDocument();
+    expect(screen.getByText(/saved by a newer version of SESH/)).toBeInTheDocument();
+    expect(screen.getByText(/update SESH/)).toBeInTheDocument();
   });
 
   it("explains an unreadable file and says it was left untouched", () => {

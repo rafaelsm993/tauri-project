@@ -2,6 +2,6 @@
   import SettingsView from "$lib/components/settings/SettingsView.svelte";
 </script>
 
-<svelte:head><title>Settings · Aevum</title></svelte:head>
+<svelte:head><title>Settings · SESH</title></svelte:head>
 
 <SettingsView />

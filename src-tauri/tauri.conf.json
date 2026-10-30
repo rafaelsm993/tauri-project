@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Aevum",
+  "productName": "SESH",
+  "mainBinaryName": "sesh",
   "version": "0.1.0",
-  "identifier": "com.rafaelsm993.aevum",
+  "identifier": "com.rafaelsm993.sesh",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "Aevum",
+        "title": "SESH",
         "width": 800,
         "height": 600,
         "minWidth": 360,

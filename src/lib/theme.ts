@@ -1,7 +1,7 @@
 import type { Theme } from "$lib/types/prefs";
 
 // Read by static/theme-boot.js before the app starts, so a launch paints the last theme at once.
-export const THEME_KEY = "aevum.theme";
+export const THEME_KEY = "sesh.theme";
 
 const PREFERS_LIGHT = "(prefers-color-scheme: light)";
 
@@ -16,7 +16,7 @@ function prefersLight(): boolean {
 }
 
 function syncSystemBars(): void {
-  const bars = (window as unknown as { AevumSystemBars?: SystemBars }).AevumSystemBars;
+  const bars = (window as unknown as { SeshSystemBars?: SystemBars }).SeshSystemBars;
   if (!bars) return;
   bars.setLightBars(current === "light" || (current === "system" && prefersLight()));
   if (!watching && typeof window.matchMedia === "function") {

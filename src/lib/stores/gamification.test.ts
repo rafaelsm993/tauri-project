@@ -402,7 +402,7 @@ describe("selected profile title", () => {
     expect(store.title).toEqual({ name: "Curious Mind", next: { name: "Connoisseur", level: 12 } });
   });
 
-  it.each(["automatic", "unknown", "Aevum Eternal"])(
+  it.each(["automatic", "unknown", "SESH Eternal"])(
     "uses the current automatic title for %j",
     async (title) => {
       const { store } = selectedAt(8, title);

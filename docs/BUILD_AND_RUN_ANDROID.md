@@ -88,6 +88,8 @@ npm run tauri android build -- --debug --apk --target aarch64 --target armv7
 
 Output: `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk` (debug-signed, minSdk 24). Install it with `adb install -r <apk>` or copy it to the phone. It embeds the API keys from your `.env` at compile time, so never share a local build. CI builds an arm64 debug APK with dummy keys and uploads it as the `app-debug-apk` artifact.
 
+Signed release APK: `./scripts/wdev.sh android release`, see [RELEASE.md](RELEASE.md).
+
 ## Emulator
 
 Not usable on this host. The emulator's own qemu process (`qemu-system-x86_64`, emulator 37.1.11.0) segfaults 20–30 s after the app's WebView starts, always at the same instruction, on API 35 and API 37.1 x86_64 images and in every GPU mode (`host`, `swiftshader_indirect`, `guest`, `-feature -Vulkan`). The crash is in the emulator binary (`coredumpctl list` shows it), not in the app. Retry only after an emulator update; an x86_64 build is `--target x86_64`.

@@ -42,6 +42,8 @@ npm run tauri android build -- --debug --apk --target aarch64   # Android debug 
 
 Android (phone dev loop with hot reload, APKs): see [Android runbook](docs/BUILD_AND_RUN_ANDROID.md).
 
+Release builds (Windows installers, signed Android APK): see [Release runbook](docs/RELEASE.md).
+
 ## Development workflow
 
 Conventions, TDD loop and the quality gate live in [AGENTS.md](AGENTS.md). Before any PR: `npm run verify`.

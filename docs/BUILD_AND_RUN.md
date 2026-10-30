@@ -3,7 +3,7 @@
 | Machine | Run (hot reload) | Release | Toolchain check |
 | --- | --- | --- | --- |
 | Arch desktop (native Linux) | `npm run tauri dev` | `npm run tauri build -- --no-bundle` | `node --test scripts/verify-toolchain.test.mjs` |
-| Windows 11 laptop (edit in WSL) | `./scripts/wdev.sh` | `./scripts/wdev.sh build` | `PS> powershell -ExecutionPolicy Bypass -File scripts\verify.ps1` |
+| Windows 11 laptop (edit in WSL) | `./scripts/wdev.sh` | `./scripts/wdev.sh build` (see [RELEASE.md](RELEASE.md)) | `PS> powershell -ExecutionPolicy Bypass -File scripts\verify.ps1` |
 | Android (phone, from Arch) | see [BUILD_AND_RUN_ANDROID.md](BUILD_AND_RUN_ANDROID.md) | `npm run tauri android build -- --debug --apk --target aarch64 --target armv7` | `npm run tauri info` |
 
 `src-tauri/target/`, `node_modules/` and `.env` are per machine, never shared or committed.

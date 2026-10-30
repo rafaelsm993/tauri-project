@@ -1,18 +1,14 @@
-# Product docs moved out of this repo
+# Product docs live in a private vault
 
-`GOALS.md`, `GOALS-QA.md`, and the `sprints/` directory used to live here.
-They now live in the private Obsidian vault repo (`obisidian-journal`), under
-`Programming/Tauri App/`, because this repo (`tauri-project`) is **public**
-and those documents cover unreleased product strategy, sprint planning, and
-internal review notes not meant for public visibility.
+This public repo keeps the [technical notes](notes/README.md) and the
+[release runbook](RELEASE.md). The current product guide is private:
 
-- Vault location (local): `/run/media/user/FILES/Projects/obisidian-journal/Programming/Tauri App/`
-- Vault repo: `github.com/rafaelsm993/obisidian-journal` (private)
+- Vault repo: `rafaelsm993/obisidian-journal` (private; public contributors cannot access it).
+- Local index: `/mnt/FILES/Projects/obisidian-journal/Programming/Tauri App/README.md`.
+- Current overview: `Product.md`, `Delivery.md`, `Architecture.md`, `Roadmap.md` beside that index.
+- Historical decisions and sprints: `archive/` and `archive/sprints/` beneath that index.
 
-If you're an agent or contributor working in this repo and need the product
-spec or sprint plan, read them from the vault path above — do not recreate
-them here, and do not copy their content back into this repo's git history.
-
-See the `tauri-project-docs-sync` skill for how to keep the vault copy
-current when this repo's product decisions change.
+Earlier `GOALS.md` and `GOALS-QA.md` are absent from this vault checkout despite references
+in historical notes. Do not recreate private strategy or copy it into this public repo.
+See the `tauri-project-docs-sync` skill when maintaining both sets of documentation.
 </content>

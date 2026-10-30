@@ -1,9 +1,10 @@
 # scripts/android.ps1
-# Runs the Android dev loop or a debug APK build on Windows, with JDK 17, the SDK and MSVC loaded.
-# Usage (from Windows PowerShell, repo root, or `./scripts/wdev.sh android dev|build` from WSL):
+# Runs the Android dev loop, a debug APK build or a signed release APK on Windows, with JDK 17, the SDK and MSVC loaded.
+# Usage (from Windows PowerShell, repo root, or `./scripts/wdev.sh android dev|build|release` from WSL):
 #   PS> powershell -ExecutionPolicy Bypass -File scripts\android.ps1 dev    # hot reload on the phone
 #   PS> powershell -ExecutionPolicy Bypass -File scripts\android.ps1 build  # arm64 debug APK
-param([ValidateSet("dev", "build")][string]$Mode = "dev")
+#   PS> powershell -ExecutionPolicy Bypass -File scripts\android.ps1 release  # signed arm64+armv7 release APK
+param([ValidateSet("dev", "build", "release")][string]$Mode = "dev")
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -29,6 +30,22 @@ cmd /c "`"$vcvars`" >nul && set" | ForEach-Object {
 $platformTools = Join-Path $env:ANDROID_HOME "platform-tools"
 $env:ADB = Join-Path $platformTools "adb.exe"
 $env:PATH = "$platformTools;$env:JAVA_HOME\bin;$env:USERPROFILE\.cargo\bin;C:\Program Files\nodejs;$env:PATH"
+
+if ($Mode -eq "release") {
+  if (-not (Test-Path "src-tauri\gen\android\keystore.properties")) {
+    throw "src-tauri\gen\android\keystore.properties is missing. See docs/RELEASE.md (Android signing)."
+  }
+  Write-Host "Building the signed release APK (arm64 + armv7) ..."
+  cmd /c "npm run tauri android build -- --apk --target aarch64 --target armv7"
+  if ($LASTEXITCODE -ne 0) { throw "android release build failed with exit code $LASTEXITCODE" }
+  $apk = "src-tauri\gen\android\app\build\outputs\apk\universal\release\app-universal-release.apk"
+  $apksigner = Get-ChildItem (Join-Path $env:ANDROID_HOME "build-tools") -Recurse -Filter apksigner.bat |
+    Sort-Object FullName | Select-Object -Last 1
+  & $apksigner.FullName verify --print-certs $apk
+  if ($LASTEXITCODE -ne 0) { throw "apksigner could not verify $apk" }
+  Write-Host "APK: $apk"
+  exit 0
+}
 
 if ($Mode -eq "build") {
   Write-Host "Building the arm64 debug APK ..."

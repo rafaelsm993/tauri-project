@@ -47,13 +47,22 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "msi", "appimage", "deb", "rpm"],
+    "publisher": "rafaelsm993",
+    "copyright": "© 2026 rafaelsm993. MIT License.",
+    "category": "Entertainment",
+    "shortDescription": "Track movies, TV, anime, manga, books and games.",
+    "longDescription": "SESH is a cross-platform media tracker: browse catalogs, keep a library, plan sessions and earn progression rewards, all stored on your device.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "nsis": { "installMode": "currentUser" }
+    }
   }
 }
